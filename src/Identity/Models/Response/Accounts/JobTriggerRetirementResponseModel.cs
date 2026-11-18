@@ -21,7 +21,7 @@ public class JobTriggerRetirementResponseModel : ResponseModel
     /// <summary>The emergency access grants deleted, the users' as grantor or as grantee.</summary>
     public int EmergencyAccessDeleted { get; set; }
 
-    /// <summary>The organizations' domain claims deleted, verified or not.</summary>
+    /// <summary>The organizations' unverified domain claims deleted; verified ones are kept.</summary>
     public int DomainClaimsDeleted { get; set; }
 
     /// <summary>The organizations' price migration cohort assignments deleted.</summary>

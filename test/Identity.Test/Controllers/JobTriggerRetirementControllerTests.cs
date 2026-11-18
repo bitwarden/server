@@ -109,6 +109,23 @@ public class JobTriggerRetirementControllerTests : IDisposable
     }
 
     [Fact]
+    public async Task Keeps_a_verified_domain_claim_and_deletes_an_unverified_one()
+    {
+        var organization = Guid.NewGuid();
+        var verified = new OrganizationDomain { Id = Guid.NewGuid(), OrganizationId = organization, DomainName = "example.com" };
+        verified.SetVerifiedDate();
+        var unverified = new OrganizationDomain { Id = Guid.NewGuid(), OrganizationId = organization, DomainName = "example.org" };
+        _organizationDomainRepository.GetDomainsByOrganizationIdAsync(organization).Returns([verified, unverified]);
+
+        var result = await _sut.RetireAsync(new JobTriggerRetirementRequestModel { OrganizationIds = [organization] });
+
+        // Only an unverified claim starts the verification job; a verified one still guards registration here.
+        Assert.Equal(1, Answer(result).DomainClaimsDeleted);
+        await _organizationDomainRepository.Received(1).DeleteAsync(unverified);
+        await _organizationDomainRepository.DidNotReceive().DeleteAsync(verified);
+    }
+
+    [Fact]
     public async Task Answers_its_counts_in_camel_case()
     {
         var result = await _sut.RetireAsync(new JobTriggerRetirementRequestModel { OrganizationIds = [Guid.NewGuid()] });
@@ -274,9 +291,9 @@ public class JobTriggerRetirementControllerTests : IDisposable
     [Fact]
     public async Task Refuses_a_token_that_does_not_validate_for_the_retirement_scope()
     {
-        // A deletion client's token, say: it was issued for internal.account-deletion alone.
-        Bearer("a-deletion-token");
-        _tokenValidator.ValidateAccessTokenAsync("a-deletion-token", ApiScopes.InternalJobTriggerRetirement)
+        // Another internal client's token, say: it was issued for internal.notifications alone.
+        Bearer("another-client-token");
+        _tokenValidator.ValidateAccessTokenAsync("another-client-token", ApiScopes.InternalJobTriggerRetirement)
             .Returns(new TokenValidationResult { IsError = true, Error = "insufficient_scope" });
 
         Assert.IsType<UnauthorizedResult>(await _sut.RetireAsync(Request()));
@@ -286,8 +303,8 @@ public class JobTriggerRetirementControllerTests : IDisposable
     [Theory]
     [InlineData("web")]
     [InlineData("internal.notifications")]
-    [InlineData("deletion.other-service")]
-    [InlineData("cohorts.other-service")]
+    [InlineData("installation.other-service")]
+    [InlineData("organization.other-service")]
     [InlineData("retire")]
     [InlineData("retiremigration-service")]
     public async Task Refuses_a_token_issued_to_any_other_client(string client)

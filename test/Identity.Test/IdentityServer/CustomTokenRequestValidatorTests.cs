@@ -465,9 +465,6 @@ public class CustomTokenRequestValidatorTests
         Assert.Equal("encrypted-payload", context.Result.CustomResponse["encrypted_payload"]);
     }
 
-
-
-
     [Fact]
     public async Task ValidateAsync_JobTriggerRetirementClientCredentials_SkipsUserValidation()
     {
@@ -489,7 +486,6 @@ public class CustomTokenRequestValidatorTests
         Assert.False(context.Result.IsError);
         Assert.Null(context.Result.CustomResponse);
     }
-
 
     [Fact]
     public async Task SetSuccessResult_WithSubject_AddsClaimsToSubject()

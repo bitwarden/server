@@ -20,7 +20,7 @@ namespace Bit.Identity.Controllers;
 /// <summary>
 /// An internal retirement for a service of another platform that shares this install's tenants: deletes this install's
 /// rows that start its recurring jobs for users and organizations, by their identifiers, once that platform serves them.
-/// What this install keeps of them stays, but its jobs no longer act on it.
+/// What this install keeps of them stays, verified domain claims included, but its jobs no longer act on it.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -35,6 +35,11 @@ namespace Bit.Identity.Controllers;
 /// It deletes with the repositories directly, not with the commands people use: those tell the people involved and
 /// record events, and nothing here is anybody's doing. It reads only identifiers, returns only counts and logs only
 /// the counts and the client's identifier. Safe to repeat: a second request finds nothing left to delete.
+/// </para>
+/// <para>
+/// An emergency access grant is deleted whole, from the grantor's side and the grantee's, whatever its status: the
+/// other platform takes grantor and grantee over together, with the grant, so this install's copy of the relationship
+/// is no longer the one in force, and its timeout must not approve a recovery the other platform can't see.
 /// </para>
 /// </remarks>
 [Route("internal/job-triggers")]
@@ -75,7 +80,7 @@ public class JobTriggerRetirementController : Controller
     /// <summary>Retire users' and organizations' job triggers</summary>
     /// <remarks>
     /// Deletes every emergency access grant a user is grantor or grantee of (the automatic approval and the reminder
-    /// emails), and every organization's domain claims (the verification job), price migration cohort assignment (the
+    /// emails), and every organization's unverified domain claims (the verification job), price migration cohort assignment (the
     /// migration's scheduling, emails and payment calls), and clears its pending seat sync. <c>400</c> for more than
     /// <see cref="MaxIds"/> identifiers, with nothing deleted.
     /// </remarks>
@@ -120,6 +125,13 @@ public class JobTriggerRetirementController : Controller
         {
             foreach (var domain in await _organizationDomainRepository.GetDomainsByOrganizationIdAsync(organizationId))
             {
+                // Only an unverified claim starts a job (the verification job reads VerifiedDate IS NULL). A verified
+                // claim is what this install keeps: registration and single sign-on discovery still read it.
+                if (domain.VerifiedDate is not null)
+                {
+                    continue;
+                }
+
                 await _organizationDomainRepository.DeleteAsync(domain);
                 domainClaimsDeleted++;
             }
