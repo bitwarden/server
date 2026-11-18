@@ -39,6 +39,9 @@ public class AccessLease : ITableObject<Guid>
 
     public DateTime CreationDate { get; set; } = DateTime.UtcNow;
 
+    /// <summary>Set when the expiry sweep returned the lease, so it is reported once; never set on an early end.</summary>
+    public DateTime? SweptDate { get; set; }
+
     /// <summary>Whether the lease authorizes access as of <paramref name="asOf"/>.</summary>
     public bool IsLive(DateTime asOf) =>
         AccessStatusDerivation.ComputeLeaseStatus(Action, NotAfter, asOf) == AccessLeaseStatus.Active;
