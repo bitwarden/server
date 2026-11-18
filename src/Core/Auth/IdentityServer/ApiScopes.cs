@@ -13,6 +13,8 @@ public static class ApiScopes
     public const string ApiPamCredentialRotation = "api.pam.rotation";
     public const string Internal = "internal";
     public const string ApiSendAccess = "api.send.access";
+    /// <summary>Identity's internal job trigger retirement, and nothing else (<c>retire.{service}</c> clients).</summary>
+    public const string InternalJobTriggerRetirement = "internal.job-trigger-retirement";
 
     public static IEnumerable<ApiScope> GetApiScopes()
     {
@@ -27,6 +29,7 @@ public static class ApiScopes
             new(ApiSecrets, "Secrets Manager Access"),
             new(ApiPamCredentialRotation, "AccessConnector Credential Rotation"),
             new(ApiSendAccess, "API Send Access"),
+            new(InternalJobTriggerRetirement, "Internal Job Trigger Retirement"),
         };
     }
 }

@@ -44,6 +44,18 @@ public class GlobalSettings : IGlobalSettings
     public string LicenseCertificatePath { get; set; }
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
+    /// <summary>
+    /// The secret of the internal job trigger retirement's clients (<c>retire.{service}</c>): a service of another
+    /// platform sharing this install's tenants, deleting this install's rows that start recurring jobs for users and
+    /// organizations it now serves itself. Unset, the clients don't exist and the retirement answers <c>404</c>. Never
+    /// logged.
+    /// </summary>
+    public virtual string JobTriggerRetirementClientSecret { get; set; }
+    /// <summary>
+    /// The local port of the internal listener the job trigger retirement answers on, and on no other: one that only
+    /// the install's own network reaches, never the public one. Unset, the retirement answers <c>404</c>.
+    /// </summary>
+    public virtual int? JobTriggerRetirementPort { get; set; }
     public virtual string OidcIdentityClientKey { get; set; }
     public virtual string HibpApiKey { get; set; }
     public virtual bool DisableUserRegistration { get; set; }
@@ -460,6 +472,7 @@ public class GlobalSettings : IGlobalSettings
             get => _queueName;
             set => _queueName = value?.Trim('"');
         }
+
     }
 
     public class ConnectionStringSettings : IConnectionStringSettings

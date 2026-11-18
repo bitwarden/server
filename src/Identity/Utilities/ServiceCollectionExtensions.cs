@@ -75,6 +75,11 @@ public static class ServiceCollectionExtensions
             services.AddClientProvider<InternalClientProvider>("internal");
         }
 
+        if (CoreHelpers.SettingHasValue(globalSettings.JobTriggerRetirementClientSecret))
+        {
+            services.AddClientProvider<JobTriggerRetirementClientProvider>(JobTriggerRetirementClientProvider.Prefix);
+        }
+
         services.AddClientProvider<UserClientProvider>("user");
         services.AddClientProvider<OrganizationClientProvider>("organization");
         services.AddClientProvider<SecretsManagerApiKeyProvider>(SecretsManagerApiKeyProvider.ApiKeyPrefix);
