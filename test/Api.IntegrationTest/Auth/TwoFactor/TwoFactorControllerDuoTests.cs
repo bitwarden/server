@@ -3,18 +3,14 @@ using Bit.Api.Auth.Models.Request;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Services;
-using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
-using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
-using NSubstitute;
 using Xunit;
 using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorIntegrationTestHelpers;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers.TwoFactor;
+namespace Bit.Api.IntegrationTest.Auth.TwoFactor;
 
 public class TwoFactorControllerDuoTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
@@ -29,11 +25,7 @@ public class TwoFactorControllerDuoTests : IClassFixture<ApiApplicationFactory>,
     public TwoFactorControllerDuoTests(ApiApplicationFactory factory)
     {
         _factory = factory;
-        _factory.SubstituteService<IPushNotificationService>(_ => { });
-        _factory.SubstituteService<IDuoUniversalTokenService>(svc =>
-            svc.ValidateDuoConfiguration(default, default, default).ReturnsForAnyArgs(true));
-        _factory.SubstituteService<ICompleteTwoFactorWebAuthnRegistrationCommand>(svc =>
-            svc.CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!).ReturnsForAnyArgs(true));
+        SubstituteTwoFactorProviderServices(_factory);
         _factory.SubstituteService<ITwoFactorEmailService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);

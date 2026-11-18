@@ -352,7 +352,7 @@ public class GoverningRuleResolverTests
         Assert.Null(await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals));
     }
 
-    // The bypassable shape IListRuleBypassableCiphersQuery warns admins about; the plain path releases it in full.
+    // A cipher reachable through an ungated collection (the bypassable shape); the plain path releases it in full.
     [Theory, BitAutoData]
     public async Task ResolveAsync_AlsoReachableThroughPlainCollection_ReturnsNull(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,

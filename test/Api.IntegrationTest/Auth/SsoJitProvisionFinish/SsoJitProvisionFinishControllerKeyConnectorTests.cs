@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Bit.Api.Auth.Models.Request.SsoJitProvisionFinish;
+using Bit.Api.IntegrationTest.Auth.Helpers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.KeyManagement.Models.Requests;
@@ -16,7 +17,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Xunit;
 
-namespace Bit.Api.IntegrationTest.Auth.Controllers;
+namespace Bit.Api.IntegrationTest.Auth.SsoJitProvisionFinish;
 
 public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
@@ -256,12 +257,7 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
     {
         var user = await _userRepository.GetByEmailAsync(email);
         Assert.NotNull(user);
-        user.MasterPassword = null;
-        user.Key = null;
-        user.PrivateKey = null;
-        user.PublicKey = null;
-        user.SignedPublicKey = null;
-        await _userRepository.ReplaceAsync(user);
+        await SsoJitProvisionFinishTestHelpers.ClearMasterPasswordAndKeysAsync(_userRepository, user);
 
         await AssertJitProvisionedStateAsync(email);
     }
@@ -284,9 +280,8 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
     private async Task AssertOrganizationUserStatusAsync(Organization organization, User user,
         OrganizationUserStatusType expectedStatus)
     {
-        var organizationUser = await _organizationUserRepository.GetByOrganizationAsync(organization.Id, user.Id);
-        Assert.NotNull(organizationUser);
-        Assert.Equal(expectedStatus, organizationUser.Status);
+        var organizationUser = await SsoJitProvisionFinishAssertions.AssertOrganizationUserStatusAsync(
+            _organizationUserRepository, organization.Id, user.Id, expectedStatus);
         Assert.Equal(user.Id, organizationUser.UserId);
     }
 
