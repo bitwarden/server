@@ -52,8 +52,10 @@ public class GlobalSettings : IGlobalSettings
     /// </summary>
     public virtual string StaleCopyDeletionClientSecret { get; set; }
     /// <summary>
-    /// The local port of the internal listener the stale copy deletion answers on, and on no other: one that only the
-    /// install's own network reaches, never the public one. Unset, the deletion answers <c>404</c>.
+    /// The local port of the internal listener the stale copy deletion answers on, and on no other. It must be an
+    /// additional Kestrel endpoint (an <c>ASPNETCORE_URLS</c> entry or <c>Kestrel:Endpoints</c>), different from
+    /// the public port, that only the install's own network reaches and the proxy never forwards to. Unset, the
+    /// stale copy deletion answers <c>404</c>.
     /// </summary>
     public virtual int? StaleCopyDeletionPort { get; set; }
     public virtual string OidcIdentityClientKey { get; set; }
@@ -472,7 +474,6 @@ public class GlobalSettings : IGlobalSettings
             get => _queueName;
             set => _queueName = value?.Trim('"');
         }
-
     }
 
     public class ConnectionStringSettings : IConnectionStringSettings

@@ -44,6 +44,7 @@ public class StaleCopyDeletionControllerTests : IDisposable
     private readonly IAttachmentStorageService _attachmentStorageService = Substitute.For<IAttachmentStorageService>();
     private readonly ISendFileStorageService _sendFileStorageService = Substitute.For<ISendFileStorageService>();
     private readonly IOrganizationAbilityCacheService _abilityCache = Substitute.For<IOrganizationAbilityCacheService>();
+    private readonly IProviderAbilityCacheService _providerAbilityCache = Substitute.For<IProviderAbilityCacheService>();
     private readonly ITokenValidator _tokenValidator = Substitute.For<ITokenValidator>();
     private readonly GlobalSettings _globalSettings = Substitute.For<GlobalSettings>();
     private readonly ILogger<StaleCopyDeletionController> _logger = Substitute.For<ILogger<StaleCopyDeletionController>>();
@@ -59,7 +60,7 @@ public class StaleCopyDeletionControllerTests : IDisposable
         _cipherRepository.GetManyByOrganizationIdAsync(default).ReturnsForAnyArgs([]);
         _cipherRepository.GetManyByUserIdAsync(default, default).ReturnsForAnyArgs([]);
         _sut = new StaleCopyDeletionController(_providerRepository, _organizationRepository, _userRepository,
-            _cipherRepository, _attachmentStorageService, _sendFileStorageService, _abilityCache, _tokenValidator,
+            _cipherRepository, _attachmentStorageService, _sendFileStorageService, _abilityCache, _providerAbilityCache, _tokenValidator,
             _globalSettings, _logger)
         {
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
@@ -107,6 +108,7 @@ public class StaleCopyDeletionControllerTests : IDisposable
         Received.InOrder(() =>
         {
             _providerRepository.DeleteAsync(provider);
+            _providerAbilityCache.DeleteProviderAbilityAsync(provider.Id);
             _attachmentStorageService.DeleteAttachmentsForCipherAsync(organizationCiphers[0].Id);
             _sendFileStorageService.DeleteFilesForOrganizationAsync(organization.Id);
             _organizationRepository.DeleteAndCreateDeleteTasksAsync(organization,
@@ -119,6 +121,8 @@ public class StaleCopyDeletionControllerTests : IDisposable
         await _attachmentStorageService.DidNotReceive().DeleteAttachmentsForCipherAsync(organizationCiphers[1].Id);
         await _organizationRepository.Received(1).DeleteAndCreateDeleteTasksAsync(Arg.Any<Organization>(), Arg.Any<IEnumerable<OrganizationDeleteTaskType>>());
         await _userRepository.Received(1).DeleteAsync(Arg.Any<User>());
+        // As the provider's own deletion, its cached ability goes with it.
+        await _providerAbilityCache.Received(1).DeleteProviderAbilityAsync(Arg.Any<Guid>());
         // Its own repository delete, never the plain one that leaves the event log behind.
         await _organizationRepository.DidNotReceiveWithAnyArgs().DeleteAsync(default!);
     }
@@ -254,9 +258,9 @@ public class StaleCopyDeletionControllerTests : IDisposable
     [Fact]
     public async Task Refuses_a_token_that_does_not_validate_for_the_deletion_scope()
     {
-        // A retirement client's token, say: it was issued for internal.job-trigger-retirement alone.
-        Bearer("a-retirement-token");
-        _tokenValidator.ValidateAccessTokenAsync("a-retirement-token", ApiScopes.InternalStaleCopyDeletion)
+        // Another internal client's token, say: it was issued for internal.notifications alone.
+        Bearer("another-client-token");
+        _tokenValidator.ValidateAccessTokenAsync("another-client-token", ApiScopes.InternalStaleCopyDeletion)
             .Returns(new TokenValidationResult { IsError = true, Error = "insufficient_scope" });
 
         Assert.IsType<UnauthorizedResult>(await _sut.DeleteAsync(Request()));
@@ -265,8 +269,8 @@ public class StaleCopyDeletionControllerTests : IDisposable
 
     [Theory]
     [InlineData("web")]
-    [InlineData("deletion.other-service")]
-    [InlineData("retire.migration-service")]
+    [InlineData("installation.other-service")]
+    [InlineData("installation.migration-service")]
     [InlineData("release")]
     [InlineData("releasemigration-service")]
     public async Task Refuses_a_token_issued_to_any_other_client(string client)

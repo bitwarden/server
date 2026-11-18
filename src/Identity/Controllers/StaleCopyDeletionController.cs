@@ -45,6 +45,12 @@ namespace Bit.Identity.Controllers;
 /// ciphers have attachments, returns only counts and logs only the counts and the client's identifier. Safe to repeat:
 /// a tenant already deleted is counted as already gone.
 /// </para>
+/// <para>
+/// Deleting an organization deletes its domain claims and policies, and deleting a user frees the address. This install
+/// doesn't refuse a later registration with that address or in that domain itself: a deployment that runs both
+/// platforms routes a registration naming an address or organization the other platform holds to that platform, which
+/// keeps the claims and the refusals.
+/// </para>
 /// </remarks>
 [Route("internal/stale-copies")]
 // A trusted service's endpoint, not a client's: kept out of the OpenAPI the SDK is generated from.
@@ -62,6 +68,7 @@ public class StaleCopyDeletionController : Controller
     private readonly IAttachmentStorageService _attachmentStorageService;
     private readonly ISendFileStorageService _sendFileStorageService;
     private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
+    private readonly IProviderAbilityCacheService _providerAbilityCacheService;
     private readonly ITokenValidator _tokenValidator;
     private readonly GlobalSettings _globalSettings;
     private readonly ILogger<StaleCopyDeletionController> _logger;
@@ -74,6 +81,7 @@ public class StaleCopyDeletionController : Controller
         IAttachmentStorageService attachmentStorageService,
         ISendFileStorageService sendFileStorageService,
         IOrganizationAbilityCacheService organizationAbilityCacheService,
+        IProviderAbilityCacheService providerAbilityCacheService,
         ITokenValidator tokenValidator,
         GlobalSettings globalSettings,
         ILogger<StaleCopyDeletionController> logger)
@@ -85,6 +93,7 @@ public class StaleCopyDeletionController : Controller
         _attachmentStorageService = attachmentStorageService;
         _sendFileStorageService = sendFileStorageService;
         _organizationAbilityCacheService = organizationAbilityCacheService;
+        _providerAbilityCacheService = providerAbilityCacheService;
         _tokenValidator = tokenValidator;
         _globalSettings = globalSettings;
         _logger = logger;
@@ -141,7 +150,9 @@ public class StaleCopyDeletionController : Controller
                 continue;
             }
 
+            // As ProviderService's deletion: the row, then its cached ability.
             await _providerRepository.DeleteAsync(provider);
+            await _providerAbilityCacheService.DeleteProviderAbilityAsync(providerId);
             providersDeleted++;
         }
 
@@ -174,7 +185,10 @@ public class StaleCopyDeletionController : Controller
                 continue;
             }
 
-            // As UserService.DeleteAsync, less the subscription's cancellation and the logout push. Its attachment files
+            // As UserService.DeleteAsync, less every refusal and side effect it adds: the refusals of an account an
+            // organization claims and of the only owner of an organization or a provider (the account and those tenants
+            // live on the other platform now, which made its own checks), the subscription's cancellation (the other
+            // platform bills it), the logout push (the devices sign in there) and the events. Its attachment files
             // go too, which the account deletion leaves: IAttachmentStorageService.DeleteAttachmentsForUserAsync deletes
             // nothing on Azure or local storage, so they are deleted cipher by cipher, as an organization's are.
             ciphersWithAttachments += await DeleteAttachmentFilesAsync(
