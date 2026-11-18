@@ -157,12 +157,14 @@ public class SendValidationService : ISendValidationService
         }
 
         // `send` already carries the incoming data; compare against the persisted Send.
-        // An unchanged item keeps the persisted CipherId, which may be null for Sends whose item was already gone.
+        // An unchanged item keeps the persisted CipherId, unless it is stored as null. In that case we use
+        // the metadata field to heal the persisted column so the Send can potentially get cleaned up quicker.
         if (send.Id != default)
         {
             var stored = await _sendRepository.GetByIdAsync(send.Id);
             if (stored != null && ItemIdOf(stored) == itemId)
             {
+                send.CipherId = itemId;
                 return;
             }
         }
