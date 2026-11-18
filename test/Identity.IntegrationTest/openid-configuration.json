@@ -15,6 +15,7 @@
     "api.secrets",
     "api.pam.rotation",
     "api.send.access",
+    "internal.account-deletion",
     "offline_access"
   ],
   "claims_supported": [
