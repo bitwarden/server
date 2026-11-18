@@ -8,8 +8,8 @@ using Duende.IdentityServer.Models;
 namespace Bit.Identity.IdentityServer.ClientProviders;
 
 /// <summary>
-/// The internal account lookup's clients, <c>lookup.{service}</c>: a service of another platform that
-/// shares this install's people, holding <see cref="GlobalSettings.AccountLookupClientSecret"/>.
+/// The internal account lookup's clients, <c>lookup.{service}</c>: internal clients holding
+/// <see cref="GlobalSettings.AccountLookupClientSecret"/>.
 /// </summary>
 /// <remarks>
 /// Client credentials only, for <see cref="ApiScopes.InternalAccountLookup"/> alone, so a token

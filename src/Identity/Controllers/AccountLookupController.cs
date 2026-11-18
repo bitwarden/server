@@ -17,10 +17,9 @@ using Microsoft.Net.Http.Headers;
 namespace Bit.Identity.Controllers;
 
 /// <summary>
-/// An internal lookup for a service of another platform that shares this install's people: whether an
-/// address has an account here, and whether an organization here blocks account creation on the
-/// address's domain. It lets that platform refuse a registration this install would refuse, in the
-/// same order and words, without either platform reading the other's accounts.
+/// An internal lookup: whether an address has an account on this server, and whether an organization
+/// here blocks account creation on the address's domain. It answers the checks this server's own
+/// registration makes, in the same order and words, and tells the caller nothing more of any account.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -31,8 +30,8 @@ namespace Bit.Identity.Controllers;
 /// outside the install's network: the proxy in front of Identity should refuse <c>/internal/</c>.
 /// </para>
 /// <para>
-/// It answers two booleans, the identifier of the account the address finds, as this install's database compares
-/// addresses (its collation can find an account for a spelling another platform's comparison doesn't), and when that
+/// It answers two booleans, the identifier of the account the address finds, as this server's database compares
+/// addresses (its collation can find an account for a spelling an ordinal comparison doesn't), and when that
 /// account was made, and nothing else of any account. It logs neither the address nor the answer.
 /// </para>
 /// </remarks>
@@ -70,8 +69,8 @@ public class AccountLookupController : Controller
     /// organization other than <c>excludeOrganizationId</c> has verified the address's domain and
     /// blocks account creation on it (<c>OrganizationDomain_HasVerifiedDomainWithBlockPolicy</c>, the
     /// registration's "This email address is claimed by an organization using Bitwarden.").
-    /// <c>accountCreationDate</c>: when the account with the address was made (UTC), <c>null</c> without one; the
-    /// other platform, which may have given the address up, sends a sign-in to the newer account.
+    /// <c>accountCreationDate</c>: when the account with the address was made (UTC), <c>null</c> without one, for the
+    /// caller to compare with dates of its own.
     /// </remarks>
     [HttpPost("")]
     [ProducesResponseType(typeof(AccountLookupResponseModel), StatusCodes.Status200OK)]
@@ -120,9 +119,9 @@ public class AccountLookupController : Controller
     /// <remarks>
     /// <c>organizationId</c>: the organization here whose single sign-on identifier this is
     /// (<c>Organization_ReadByIdentifier</c>, as <c>OrganizationService.UpdateAsync</c> reads it before
-    /// refusing "Identifier already in use by another organization."), or <c>null</c>. The other
-    /// platform refuses its own organization an identifier one here already uses, since the two share
-    /// one namespace that signed-out single sign-on is routed by.
+    /// refusing "Identifier already in use by another organization."), or <c>null</c>. Signed-out single
+    /// sign-on is routed by this identifier, so the caller can refuse an identifier an organization here
+    /// already uses.
     /// </remarks>
     [HttpPost("organization-identifier")]
     [ProducesResponseType(typeof(OrganizationIdentifierLookupResponseModel), StatusCodes.Status200OK)]

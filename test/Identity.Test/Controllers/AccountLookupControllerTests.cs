@@ -38,7 +38,7 @@ public class AccountLookupControllerTests : IDisposable
             ControllerContext = new ControllerContext { HttpContext = new DefaultHttpContext() },
         };
         Bearer(Token);
-        Validates(Token, $"{AccountLookupClientProvider.Prefix}.other-service");
+        Validates(Token, $"{AccountLookupClientProvider.Prefix}.internal-service");
     }
 
     public void Dispose() => _sut.Dispose();
@@ -128,7 +128,7 @@ public class AccountLookupControllerTests : IDisposable
     [Theory]
     [InlineData("web")]
     [InlineData("internal.notifications")]
-    [InlineData("lookupother-service")]
+    [InlineData("lookupinternal-service")]
     public async Task Refuses_a_token_issued_to_any_other_client(string client)
     {
         Validates(Token, client);

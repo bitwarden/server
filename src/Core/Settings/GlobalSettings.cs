@@ -45,10 +45,10 @@ public class GlobalSettings : IGlobalSettings
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
     /// <summary>
-    /// The secret of the internal account lookup's clients (<c>lookup.{service}</c>): a service of
-    /// another platform sharing this install's people, asking whether an address has an account here
-    /// and whether an organization here blocks account creation on its domain. Unset, the clients
-    /// don't exist and the lookup answers <c>404</c>. Never logged.
+    /// The secret of the internal account lookup's clients (<c>lookup.{service}</c>): internal clients
+    /// that ask whether an address has an account on this server and whether an organization here
+    /// blocks account creation on its domain. Unset, the clients don't exist and the lookup answers
+    /// <c>404</c>. Never logged.
     /// </summary>
     public virtual string AccountLookupClientSecret { get; set; }
     public virtual string OidcIdentityClientKey { get; set; }

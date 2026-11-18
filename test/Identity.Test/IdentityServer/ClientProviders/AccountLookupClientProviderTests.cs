@@ -14,10 +14,10 @@ public class AccountLookupClientProviderTests
     {
         var sut = new AccountLookupClientProvider(new GlobalSettings { AccountLookupClientSecret = "a-secret" });
 
-        var client = await sut.GetAsync("other-service");
+        var client = await sut.GetAsync("internal-service");
 
         Assert.NotNull(client);
-        Assert.Equal("lookup.other-service", client.ClientId);
+        Assert.Equal("lookup.internal-service", client.ClientId);
         Assert.True(client.RequireClientSecret);
         var secret = Assert.Single(client.ClientSecrets);
         Assert.Equal("a-secret".Sha256(), secret.Value);
@@ -27,7 +27,7 @@ public class AccountLookupClientProviderTests
         Assert.True(client.Enabled);
         var claim = Assert.Single(client.Claims);
         Assert.Equal(JwtClaimTypes.Subject, claim.Type);
-        Assert.Equal("other-service", claim.Value);
+        Assert.Equal("internal-service", claim.Value);
     }
 
     [Theory]
@@ -38,7 +38,7 @@ public class AccountLookupClientProviderTests
     {
         var sut = new AccountLookupClientProvider(new GlobalSettings { AccountLookupClientSecret = secret! });
 
-        Assert.Null(await sut.GetAsync("other-service"));
+        Assert.Null(await sut.GetAsync("internal-service"));
     }
 
     [Fact]

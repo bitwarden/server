@@ -471,7 +471,7 @@ public class CustomTokenRequestValidatorTests
         var validatedRequest = new ValidatedTokenRequest
         {
             GrantType = "client_credentials",
-            ClientId = "lookup.other-service",
+            ClientId = "lookup.internal-service",
             Client = new Client { AllowedScopes = new HashSet<string> { ApiScopes.InternalAccountLookup } },
             ClientClaims = []
         };

@@ -19,7 +19,7 @@ public class AccountLookupResponseModel : ResponseModel
     public bool AccountExists { get; set; }
 
     /// <summary>
-    /// The account that signs in with the address, as this install's database compares addresses, or null.
+    /// The account that signs in with the address, as this server's database compares addresses, or null.
     /// </summary>
     public Guid? AccountId { get; set; }
 
@@ -32,8 +32,7 @@ public class AccountLookupResponseModel : ResponseModel
 
     /// <summary>
     /// When the account with the address was made (<c>User.CreationDate</c>, UTC), or <c>null</c> when there is none.
-    /// The other platform compares it with when it gave the address up, so a sign-in reaches whichever account at the
-    /// address is newer.
+    /// For the caller to compare with dates of its own.
     /// </summary>
     public DateTime? AccountCreationDate { get; set; }
 }
