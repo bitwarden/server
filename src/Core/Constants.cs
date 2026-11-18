@@ -141,6 +141,7 @@ public static partial class FeatureFlagKeys
     public const string MembersTableV2 = "pm-37463-members-table-v2";
     public const string OrganizationMembershipSdk = "pm-41568-org-memberships-v2";
     public const string GroupsTableV2 = "pm-43419-groups-table-v2";
+    public const string AuthorizationServices = "pm-35160-authorization-services";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
