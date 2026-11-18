@@ -23,7 +23,8 @@ namespace Bit.Identity.Controllers;
 /// An internal staff search for a service of another platform that shares this install's people: the
 /// organizations, providers and users the Admin Portal's index pages would list for the same search, and
 /// the organizations its add-existing-organization list would offer a reseller, found by the same repository
-/// calls with the same arguments, and only what those pages show of each.
+/// calls, and only what those pages show of each. The users search differs from its page: the address is
+/// required and taken literally.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -184,8 +185,9 @@ public class StaffSearchController : Controller
 
     /// <summary>Search users</summary>
     /// <remarks>
-    /// As the Admin Portal's users index searches: addresses beginning with <c>email</c>, in address
-    /// order. <c>email</c> is required, so nobody may page through every account.
+    /// Addresses beginning with <c>email</c>, in address order, from the repository call the Admin Portal's
+    /// users index makes. Unlike the index, <c>email</c> is required and taken literally (no wildcards), so an
+    /// empty search can't list every account; a short prefix still pages through many.
     /// </remarks>
     [HttpGet("users")]
     [ProducesResponseType(typeof(ListResponseModel<StaffSearchUserResponseModel>), StatusCodes.Status200OK)]

@@ -13,8 +13,8 @@ namespace Bit.Identity.IdentityServer.ClientProviders;
 /// </summary>
 /// <remarks>
 /// Client credentials only, for <see cref="ApiScopes.InternalStaffSearch"/> alone, so a token obtained
-/// this way reaches the search and nothing else. A secret of its own, so a client of the account lookup
-/// or deletion can't search. Short-lived: a quarter of an hour. Registered only when the secret is set.
+/// this way reaches the search and nothing else. A secret of its own, so no other internal client's
+/// secret searches. Short-lived: a quarter of an hour. Registered only when the secret is set.
 /// </remarks>
 internal class StaffSearchClientProvider : IClientProvider
 {

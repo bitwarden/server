@@ -515,9 +515,9 @@ public class StaffSearchControllerTests : IDisposable
     [MemberData(nameof(Endpoints))]
     public async Task Refuses_a_token_that_does_not_validate_for_the_search_scope(string endpoint)
     {
-        // A deletion client's token, say: it was issued for internal.account-deletion alone.
-        Bearer("a-deletion-token");
-        _tokenValidator.ValidateAccessTokenAsync("a-deletion-token", ApiScopes.InternalStaffSearch)
+        // Another internal client's token, say: it was issued for internal.notifications alone.
+        Bearer("another-client-token");
+        _tokenValidator.ValidateAccessTokenAsync("another-client-token", ApiScopes.InternalStaffSearch)
             .Returns(new TokenValidationResult { IsError = true, Error = "insufficient_scope" });
 
         Assert.IsType<UnauthorizedResult>(await Search(endpoint));
@@ -528,8 +528,8 @@ public class StaffSearchControllerTests : IDisposable
     [Theory]
     [InlineData("web")]
     [InlineData("internal.notifications")]
-    [InlineData("lookup.other-service")]
-    [InlineData("deletion.other-service")]
+    [InlineData("installation.other-service")]
+    [InlineData("organization.other-service")]
     [InlineData("searchother-service")]
     [InlineData("Search.other-service")]
     public async Task Refuses_a_token_issued_to_any_other_client(string client)
