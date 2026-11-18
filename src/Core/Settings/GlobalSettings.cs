@@ -44,6 +44,19 @@ public class GlobalSettings : IGlobalSettings
     public string LicenseCertificatePath { get; set; }
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
+    /// <summary>
+    /// The secret of the internal staff search's clients (<c>search.{service}</c>): a service of another
+    /// platform sharing this install's people, searching organizations, providers and users as the Admin
+    /// Portal's index pages do. Unset, the clients don't exist and the search answers <c>404</c>. Never
+    /// logged.
+    /// </summary>
+    public virtual string StaffSearchClientSecret { get; set; }
+    /// <summary>
+    /// The local port of the internal listener the staff search answers on, and on no other: one that
+    /// only the install's own network reaches, never the public one. Unset, the search answers
+    /// <c>404</c>.
+    /// </summary>
+    public virtual int? StaffSearchPort { get; set; }
     public virtual string OidcIdentityClientKey { get; set; }
     public virtual string HibpApiKey { get; set; }
     public virtual bool DisableUserRegistration { get; set; }
@@ -460,6 +473,7 @@ public class GlobalSettings : IGlobalSettings
             get => _queueName;
             set => _queueName = value?.Trim('"');
         }
+
     }
 
     public class ConnectionStringSettings : IConnectionStringSettings
