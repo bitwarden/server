@@ -178,9 +178,9 @@ public class AccountDeletionControllerTests : IDisposable
     [Fact]
     public async Task Refuses_a_token_that_does_not_validate_for_the_deletion_scope()
     {
-        // A lookup client's token, say: it was issued for internal.account-lookup alone.
-        Bearer("a-lookup-token");
-        _tokenValidator.ValidateAccessTokenAsync("a-lookup-token", ApiScopes.InternalAccountDeletion)
+        // Another internal client's token, say: it was issued for internal.notifications alone.
+        Bearer("another-client-token");
+        _tokenValidator.ValidateAccessTokenAsync("another-client-token", ApiScopes.InternalAccountDeletion)
             .Returns(new TokenValidationResult { IsError = true, Error = "insufficient_scope" });
 
         var result = await _sut.DeleteAsync(Guid.NewGuid());
@@ -192,7 +192,7 @@ public class AccountDeletionControllerTests : IDisposable
     [Theory]
     [InlineData("web")]
     [InlineData("internal.notifications")]
-    [InlineData("lookup.other-service")]
+    [InlineData("installation.other-service")]
     [InlineData("deletionother-service")]
     public async Task Refuses_a_token_issued_to_any_other_client(string client)
     {

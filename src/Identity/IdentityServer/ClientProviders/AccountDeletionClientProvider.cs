@@ -13,8 +13,8 @@ namespace Bit.Identity.IdentityServer.ClientProviders;
 /// </summary>
 /// <remarks>
 /// Client credentials only, for <see cref="ApiScopes.InternalAccountDeletion"/> alone, so a token
-/// obtained this way reaches the deletion and nothing else. A secret of its own, so a client of the
-/// account lookup can't delete. Short-lived: a quarter of an hour. Registered only when the secret is
+/// obtained this way reaches the deletion and nothing else. A secret of its own, so no other internal
+/// client's secret deletes an account. Short-lived: a quarter of an hour. Registered only when the secret is
 /// set.
 /// </remarks>
 internal class AccountDeletionClientProvider : IClientProvider

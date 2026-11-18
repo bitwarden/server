@@ -18,9 +18,11 @@ namespace Bit.Identity.Controllers;
 
 /// <summary>
 /// An internal deletion for a service of another platform that shares this install's people: deletes
-/// this install's copy of one account, by its identifier, as the account's holder deleting it here
-/// would (<see cref="IUserService.DeleteAsync(Core.Entities.User)"/>), once the account has been
-/// deleted on that platform.
+/// this install's copy of one account, by its identifier, with the account holder's own deletion
+/// (<see cref="IUserService.DeleteAsync(Core.Entities.User)"/>), once the account has been deleted on that
+/// platform. One difference, on purpose: the copy's payment gateway customer and subscription are forgotten
+/// first, so the deletion cancels nothing. The other platform bills the account; a subscription this copy
+/// still names is the one it owns, and cancelling it here would end its billing.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -97,8 +99,8 @@ public class AccountDeletionController : Controller
             return Ok(new AccountDeletionResponseModel(false));
         }
 
-        // The copy may be stale: its subscription may since have moved to an organization, which the
-        // deletion would cancel. Forgotten here alone, so the deletion leaves the gateway untouched.
+        // The other platform bills the account: a subscription this copy names is the one it owns, so it is
+        // forgotten here alone, and the deletion leaves the payment gateway untouched.
         user.Gateway = null;
         user.GatewayCustomerId = null;
         user.GatewaySubscriptionId = null;
