@@ -267,6 +267,61 @@ public class PamAccessConnectorRepositoryTests
         Assert.NotNull(await apiKeyRepository.GetByIdAsync(survivingKey.Id));
     }
 
+    [DatabaseTheory, DatabaseData]
+    public async Task OrganizationDeleteAsync_WithAccessConnector_DeletesItsCredential(
+        IApiKeyRepository apiKeyRepository,
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        IPamAccessConnectorRepository pamAccessConnectorRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var target = await pamTargetSystemRepository.CreateAsync(new PamTargetSystem
+        {
+            OrganizationId = organization.Id,
+            Name = $"target-{Guid.NewGuid()}",
+            Method = PamTargetSystemMethod.Automatic,
+            Status = PamTargetSystemStatus.Active,
+            CreationDate = now,
+            RevisionDate = now,
+        });
+        var apiKey = await apiKeyRepository.CreateAsync(BuildAccessConnectorApiKey());
+        var accessConnector = await pamAccessConnectorRepository.CreateAsync(new PamAccessConnector
+        {
+            OrganizationId = organization.Id,
+            Name = "doomed-access-connector",
+            ApiKeyId = apiKey.Id,
+            Status = PamAccessConnectorStatus.Enabled,
+        });
+        await pamAccessConnectorRepository.CreateAssignmentAsync(new PamAccessConnectorTargetAssignment
+        {
+            Id = CombGuid.Generate(),
+            AccessConnectorId = accessConnector.Id,
+            TargetSystemId = target.Id,
+            OrganizationId = organization.Id,
+            CreationDate = now,
+        });
+
+        var otherOrganization = await organizationRepository.CreateTestOrganizationAsync();
+        var otherApiKey = await apiKeyRepository.CreateAsync(BuildAccessConnectorApiKey("other"));
+        var otherAccessConnector = await pamAccessConnectorRepository.CreateAsync(new PamAccessConnector
+        {
+            OrganizationId = otherOrganization.Id,
+            Name = "other-access-connector",
+            ApiKeyId = otherApiKey.Id,
+            Status = PamAccessConnectorStatus.Enabled,
+        });
+
+        await organizationRepository.DeleteAsync(organization);
+
+        Assert.Null(await organizationRepository.GetByIdAsync(organization.Id));
+        Assert.Null(await pamAccessConnectorRepository.GetByIdAsync(accessConnector.Id));
+        Assert.Null(await apiKeyRepository.GetByIdAsync(apiKey.Id));
+
+        Assert.NotNull(await pamAccessConnectorRepository.GetByIdAsync(otherAccessConnector.Id));
+        Assert.NotNull(await apiKeyRepository.GetByIdAsync(otherApiKey.Id));
+    }
+
     private static ApiKey BuildAccessConnectorApiKey(string identifier = "accessConnector") => new()
     {
         ServiceAccountId = null,

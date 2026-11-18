@@ -1545,6 +1545,135 @@ public class SubscriptionUpdatedHandlerTests
     }
 
     [Fact]
+    public async Task HandleAsync_ScheduleTriggeredFamiliesMigration_ScheduleReleasedBeforeProcessing_UpdatesOrganization()
+    {
+        // Arrange — the event's copy still has the schedule, the fresh fetch no longer does
+        var organizationId = Guid.NewGuid();
+        var familiesPlan = new FamiliesPlan();
+        var families2019Plan = new Families2019Plan();
+        var families2025Plan = new Families2025Plan();
+
+        var eventSubscription = BuildFamiliesMigrationSubscription(organizationId, familiesPlan, "sub_sched_123");
+        var freshSubscription = BuildFamiliesMigrationSubscription(organizationId, familiesPlan, null);
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = eventSubscription,
+                PreviousAttributes = JObject.FromObject(new
+                {
+                    items = new
+                    {
+                        data = new[] { new { price = new { id = families2019Plan.PasswordManager.StripePlanId } } }
+                    }
+                })
+            }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.FamiliesAnnually2019,
+            Plan = "Families 2019",
+            UsersGetPremium = false,
+            Seats = 5
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(freshSubscription);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        Assert.Equal(PlanType.FamiliesAnnually, organization.PlanType);
+        await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(
+            Arg.Is<Organization>(o =>
+                o.Id == organizationId &&
+                o.PlanType == PlanType.FamiliesAnnually));
+    }
+
+    [Fact]
+    public async Task HandleAsync_ScheduleTriggeredFamiliesMigration_EventSnapshotHasNoSchedule_FreshHasSchedule_DoesNotUpdateOrganization()
+    {
+        // Arrange — the event's copy has no schedule, the fresh fetch does
+        var organizationId = Guid.NewGuid();
+        var familiesPlan = new FamiliesPlan();
+        var families2019Plan = new Families2019Plan();
+        var families2025Plan = new Families2025Plan();
+
+        var eventSubscription = BuildFamiliesMigrationSubscription(organizationId, familiesPlan, null);
+        var freshSubscription = BuildFamiliesMigrationSubscription(organizationId, familiesPlan, "sub_sched_123");
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = eventSubscription,
+                PreviousAttributes = JObject.FromObject(new
+                {
+                    items = new
+                    {
+                        data = new[] { new { price = new { id = families2019Plan.PasswordManager.StripePlanId } } }
+                    }
+                })
+            }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.FamiliesAnnually2019,
+            Plan = "Families 2019",
+            UsersGetPremium = false,
+            Seats = 5
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(freshSubscription);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually).Returns(familiesPlan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2019).Returns(families2019Plan);
+        _pricingClient.GetPlanOrThrow(PlanType.FamiliesAnnually2025).Returns(families2025Plan);
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _replaceOrganizationAndUpdateCacheCommand.DidNotReceive().RunAsync(Arg.Any<Organization>());
+    }
+
+    private static Subscription BuildFamiliesMigrationSubscription(
+        Guid organizationId,
+        FamiliesPlan familiesPlan,
+        string? scheduleId) => new()
+        {
+            Id = "sub_123",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = scheduleId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+            [
+                new SubscriptionItem
+                {
+                    CurrentPeriodEnd = DateTime.UtcNow.AddDays(365),
+                    Price = new Price { Id = familiesPlan.PasswordManager.StripePlanId }
+                }
+            ]
+            },
+            Metadata = new Dictionary<string, string>
+            {
+                { "organizationId", organizationId.ToString() }
+            }
+        };
+
+    [Fact]
     public async Task HandleAsync_NoSchedule_DoesNotUpdateOrganization()
     {
         // Arrange — no ScheduleId means this isn't a schedule transition
@@ -3027,6 +3156,130 @@ public class SubscriptionUpdatedHandlerTests
         Assert.NotEqual(default, assignment.RevisionDate);
         await _cohortAssignmentRepository.Received(1).ReplaceAsync(
             Arg.Is<OrganizationPlanMigrationCohortAssignment>(a => a.Id == assignmentId && a.MigratedDate.HasValue));
+    }
+
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_ScheduleReleasedBeforeProcessing_AppliesAndMarksMigrated()
+    {
+        // Arrange — the event's copy still has the schedule, the fresh fetch no longer does
+        var (parsedEvent, assignment, organization) = ArrangeBusinessMigrationScheduleSnapshots(
+            eventScheduleId: "sub_sched_x",
+            freshScheduleId: null);
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        Assert.Equal(PlanType.EnterpriseAnnually, organization.PlanType);
+        await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(Arg.Is<Organization>(o =>
+            o.Id == organization.Id && o.PlanType == PlanType.EnterpriseAnnually));
+        Assert.NotNull(assignment.MigratedDate);
+    }
+
+    [Fact]
+    public async Task HandleAsync_BusinessMigration_EventSnapshotHasNoSchedule_FreshHasSchedule_DoesNothing()
+    {
+        // Arrange — the event's copy has no schedule, the fresh fetch does
+        var (parsedEvent, _, _) = ArrangeBusinessMigrationScheduleSnapshots(
+            eventScheduleId: null,
+            freshScheduleId: "sub_sched_x");
+
+        // Act
+        await _sut.HandleAsync(parsedEvent);
+
+        // Assert
+        await _replaceOrganizationAndUpdateCacheCommand.DidNotReceive().RunAsync(Arg.Any<Organization>());
+        await _cohortAssignmentRepository.DidNotReceive().ReplaceAsync(Arg.Any<OrganizationPlanMigrationCohortAssignment>());
+    }
+
+    private (Event ParsedEvent, OrganizationPlanMigrationCohortAssignment Assignment, Organization Organization)
+        ArrangeBusinessMigrationScheduleSnapshots(string? eventScheduleId, string? freshScheduleId)
+    {
+        var organizationId = Guid.NewGuid();
+        var cohortId = Guid.NewGuid();
+        var enterprise2020Annual = new Enterprise2020Plan(true);
+        var enterpriseAnnual = new EnterprisePlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterprise2020Annual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            }
+        };
+
+        Subscription BuildSubscription(string? scheduleId) => new()
+        {
+            Id = "sub_happy_ea",
+            ScheduleId = scheduleId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Price = new Price { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId },
+                        Plan = new Plan { Id = enterpriseAnnual.PasswordManager.StripeSeatPlanId }
+                    }
+                ]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization
+        {
+            Id = organizationId,
+            PlanType = PlanType.EnterpriseAnnually2020,
+            Plan = enterprise2020Annual.Name,
+            UseScim = false,
+            Seats = 200,
+            MaxStorageGb = 50,
+        };
+
+        var assignment = new OrganizationPlanMigrationCohortAssignment
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            CohortId = cohortId
+        };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = BuildSubscription(eventScheduleId),
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(BuildSubscription(freshScheduleId));
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(true);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually2020).Returns(enterprise2020Annual);
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseMonthly2020).Returns(new Enterprise2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually2020).Returns(new Teams2020Plan(true));
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly2020).Returns(new Teams2020Plan(false));
+        _pricingClient.GetPlanOrThrow(PlanType.EnterpriseAnnually).Returns(enterpriseAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+        _cohortAssignmentRepository.GetByOrganizationIdAsync(organizationId).Returns(assignment);
+        _cohortRepository.GetByIdAsync(cohortId).Returns(new OrganizationPlanMigrationCohort
+        {
+            Id = cohortId,
+            Name = "Enterprise2020Annual",
+            MigrationPathId = MigrationPathId.Enterprise2020AnnualToCurrent,
+            IsActive = true
+        });
+
+        return (parsedEvent, assignment, organization);
     }
 
     // PM-37510 (T2): migrating Enterprise 2020 (base 200) to current (base 50) writes a grace of 150
@@ -6373,6 +6626,93 @@ public class SubscriptionUpdatedHandlerTests
         Assert.Equal(PlanType.TeamsAnnually, organization.PlanType);
         await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(Arg.Is<Organization>(o =>
             o.Id == organizationId && o.PlanType == PlanType.TeamsAnnually));
+    }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_ScheduleReleasedBeforeProcessing_UpdatesPlanType()
+    {
+        // The event's copy still has the schedule, the fresh fetch no longer does
+        var (parsedEvent, organization) = ArrangeAnnualUpgradeOfferScheduleSnapshots(
+            eventScheduleId: "sub_sched_annual_upgrade_happy",
+            freshScheduleId: null);
+
+        await _sut.HandleAsync(parsedEvent);
+
+        Assert.Equal(PlanType.TeamsAnnually, organization.PlanType);
+        await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(Arg.Is<Organization>(o =>
+            o.Id == organization.Id && o.PlanType == PlanType.TeamsAnnually));
+    }
+
+    [Fact]
+    public async Task HandleAsync_AnnualUpgradeOffer_EventSnapshotHasNoSchedule_FreshHasSchedule_DoesNotUpdatePlanType()
+    {
+        // The event's copy has no schedule, the fresh fetch does
+        var (parsedEvent, _) = ArrangeAnnualUpgradeOfferScheduleSnapshots(
+            eventScheduleId: null,
+            freshScheduleId: "sub_sched_annual_upgrade_happy");
+
+        await _sut.HandleAsync(parsedEvent);
+
+        await _replaceOrganizationAndUpdateCacheCommand.DidNotReceive().RunAsync(Arg.Any<Organization>());
+    }
+
+    private (Event ParsedEvent, Organization Organization) ArrangeAnnualUpgradeOfferScheduleSnapshots(
+        string? eventScheduleId,
+        string? freshScheduleId)
+    {
+        var organizationId = Guid.NewGuid();
+        var teamsMonthly = new TeamsPlan(false);
+        var teamsAnnual = new TeamsPlan(true);
+
+        var previousSubscription = new Subscription
+        {
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsMonthly.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsMonthly.PasswordManager.StripeSeatPlanId }
+                }]
+            }
+        };
+
+        Subscription BuildSubscription(string? scheduleId) => new()
+        {
+            Id = "sub_annual_upgrade_happy",
+            Status = SubscriptionStatus.Active,
+            ScheduleId = scheduleId,
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data = [new SubscriptionItem
+                {
+                    Price = new Price { Id = teamsAnnual.PasswordManager.StripeSeatPlanId },
+                    Plan = new Plan { Id = teamsAnnual.PasswordManager.StripeSeatPlanId }
+                }]
+            },
+            Metadata = new Dictionary<string, string> { { "organizationId", organizationId.ToString() } },
+            LatestInvoice = new Invoice { BillingReason = BillingReasons.SubscriptionCycle }
+        };
+
+        var organization = new Organization { Id = organizationId, PlanType = PlanType.TeamsMonthly, Plan = teamsMonthly.Name };
+
+        var parsedEvent = new Event
+        {
+            Data = new EventData
+            {
+                Object = BuildSubscription(eventScheduleId),
+                PreviousAttributes = JObject.FromObject(previousSubscription)
+            }
+        };
+
+        _stripeEventService.GetSubscription(Arg.Any<Event>(), Arg.Any<bool>(), Arg.Any<List<string>>())
+            .Returns(BuildSubscription(freshScheduleId));
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+        _featureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration).Returns(false);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsMonthly).Returns(teamsMonthly);
+        _pricingClient.GetPlanOrThrow(PlanType.TeamsAnnually).Returns(teamsAnnual);
+        _pricingClient.ListPlans().Returns(MockPlans.Plans);
+
+        return (parsedEvent, organization);
     }
 
     [Fact]
