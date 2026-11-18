@@ -166,7 +166,7 @@ BEGIN
         [V2UpgradeToken] = @V2UpgradeToken,
         [InviteReminderDueDate] = @InviteReminderDueDate,
         [InviteRemindersSentCount] = @InviteRemindersSentCount,
-        [ExternalName] = ISNULL(@ExternalName, [ExternalName])
+        [ExternalName] = @ExternalName
     WHERE
         [Id] = @Id
 
@@ -540,8 +540,7 @@ BEGIN
         [V2UpgradeToken] = OUI.[V2UpgradeToken],
         [InviteReminderDueDate] = OUI.[InviteReminderDueDate],
         [InviteRemindersSentCount] = OUI.[InviteRemindersSentCount],
-        -- NULL keeps the stored value, so callers that predate ExternalName (or don't set it) can't erase it
-        [ExternalName] = ISNULL(OUI.[ExternalName], OU.[ExternalName])
+        [ExternalName] = OUI.[ExternalName]
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN

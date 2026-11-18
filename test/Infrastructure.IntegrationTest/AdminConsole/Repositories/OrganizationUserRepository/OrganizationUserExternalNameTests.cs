@@ -8,10 +8,6 @@ using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories.OrganizationUserRepository;
 
-/// <summary>
-/// Saving a member with a NULL ExternalName keeps the stored value, so a server version that predates
-/// the column (or a caller that doesn't set it) can't erase the SCIM userName.
-/// </summary>
 public class OrganizationUserExternalNameTests
 {
     private const string StoredName = "Jane.Doe@tenant.onmicrosoft.com";
@@ -44,38 +40,6 @@ public class OrganizationUserExternalNameTests
     }
 
     [Theory, DatabaseData]
-    public async Task ReplaceAsync_NullExternalName_KeepsStoredValue(
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository)
-    {
-        var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var orgUser = await CreateWithExternalNameAsync(organizationUserRepository, organization);
-        orgUser.ExternalName = null;
-        orgUser.Type = OrganizationUserType.Admin;
-
-        await organizationUserRepository.ReplaceAsync(orgUser);
-
-        var stored = await organizationUserRepository.GetByIdAsync(orgUser.Id);
-        Assert.Equal(StoredName, stored!.ExternalName);
-        // The rest of the save still applies
-        Assert.Equal(OrganizationUserType.Admin, stored.Type);
-    }
-
-    [Theory, DatabaseData]
-    public async Task ReplaceAsync_WithCollections_NullExternalName_KeepsStoredValue(
-        IOrganizationUserRepository organizationUserRepository,
-        IOrganizationRepository organizationRepository)
-    {
-        var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var orgUser = await CreateWithExternalNameAsync(organizationUserRepository, organization);
-        orgUser.ExternalName = null;
-
-        await organizationUserRepository.ReplaceAsync(orgUser, []);
-
-        Assert.Equal(StoredName, (await organizationUserRepository.GetByIdAsync(orgUser.Id))!.ExternalName);
-    }
-
-    [Theory, DatabaseData]
     public async Task ReplaceAsync_NewExternalName_ReplacesStoredValue(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository)
@@ -90,28 +54,23 @@ public class OrganizationUserExternalNameTests
     }
 
     [Theory, DatabaseData]
-    public async Task ReplaceManyAsync_NullExternalName_KeepsStoredValue_NewExternalName_ReplacesIt(
+    public async Task ReplaceManyAsync_NewExternalName_ReplacesStoredValue(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository)
     {
         var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var kept = await CreateWithExternalNameAsync(organizationUserRepository, organization);
-        var renamed = await CreateWithExternalNameAsync(organizationUserRepository, organization);
+        var orgUser = await CreateWithExternalNameAsync(organizationUserRepository, organization);
 
         // EF can only update entities that it read from the database
-        var toUpdate = await organizationUserRepository.GetManyAsync([kept.Id, renamed.Id]);
-        foreach (var orgUser in toUpdate)
+        var toUpdate = await organizationUserRepository.GetManyAsync([orgUser.Id]);
+        foreach (var member in toUpdate)
         {
-            orgUser.ExternalName = orgUser.Id == kept.Id ? null : NewName;
-            orgUser.Type = OrganizationUserType.Admin;
+            member.ExternalName = NewName;
         }
 
         await organizationUserRepository.ReplaceManyAsync(toUpdate);
 
-        var storedKept = await organizationUserRepository.GetByIdAsync(kept.Id);
-        Assert.Equal(StoredName, storedKept!.ExternalName);
-        Assert.Equal(OrganizationUserType.Admin, storedKept.Type);
-        Assert.Equal(NewName, (await organizationUserRepository.GetByIdAsync(renamed.Id))!.ExternalName);
+        Assert.Equal(NewName, (await organizationUserRepository.GetByIdAsync(orgUser.Id))!.ExternalName);
     }
 
     private static async Task<OrganizationUser> CreateWithExternalNameAsync(

@@ -44,7 +44,7 @@ BEGIN
         [V2UpgradeToken] = @V2UpgradeToken,
         [InviteReminderDueDate] = @InviteReminderDueDate,
         [InviteRemindersSentCount] = @InviteRemindersSentCount,
-        [ExternalName] = ISNULL(@ExternalName, [ExternalName])
+        [ExternalName] = @ExternalName
     WHERE
         [Id] = @Id
 

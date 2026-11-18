@@ -98,7 +98,7 @@ BEGIN
         [V2UpgradeToken] = OUI.[V2UpgradeToken],
         [InviteReminderDueDate] = OUI.[InviteReminderDueDate],
         [InviteRemindersSentCount] = OUI.[InviteRemindersSentCount],
-        [ExternalName] = ISNULL(OUI.[ExternalName], OU.[ExternalName])
+        [ExternalName] = OUI.[ExternalName]
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN
