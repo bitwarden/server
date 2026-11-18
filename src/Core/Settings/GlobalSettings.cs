@@ -45,10 +45,9 @@ public class GlobalSettings : IGlobalSettings
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
     /// <summary>
-    /// The secret of the internal job trigger retirement's clients (<c>retire.{service}</c>): a service of another
-    /// platform sharing this install's tenants, deleting this install's rows that start recurring jobs for users and
-    /// organizations it now serves itself. Unset, the clients don't exist and the retirement answers <c>404</c>. Never
-    /// logged.
+    /// The secret of the internal job trigger retirement's clients (<c>retire.{service}</c>): internal clients that
+    /// delete the rows that start this server's recurring jobs for the users and organizations they name. Unset, the
+    /// clients don't exist and the retirement answers <c>404</c>. Never logged.
     /// </summary>
     public virtual string JobTriggerRetirementClientSecret { get; set; }
     /// <summary>

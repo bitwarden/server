@@ -8,8 +8,8 @@ using Duende.IdentityServer.Models;
 namespace Bit.Identity.IdentityServer.ClientProviders;
 
 /// <summary>
-/// The internal job trigger retirement's clients, <c>retire.{service}</c>: a service of another platform that shares
-/// this install's tenants, holding <see cref="GlobalSettings.JobTriggerRetirementClientSecret"/>.
+/// The internal job trigger retirement's clients, <c>retire.{service}</c>: internal clients holding
+/// <see cref="GlobalSettings.JobTriggerRetirementClientSecret"/>.
 /// </summary>
 /// <remarks>
 /// Client credentials only, for <see cref="ApiScopes.InternalJobTriggerRetirement"/> alone, so a token obtained this

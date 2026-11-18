@@ -18,10 +18,10 @@ public class JobTriggerRetirementClientProviderTests
             InternalIdentityKey = "another-secret",
         });
 
-        var client = await sut.GetAsync("migration-service");
+        var client = await sut.GetAsync("internal-service");
 
         Assert.NotNull(client);
-        Assert.Equal("retire.migration-service", client.ClientId);
+        Assert.Equal("retire.internal-service", client.ClientId);
         Assert.True(client.RequireClientSecret);
         // Its own secret, not the internal client's.
         var secret = Assert.Single(client.ClientSecrets);
@@ -32,7 +32,7 @@ public class JobTriggerRetirementClientProviderTests
         Assert.True(client.Enabled);
         var claim = Assert.Single(client.Claims);
         Assert.Equal(JwtClaimTypes.Subject, claim.Type);
-        Assert.Equal("migration-service", claim.Value);
+        Assert.Equal("internal-service", claim.Value);
     }
 
     [Theory]
@@ -46,7 +46,7 @@ public class JobTriggerRetirementClientProviderTests
             JobTriggerRetirementClientSecret = secret!,
         });
 
-        Assert.Null(await sut.GetAsync("migration-service"));
+        Assert.Null(await sut.GetAsync("internal-service"));
     }
 
     [Fact]

@@ -471,7 +471,7 @@ public class CustomTokenRequestValidatorTests
         var validatedRequest = new ValidatedTokenRequest
         {
             GrantType = "client_credentials",
-            ClientId = "retire.migration-service",
+            ClientId = "retire.internal-service",
             Client = new Client { AllowedScopes = new HashSet<string> { ApiScopes.InternalJobTriggerRetirement } },
             ClientClaims = []
         };

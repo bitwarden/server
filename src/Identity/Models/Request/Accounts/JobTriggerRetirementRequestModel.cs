@@ -3,8 +3,7 @@
 namespace Bit.Identity.Models.Request.Accounts;
 
 /// <summary>
-/// The users and organizations whose job triggers this install retires: another platform now serves them. Either list
-/// may be empty or absent.
+/// The users and organizations whose job triggers this server retires. Either list may be empty or absent.
 /// </summary>
 public class JobTriggerRetirementRequestModel
 {

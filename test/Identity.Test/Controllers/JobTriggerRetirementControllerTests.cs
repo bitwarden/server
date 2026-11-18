@@ -27,7 +27,7 @@ public class JobTriggerRetirementControllerTests : IDisposable
 {
     private const string Token = "a-token";
     private const int InternalPort = 33657;
-    private const string Client = $"{JobTriggerRetirementClientProvider.Prefix}.migration-service";
+    private const string Client = $"{JobTriggerRetirementClientProvider.Prefix}.internal-service";
 
     private readonly IEmergencyAccessRepository _emergencyAccessRepository = Substitute.For<IEmergencyAccessRepository>();
     private readonly IOrganizationDomainRepository _organizationDomainRepository = Substitute.For<IOrganizationDomainRepository>();
@@ -306,7 +306,7 @@ public class JobTriggerRetirementControllerTests : IDisposable
     [InlineData("installation.other-service")]
     [InlineData("organization.other-service")]
     [InlineData("retire")]
-    [InlineData("retiremigration-service")]
+    [InlineData("retireinternal-service")]
     public async Task Refuses_a_token_issued_to_any_other_client(string client)
     {
         Validates(Token, client);

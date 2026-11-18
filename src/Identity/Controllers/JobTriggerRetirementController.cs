@@ -18,9 +18,9 @@ using Microsoft.Net.Http.Headers;
 namespace Bit.Identity.Controllers;
 
 /// <summary>
-/// An internal retirement for a service of another platform that shares this install's tenants: deletes this install's
-/// rows that start its recurring jobs for users and organizations, by their identifiers, once that platform serves them.
-/// What this install keeps of them stays, verified domain claims included, but its jobs no longer act on it.
+/// An internal endpoint that deletes the rows that start this server's recurring jobs for the users and organizations
+/// an internal client names by their identifiers. Everything else this server keeps of them stays, verified domain
+/// claims included, but its jobs no longer act on it.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -37,9 +37,9 @@ namespace Bit.Identity.Controllers;
 /// the counts and the client's identifier. Safe to repeat: a second request finds nothing left to delete.
 /// </para>
 /// <para>
-/// An emergency access grant is deleted whole, from the grantor's side and the grantee's, whatever its status: the
-/// other platform takes grantor and grantee over together, with the grant, so this install's copy of the relationship
-/// is no longer the one in force, and its timeout must not approve a recovery the other platform can't see.
+/// An emergency access grant is deleted whole, from the grantor's side and the grantee's, whatever its status, rather
+/// than left to time out: the caller decides that the users it names no longer act here, so the grant goes before the
+/// timeout job can approve a recovery or send a reminder for any of them.
 /// </para>
 /// </remarks>
 [Route("internal/job-triggers")]
@@ -126,7 +126,7 @@ public class JobTriggerRetirementController : Controller
             foreach (var domain in await _organizationDomainRepository.GetDomainsByOrganizationIdAsync(organizationId))
             {
                 // Only an unverified claim starts a job (the verification job reads VerifiedDate IS NULL). A verified
-                // claim is what this install keeps: registration and single sign-on discovery still read it.
+                // claim is what this server keeps: registration and single sign-on discovery still read it.
                 if (domain.VerifiedDate is not null)
                 {
                     continue;
