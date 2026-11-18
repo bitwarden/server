@@ -17,12 +17,11 @@ using Microsoft.Net.Http.Headers;
 namespace Bit.Identity.Controllers;
 
 /// <summary>
-/// An internal deletion for a service of another platform that shares this install's people: deletes
-/// this install's copy of one account, by its identifier, with the account holder's own deletion
-/// (<see cref="IUserService.DeleteAsync(Core.Entities.User)"/>), once the account has been deleted on that
-/// platform. One difference, on purpose: the copy's payment gateway customer and subscription are forgotten
-/// first, so the deletion cancels nothing. The other platform bills the account; a subscription this copy
-/// still names is the one it owns, and cancelling it here would end its billing.
+/// An internal deletion for a client holding a <c>deletion.{service}</c> token: deletes one account, by its
+/// identifier, with the account holder's own deletion
+/// (<see cref="IUserService.DeleteAsync(Core.Entities.User)"/>). One difference, on purpose: the account's
+/// payment gateway customer and subscription are forgotten first, so the deletion cancels nothing at the
+/// payment gateway. The caller is responsible for the account's billing.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -70,7 +69,7 @@ public class AccountDeletionController : Controller
     /// <summary>Delete an account</summary>
     /// <remarks>
     /// <c>deleted</c> is true when the account was deleted, and false when there is no account with
-    /// the identifier (already deleted, or never here). A refusal is <c>400</c> in the holder's
+    /// the identifier (already deleted, or never created). A refusal is <c>400</c> in the holder's
     /// deletion's words, with nothing deleted.
     /// </remarks>
     [HttpDelete("{id:guid}")]
@@ -99,8 +98,8 @@ public class AccountDeletionController : Controller
             return Ok(new AccountDeletionResponseModel(false));
         }
 
-        // The other platform bills the account: a subscription this copy names is the one it owns, so it is
-        // forgotten here alone, and the deletion leaves the payment gateway untouched.
+        // The caller is responsible for billing: the gateway customer and subscription are forgotten on the
+        // account alone, so the deletion cancels nothing and leaves the payment gateway untouched.
         user.Gateway = null;
         user.GatewayCustomerId = null;
         user.GatewaySubscriptionId = null;

@@ -8,8 +8,8 @@ using Duende.IdentityServer.Models;
 namespace Bit.Identity.IdentityServer.ClientProviders;
 
 /// <summary>
-/// The internal account deletion's clients, <c>deletion.{service}</c>: a service of another platform
-/// that shares this install's people, holding <see cref="GlobalSettings.AccountDeletionClientSecret"/>.
+/// The internal account deletion's clients, <c>deletion.{service}</c>: an internal client holding
+/// <see cref="GlobalSettings.AccountDeletionClientSecret"/>.
 /// </summary>
 /// <remarks>
 /// Client credentials only, for <see cref="ApiScopes.InternalAccountDeletion"/> alone, so a token

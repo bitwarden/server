@@ -471,7 +471,7 @@ public class CustomTokenRequestValidatorTests
         var validatedRequest = new ValidatedTokenRequest
         {
             GrantType = "client_credentials",
-            ClientId = "deletion.other-service",
+            ClientId = "deletion.a-service",
             Client = new Client { AllowedScopes = new HashSet<string> { ApiScopes.InternalAccountDeletion } },
             ClientClaims = []
         };

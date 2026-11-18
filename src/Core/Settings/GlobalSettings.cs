@@ -45,10 +45,9 @@ public class GlobalSettings : IGlobalSettings
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
     /// <summary>
-    /// The secret of the internal account deletion's clients (<c>deletion.{service}</c>): a service of
-    /// another platform sharing this install's people, deleting this install's copy of an account by its
-    /// identifier once the account has been deleted there. Unset, the clients don't exist and the
-    /// deletion answers <c>404</c>. Never logged.
+    /// The secret of the internal account deletion's clients (<c>deletion.{service}</c>), which delete one
+    /// account by its identifier. Unset, the clients don't exist and the deletion answers <c>404</c>. Never
+    /// logged.
     /// </summary>
     public virtual string AccountDeletionClientSecret { get; set; }
     /// <summary>

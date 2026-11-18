@@ -44,7 +44,7 @@ public class AccountDeletionControllerTests : IDisposable
         };
         _sut.HttpContext.Connection.LocalPort = InternalPort;
         Bearer(Token);
-        Validates(Token, $"{AccountDeletionClientProvider.Prefix}.other-service");
+        Validates(Token, $"{AccountDeletionClientProvider.Prefix}.a-service");
     }
 
     public void Dispose() => _sut.Dispose();
@@ -66,7 +66,7 @@ public class AccountDeletionControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Leaves_the_gateway_alone_as_the_copy_s_subscription_may_be_another_s_now()
+    public async Task Leaves_the_payment_gateway_subscription_alone()
     {
         var user = new User
         {
@@ -85,7 +85,7 @@ public class AccountDeletionControllerTests : IDisposable
     }
 
     [Fact]
-    public async Task Answers_not_deleted_for_an_account_it_does_not_hold()
+    public async Task Answers_not_deleted_when_no_account_has_the_identifier()
     {
         _userRepository.GetByIdAsync(Arg.Any<Guid>()).ReturnsNull();
 
@@ -192,8 +192,8 @@ public class AccountDeletionControllerTests : IDisposable
     [Theory]
     [InlineData("web")]
     [InlineData("internal.notifications")]
-    [InlineData("installation.other-service")]
-    [InlineData("deletionother-service")]
+    [InlineData("installation.a-service")]
+    [InlineData("deletiona-service")]
     public async Task Refuses_a_token_issued_to_any_other_client(string client)
     {
         Validates(Token, client);

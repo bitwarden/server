@@ -18,10 +18,10 @@ public class AccountDeletionClientProviderTests
             InternalIdentityKey = "another-secret",
         });
 
-        var client = await sut.GetAsync("other-service");
+        var client = await sut.GetAsync("a-service");
 
         Assert.NotNull(client);
-        Assert.Equal("deletion.other-service", client.ClientId);
+        Assert.Equal("deletion.a-service", client.ClientId);
         Assert.True(client.RequireClientSecret);
         // Its own secret, not the internal client's.
         var secret = Assert.Single(client.ClientSecrets);
@@ -32,7 +32,7 @@ public class AccountDeletionClientProviderTests
         Assert.True(client.Enabled);
         var claim = Assert.Single(client.Claims);
         Assert.Equal(JwtClaimTypes.Subject, claim.Type);
-        Assert.Equal("other-service", claim.Value);
+        Assert.Equal("a-service", claim.Value);
     }
 
     [Theory]
@@ -46,7 +46,7 @@ public class AccountDeletionClientProviderTests
             AccountDeletionClientSecret = secret!,
         });
 
-        Assert.Null(await sut.GetAsync("other-service"));
+        Assert.Null(await sut.GetAsync("a-service"));
     }
 
     [Fact]
