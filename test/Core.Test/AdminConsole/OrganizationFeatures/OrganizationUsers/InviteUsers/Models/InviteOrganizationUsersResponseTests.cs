@@ -1,4 +1,4 @@
-using Bit.Core.AdminConsole.Models.Business;
+﻿using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
 using Bit.Test.Common.AutoFixture.Attributes;
