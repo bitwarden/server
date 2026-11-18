@@ -3,8 +3,7 @@
 namespace Bit.Identity.Models.Request.Accounts;
 
 /// <summary>
-/// The providers, organizations and users whose whole copy this install deletes: another platform has served them for
-/// longer than this copy could still be needed. Any list may be empty or absent.
+/// The providers, organizations and users to delete outright, by their identifiers. Any list may be empty or absent.
 /// </summary>
 public class StaleCopyDeletionRequestModel
 {

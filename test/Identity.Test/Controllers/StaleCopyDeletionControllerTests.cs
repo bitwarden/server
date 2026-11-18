@@ -34,7 +34,7 @@ public class StaleCopyDeletionControllerTests : IDisposable
 {
     private const string Token = "a-token";
     private const int InternalPort = 33657;
-    private const string Client = $"{StaleCopyDeletionClientProvider.Prefix}.migration-service";
+    private const string Client = $"{StaleCopyDeletionClientProvider.Prefix}.internal-service";
     private const string WithAttachment = """{"an-attachment":{"FileName":"2.encrypted-name","Key":"2.encrypted-key","Size":1}}""";
 
     private readonly IProviderRepository _providerRepository = Substitute.For<IProviderRepository>();
@@ -270,9 +270,9 @@ public class StaleCopyDeletionControllerTests : IDisposable
     [Theory]
     [InlineData("web")]
     [InlineData("installation.other-service")]
-    [InlineData("installation.migration-service")]
+    [InlineData("installation.internal-service")]
     [InlineData("release")]
-    [InlineData("releasemigration-service")]
+    [InlineData("releaseinternal-service")]
     public async Task Refuses_a_token_issued_to_any_other_client(string client)
     {
         Validates(Token, client);
@@ -299,7 +299,7 @@ public class StaleCopyDeletionControllerTests : IDisposable
             .ToList();
         Assert.Equal(
         [
-            $"Deleted stale copies at internal client {Client}'s request: 0 providers, 1 organizations and 1 users "
+            $"Deleted at internal client {Client}'s request: 0 providers, 1 organizations and 1 users "
             + "deleted, 0 already gone, attachment files of 1 ciphers deleted.",
         ], logged);
         var everything = string.Join("\n", _logger.ReceivedCalls().SelectMany(call => call.GetArguments())

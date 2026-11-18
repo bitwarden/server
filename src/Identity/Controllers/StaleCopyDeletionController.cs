@@ -23,9 +23,8 @@ using Microsoft.Net.Http.Headers;
 namespace Bit.Identity.Controllers;
 
 /// <summary>
-/// An internal deletion for a service of another platform that shares this install's tenants: deletes this install's
-/// whole copy of providers, organizations and users, by their identifiers, once that platform has served them for longer
-/// than this copy could still be needed.
+/// An internal deletion: deletes the providers, organizations and users an internal client names, by their identifiers,
+/// outright and with everything they hold.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -37,23 +36,23 @@ namespace Bit.Identity.Controllers;
 /// front of Identity should refuse <c>/internal/</c> as well.
 /// </para>
 /// <para>
-/// It deletes as the organization and account deletions do, with their repositories and file stores, but not with
-/// their commands: those cancel the tenant's subscription, which the other platform now bills, push a logout to the
-/// person's devices, which now sign in there, and record events, and nothing here is anybody's doing. The attachment
-/// files of the organizations' ciphers and of the users' own go first, then their Send files, then the rows, so a
-/// request that fails part way finds what is left when repeated. Nothing is decrypted: it reads identifiers and which
-/// ciphers have attachments, returns only counts and logs only the counts and the client's identifier. Safe to repeat:
-/// a tenant already deleted is counted as already gone.
+/// It deletes by repository and file store, as the organization and account deletions do underneath, rather than
+/// through their commands, so it makes none of their checks and none of their side effects: no claimed-account or
+/// only-owner refusal, no subscription cancellation, no logout push, no events. The caller has already decided these
+/// providers, organizations and users are to be removed outright. The attachment files of the organizations' ciphers
+/// and of the users' own go first, then their Send files, then the rows, so a request that fails part way finds what is
+/// left when repeated. Nothing is decrypted: it reads identifiers and which ciphers have attachments, returns only
+/// counts and logs only the counts and the client's identifier. Safe to repeat: a provider, organization or user
+/// already deleted is counted as already gone.
 /// </para>
 /// <para>
-/// Deleting an organization deletes its domain claims and policies, and deleting a user frees the address. This install
-/// doesn't refuse a later registration with that address or in that domain itself: a deployment that runs both
-/// platforms routes a registration naming an address or organization the other platform holds to that platform, which
-/// keeps the claims and the refusals.
+/// Deleting an organization deletes its domain claims and policies, and deleting a user frees the address, so this
+/// server no longer refuses a later registration with that address or in that domain. Refusing one, if it should be
+/// refused, is for the caller to arrange.
 /// </para>
 /// </remarks>
 [Route("internal/stale-copies")]
-// A trusted service's endpoint, not a client's: kept out of the OpenAPI the SDK is generated from.
+// An internal client's endpoint, not an app's: kept out of the OpenAPI the SDK is generated from.
 [ApiExplorerSettings(IgnoreApi = true)]
 [ExceptionHandlerFilter]
 public class StaleCopyDeletionController : Controller
@@ -99,7 +98,7 @@ public class StaleCopyDeletionController : Controller
         _logger = logger;
     }
 
-    /// <summary>Delete providers', organizations' and users' whole copies</summary>
+    /// <summary>Delete providers, organizations and users outright</summary>
     /// <remarks>
     /// Providers first (their staff and client links), then organizations (as <c>Organization_DeleteById</c> deletes
     /// them, with their ciphers, collections, groups, members, policies, single sign-on and Secrets Manager data, and
@@ -129,7 +128,7 @@ public class StaleCopyDeletionController : Controller
 
         if (model is null)
         {
-            throw new BadRequestException("Name the providers, organizations and users whose copies to delete.");
+            throw new BadRequestException("Name the providers, organizations and users to delete.");
         }
 
         var providerIds = (model.ProviderIds ?? []).Distinct().ToList();
@@ -166,8 +165,8 @@ public class StaleCopyDeletionController : Controller
             }
 
             // As OrganizationDeleteCommand, less the subscription's cancellation and its Key Connector refusal, which
-            // keeps members able to unlock when a customer deletes their organization; the organization and its members
-            // live on the other platform now: the files, the rows with the event log's clean-up, the cached ability.
+            // keeps members able to unlock when a customer deletes their organization; the caller has decided the
+            // organization goes outright: the files, the rows with the event log's clean-up, the cached ability.
             ciphersWithAttachments += await DeleteAttachmentFilesAsync(
                 await _cipherRepository.GetManyByOrganizationIdAsync(organizationId));
             await _sendFileStorageService.DeleteFilesForOrganizationAsync(organizationId);
@@ -186,11 +185,11 @@ public class StaleCopyDeletionController : Controller
             }
 
             // As UserService.DeleteAsync, less every refusal and side effect it adds: the refusals of an account an
-            // organization claims and of the only owner of an organization or a provider (the account and those tenants
-            // live on the other platform now, which made its own checks), the subscription's cancellation (the other
-            // platform bills it), the logout push (the devices sign in there) and the events. Its attachment files
-            // go too, which the account deletion leaves: IAttachmentStorageService.DeleteAttachmentsForUserAsync deletes
-            // nothing on Azure or local storage, so they are deleted cipher by cipher, as an organization's are.
+            // organization claims and of the only owner of an organization or a provider, the subscription's
+            // cancellation, the logout push and the events; the caller has decided the account goes outright, and has
+            // made whatever checks it needs. Its attachment files go too, which the account deletion leaves:
+            // IAttachmentStorageService.DeleteAttachmentsForUserAsync deletes nothing on Azure or local storage, so
+            // they are deleted cipher by cipher, as an organization's are.
             ciphersWithAttachments += await DeleteAttachmentFilesAsync(
                 await _cipherRepository.GetManyByUserIdAsync(userId, withOrganizations: false));
             await _sendFileStorageService.DeleteFilesForUserAsync(userId);
@@ -199,7 +198,7 @@ public class StaleCopyDeletionController : Controller
         }
 
         _logger.LogInformation(
-            "Deleted stale copies at internal client {ClientId}'s request: {ProvidersDeleted} providers, "
+            "Deleted at internal client {ClientId}'s request: {ProvidersDeleted} providers, "
             + "{OrganizationsDeleted} organizations and {UsersDeleted} users deleted, {AlreadyGone} already gone, "
             + "attachment files of {CiphersWithAttachmentsDeleted} ciphers deleted.",
             client, providersDeleted, organizationsDeleted, usersDeleted, alreadyGone, ciphersWithAttachments);

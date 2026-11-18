@@ -471,7 +471,7 @@ public class CustomTokenRequestValidatorTests
         var validatedRequest = new ValidatedTokenRequest
         {
             GrantType = "client_credentials",
-            ClientId = "release.migration-service",
+            ClientId = "release.internal-service",
             Client = new Client { AllowedScopes = new HashSet<string> { ApiScopes.InternalStaleCopyDeletion } },
             ClientClaims = []
         };

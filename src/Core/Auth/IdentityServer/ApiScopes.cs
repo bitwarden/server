@@ -13,7 +13,10 @@ public static class ApiScopes
     public const string ApiPamCredentialRotation = "api.pam.rotation";
     public const string Internal = "internal";
     public const string ApiSendAccess = "api.send.access";
-    /// <summary>Identity's internal stale copy deletion, and nothing else (<c>release.{service}</c> clients).</summary>
+    /// <summary>
+    /// Identity's internal deletion of named users, organizations and providers, and nothing else
+    /// (<c>release.{service}</c> clients).
+    /// </summary>
     public const string InternalStaleCopyDeletion = "internal.stale-copy-deletion";
 
     public static IEnumerable<ApiScope> GetApiScopes()

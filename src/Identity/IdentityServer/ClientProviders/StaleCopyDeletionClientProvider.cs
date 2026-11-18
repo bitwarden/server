@@ -8,12 +8,12 @@ using Duende.IdentityServer.Models;
 namespace Bit.Identity.IdentityServer.ClientProviders;
 
 /// <summary>
-/// The internal stale copy deletion's clients, <c>release.{service}</c>: a service of another platform that shares this
-/// install's tenants, holding <see cref="GlobalSettings.StaleCopyDeletionClientSecret"/>.
+/// The internal deletion's clients, <c>release.{service}</c>: internal clients holding
+/// <see cref="GlobalSettings.StaleCopyDeletionClientSecret"/>.
 /// </summary>
 /// <remarks>
 /// Client credentials only, for <see cref="ApiScopes.InternalStaleCopyDeletion"/> alone, so a token obtained this way
-/// reaches the deletion and nothing else. A secret of its own, so no other internal client's secret deletes a tenant.
+/// reaches the deletion and nothing else. A secret of its own, so no other internal client's secret deletes anything.
 /// Short-lived: a quarter of an hour. Registered only when the secret is set.
 /// </remarks>
 internal class StaleCopyDeletionClientProvider : IClientProvider

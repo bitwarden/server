@@ -45,17 +45,16 @@ public class GlobalSettings : IGlobalSettings
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
     /// <summary>
-    /// The secret of the internal stale copy deletion's clients (<c>release.{service}</c>): a service of another
-    /// platform sharing this install's tenants, deleting this install's whole copy of users, organizations and providers
-    /// it has served itself for longer than this install's copy could still be needed. Unset, the clients don't exist
-    /// and the deletion answers <c>404</c>. Never logged.
+    /// The secret of the <c>release.{service}</c> clients: internal clients that may delete named users, organizations
+    /// and providers outright through Identity's internal deletion endpoint. Unset, the clients don't exist and the
+    /// deletion answers <c>404</c>. Never logged.
     /// </summary>
     public virtual string StaleCopyDeletionClientSecret { get; set; }
     /// <summary>
-    /// The local port of the internal listener the stale copy deletion answers on, and on no other. It must be an
+    /// The local port of the internal listener the internal deletion answers on, and on no other. It must be an
     /// additional Kestrel endpoint (an <c>ASPNETCORE_URLS</c> entry or <c>Kestrel:Endpoints</c>), different from
     /// the public port, that only the install's own network reaches and the proxy never forwards to. Unset, the
-    /// stale copy deletion answers <c>404</c>.
+    /// internal deletion answers <c>404</c>.
     /// </summary>
     public virtual int? StaleCopyDeletionPort { get; set; }
     public virtual string OidcIdentityClientKey { get; set; }

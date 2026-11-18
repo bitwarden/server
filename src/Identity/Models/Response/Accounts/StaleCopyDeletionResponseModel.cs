@@ -2,7 +2,7 @@
 
 namespace Bit.Identity.Models.Response.Accounts;
 
-/// <summary>What the internal stale copy deletion did: counts, and nothing of the rows.</summary>
+/// <summary>What the internal deletion did: counts, and nothing of the rows.</summary>
 public class StaleCopyDeletionResponseModel : ResponseModel
 {
     public StaleCopyDeletionResponseModel(
@@ -29,7 +29,7 @@ public class StaleCopyDeletionResponseModel : ResponseModel
     /// <summary>The users deleted, with everything they held.</summary>
     public int UsersDeleted { get; set; }
 
-    /// <summary>The distinct identifiers named that this install no longer holds: nothing to delete.</summary>
+    /// <summary>The distinct identifiers named that no longer exist: nothing to delete.</summary>
     public int AlreadyGone { get; set; }
 
     /// <summary>The ciphers, the organizations' and the users' own, whose attachment files were deleted.</summary>
