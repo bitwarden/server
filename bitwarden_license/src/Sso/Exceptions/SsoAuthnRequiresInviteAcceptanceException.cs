@@ -9,7 +9,7 @@
 /// that the SSO callback can redirect the user back to the web client's /login
 /// with enough context for the client to match the redirect against its stashed
 /// invite, or — when nothing matches — show the <c>/sso-login-failed</c> full-page
-/// error telling the user to accept their invite first. The id is the stable match
+/// error pointing the user to their invite email. The id is the stable match
 /// key — the display name can drift between when the invite was sent and when SSO
 /// is attempted.
 /// </summary>
