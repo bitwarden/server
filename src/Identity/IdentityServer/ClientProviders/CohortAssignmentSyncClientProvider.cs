@@ -13,8 +13,8 @@ namespace Bit.Identity.IdentityServer.ClientProviders;
 /// </summary>
 /// <remarks>
 /// Client credentials only, for <see cref="ApiScopes.InternalCohortAssignmentSync"/> alone, so a token obtained this
-/// way reaches the sync and nothing else. A secret of its own, so a client of the staff search, account lookup or
-/// deletion can't write cohort assignments. Short-lived: a quarter of an hour. Registered only when the secret is set.
+/// way reaches the sync and nothing else. A secret of its own, so no other internal client's secret
+/// writes cohort assignments. Short-lived: a quarter of an hour. Registered only when the secret is set.
 /// </remarks>
 internal class CohortAssignmentSyncClientProvider : IClientProvider
 {

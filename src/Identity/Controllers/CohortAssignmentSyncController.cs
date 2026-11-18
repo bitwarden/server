@@ -19,8 +19,8 @@ namespace Bit.Identity.Controllers;
 
 /// <summary>
 /// The Admin Portal's bulk cohort assignment upload (<c>OrganizationPlanMigrationCohortAssignmentsController</c>), for
-/// a service of another platform that shares this install's tenants: the same command, given the same file, and its
-/// answer as the page would show it.
+/// a service of another platform that shares this install's tenants: the same command, given the same file, and the
+/// command's answer in the command's order (the page sorts line errors by line number; this does not).
 /// </summary>
 /// <remarks>
 /// <para>

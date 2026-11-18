@@ -182,8 +182,8 @@ public class CohortAssignmentSyncControllerTests : IDisposable
     }
 
     [Theory]
-    [InlineData("search.other-service")]
-    [InlineData("lookup.other-service")]
+    [InlineData("installation.other-service")]
+    [InlineData("organization.other-service")]
     [InlineData("cohorts")]
     [InlineData("web")]
     public async Task Another_client_s_token_is_401(string client)
