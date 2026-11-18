@@ -487,10 +487,6 @@ public class CustomTokenRequestValidatorTests
         Assert.Null(context.Result.CustomResponse);
     }
 
-
-
-
-
     [Fact]
     public async Task SetSuccessResult_WithSubject_AddsClaimsToSubject()
     {

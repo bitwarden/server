@@ -467,7 +467,6 @@ public class GlobalSettings : IGlobalSettings
             get => _queueName;
             set => _queueName = value?.Trim('"');
         }
-
     }
 
     public class ConnectionStringSettings : IConnectionStringSettings
