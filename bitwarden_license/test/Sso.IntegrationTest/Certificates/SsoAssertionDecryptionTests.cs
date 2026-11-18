@@ -102,7 +102,7 @@ public class SsoAssertionDecryptionTests
     }
 
     [Fact]
-    public async Task Acs_FallbackAfterIdentityStage5Rollback_AssertionEncryptedToIdentityStagedCertificate_Decrypts()
+    public async Task Acs_FallbackAfterIdentityPromoteRollback_AssertionEncryptedToIdentityStagedCertificate_Decrypts()
     {
         // Arrange
         using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");
@@ -140,7 +140,7 @@ public class SsoAssertionDecryptionTests
     }
 
     [Fact]
-    public async Task Acs_AfterReturnFromStage6_AssertionEncryptedToNewCertificate_Decrypts()
+    public async Task Acs_AfterCleanUpRollback_AssertionEncryptedToNewCertificate_Decrypts()
     {
         // Arrange
         using var identity = TestCertificates.Create("CN=Bitwarden Test Identity");

@@ -55,7 +55,7 @@ public class IdentityTokenSigningTests
     }
 
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
-    public async Task Token_AfterReturnFromStage6_SignsWithOutgoingKey_NewKeyStillPublished(
+    public async Task Token_AfterCleanUpRollback_SignsWithOutgoingKey_NewKeyStillPublished(
         RegisterFinishRequestModel requestModel)
     {
         // Arrange

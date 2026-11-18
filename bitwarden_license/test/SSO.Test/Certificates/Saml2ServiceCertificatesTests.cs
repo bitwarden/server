@@ -76,6 +76,36 @@ public class Saml2ServiceCertificatesTests
         Assert.Empty(entries);
     }
 
+    [Fact]
+    public void Build_NoEncryptionActive_AddsOnlyTheSigningEntry()
+    {
+        using var signing = TestCertificates.Create("CN=Bitwarden Test Signing");
+
+        var entries = Saml2ServiceCertificates.Build(Signing(signing), Encryption(null));
+
+        Assert.Equal([Entry(signing, CertificateUse.Signing, CertificateStatus.Current)], Shape(entries));
+    }
+
+    [Fact]
+    public void Build_NoEncryptionActive_StagedAndRetiredEncryptionStillDecrypt()
+    {
+        using var signing = TestCertificates.Create("CN=Bitwarden Test Signing");
+        using var staged = TestCertificates.Create("CN=Bitwarden Test Staged Encryption");
+        using var retired = TestCertificates.Create("CN=Bitwarden Test Retired Encryption");
+
+        var entries = Saml2ServiceCertificates.Build(Signing(signing),
+            Encryption(null, staged: [staged], retired: [retired]));
+
+        Assert.Equal(
+        [
+            Entry(signing, CertificateUse.Signing, CertificateStatus.Current),
+            Entry(staged, CertificateUse.Encryption, CertificateStatus.Current,
+                MetadataPublishOverrideType.DoNotPublish),
+            Entry(retired, CertificateUse.Encryption, CertificateStatus.Current,
+                MetadataPublishOverrideType.DoNotPublish),
+        ], Shape(entries));
+    }
+
     [Theory]
     [InlineData("Signing", "SSO signing")]
     [InlineData("Encryption", "SSO encryption")]
