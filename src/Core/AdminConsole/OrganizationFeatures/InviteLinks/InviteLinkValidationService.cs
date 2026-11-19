@@ -1,7 +1,11 @@
-﻿using Bit.Core.AdminConsole.Entities;
+﻿using System.Diagnostics;
+using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
+using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.AdminConsole.Utilities.v2;
@@ -22,7 +26,7 @@ public class InviteLinkValidationService(
     : IInviteLinkValidationService
 {
     /// <inheritdoc />
-    public Error? ValidateEligibility(
+    public InviteLinkValidationError? ValidateEligibility(
         OrganizationInviteLink? inviteLink,
         Guid code,
         Organization? organization,
@@ -30,24 +34,24 @@ public class InviteLinkValidationService(
     {
         if (inviteLink is null || !inviteLink.CodeMatches(code.ToString()))
         {
-            return new InviteLinkNotFound();
+            return new InviteLinkNotFoundError();
         }
 
         if (organization is null or { Enabled: false })
         {
-            return new InviteLinkNotFound();
+            return new InviteLinkNotFoundError();
         }
 
         if (!organization.UseInviteLinks)
         {
-            return new InviteLinkNotAvailable();
+            return new InviteLinkNotAvailableError();
         }
 
-        // Order matters: the client starts email verification on EmailNotVerified, so reject disallowed domains
+        // Order matters: the client starts email verification on EmailNotVerifiedError, so reject disallowed domains
         // first. Otherwise the user would verify their email only to be rejected afterwards.
         if (!InviteLinkDomainValidator.IsEmailDomainAllowed(user.Email, inviteLink.GetAllowedDomains()))
         {
-            return new EmailDomainNotAllowed(organization.DisplayName());
+            return new EmailDomainNotAllowedError(organization.DisplayName());
         }
 
         // Security: allowed domains only provide protection if the user has proven control over their email address.
@@ -55,7 +59,7 @@ public class InviteLinkValidationService(
         var requireEmailVerification = !globalSettings.SelfHosted || globalSettings.EnableOpenInviteLinkEmailVerification;
         if (!user.EmailVerified && requireEmailVerification)
         {
-            return new EmailNotVerified();
+            return new EmailNotVerifiedError();
         }
 
         return null;
@@ -77,7 +81,7 @@ public class InviteLinkValidationService(
 
         if (freeAdminError is not null)
         {
-            return new JoinRequirementsValidationResult(freeAdminError, AutoConfirmPolicyEnabled: false);
+            return new JoinRequirementsValidationResult(ToInviteLinkValidationError(freeAdminError), AutoConfirmPolicyEnabled: false);
         }
 
         var allOrganizationMemberships = await organizationUserRepository.GetManyByUserAsync(user.Id);
@@ -91,7 +95,7 @@ public class InviteLinkValidationService(
 
         if (autoConfirmResult.IsError)
         {
-            return new JoinRequirementsValidationResult(autoConfirmResult.Error, autoConfirmResult.AutoConfirmPolicyEnabled);
+            return new JoinRequirementsValidationResult(ToInviteLinkValidationError(autoConfirmResult.Error!), autoConfirmResult.AutoConfirmPolicyEnabled);
         }
 
         var singleOrgError = await joinOrganizationPolicyValidationService.ValidateSingleOrganizationPolicyAsync(
@@ -103,7 +107,7 @@ public class InviteLinkValidationService(
 
         if (singleOrgError is not null)
         {
-            return new JoinRequirementsValidationResult(singleOrgError, autoConfirmResult.AutoConfirmPolicyEnabled);
+            return new JoinRequirementsValidationResult(ToInviteLinkValidationError(singleOrgError), autoConfirmResult.AutoConfirmPolicyEnabled);
         }
 
         var twoFactorError = await joinOrganizationPolicyValidationService.ValidateTwoFactorAuthenticationPolicyAsync(
@@ -112,10 +116,12 @@ public class InviteLinkValidationService(
             proposedRole,
             policyEnforcer);
 
-        return new JoinRequirementsValidationResult(twoFactorError, autoConfirmResult.AutoConfirmPolicyEnabled);
+        return new JoinRequirementsValidationResult(
+            twoFactorError is null ? null : ToInviteLinkValidationError(twoFactorError),
+            autoConfirmResult.AutoConfirmPolicyEnabled);
     }
 
-    public async Task<Error?> ValidateSeatAvailabilityAsync(
+    public async Task<InviteLinkValidationError?> ValidateSeatAvailabilityAsync(
         Organization organization,
         OrganizationUser? existingOrganizationUser)
     {
@@ -129,6 +135,23 @@ public class InviteLinkValidationService(
 
         return OrganizationSeatAvailability.HasAvailableSeats(organization, occupiedSeatCount)
             ? null
-            : new OrganizationHasNoAvailableSeats(organization.DisplayName());
+            : new OrganizationHasNoAvailableSeatsError(organization.DisplayName());
     }
+
+    /// <summary>
+    /// Translates an error from shared code into its coded invite link error. Throws for an unmapped error so a
+    /// new shared error can't silently reach the endpoints as a plain 400.
+    /// </summary>
+    private static InviteLinkValidationError ToInviteLinkValidationError(Error error) =>
+        error switch
+        {
+            CannotBeAdminOfMultipleFreeOrganizations => new OnlyOneFreeOrganizationAdminAllowedError(),
+            ProviderUsersCannotJoin => new ProviderUsersCannotJoinError(),
+            OtherOrganizationDoesNotAllowOtherMembership e => new AutoConfirmPolicyViolationOtherOrgError(e.Email),
+            UserCannotBelongToAnotherOrganization e => new AutoConfirmPolicyViolationTargetOrgError(e.Email),
+            UserIsAMemberOfAnotherOrganization => new MemberOfAnotherOrganizationError(),
+            UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy => new SingleOrganizationPolicyError(),
+            TwoFactorRequiredForMembership => new TwoFactorRequiredForMembershipError(),
+            _ => throw new UnreachableException($"Unmapped join requirement error: {error.GetType().Name}")
+        };
 }
