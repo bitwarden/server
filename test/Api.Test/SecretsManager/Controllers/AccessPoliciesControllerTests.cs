@@ -45,12 +45,32 @@ public class AccessPoliciesControllerTests
 
     [Theory]
     [BitAutoData]
+    public async Task GetPeoplePotentialGrantees_ServiceAccount_ThrowsNotFound(
+        SutProvider<AccessPoliciesController> sutProvider,
+        Guid id,
+        Guid serviceAccountId)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<IAccessClientQuery>()
+            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), id)
+            .Returns((AccessClientType.ServiceAccount, serviceAccountId));
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetPeoplePotentialGranteesAsync(id));
+
+        await sutProvider.GetDependency<IAccessPolicyRepository>().DidNotReceiveWithAnyArgs()
+            .GetPeopleGranteesAsync(default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
     public async Task GetPeoplePotentialGrantees_HasAccessNoPotentialGrantees_ReturnsEmptyList(
         SutProvider<AccessPoliciesController> sutProvider,
         Guid id)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(Guid.NewGuid());
+        sutProvider.GetDependency<IAccessClientQuery>()
+            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), id)
+            .Returns((AccessClientType.User, Guid.NewGuid()));
         sutProvider.GetDependency<IAccessPolicyRepository>().GetPeopleGranteesAsync(id, Arg.Any<Guid>())
             .ReturnsForAnyArgs(new PeopleGrantees
             {
@@ -73,7 +93,9 @@ public class AccessPoliciesControllerTests
         GroupGrantee groupGrantee)
     {
         sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
-        sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(Guid.NewGuid());
+        sutProvider.GetDependency<IAccessClientQuery>()
+            .GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), id)
+            .Returns((AccessClientType.User, Guid.NewGuid()));
         sutProvider.GetDependency<IAccessPolicyRepository>().GetPeopleGranteesAsync(id, Arg.Any<Guid>())
             .ReturnsForAnyArgs(new PeopleGrantees
             {

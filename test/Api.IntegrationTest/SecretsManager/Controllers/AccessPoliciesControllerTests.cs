@@ -77,6 +77,19 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task GetPeoplePotentialGrantees_ServiceAccount_NotFound()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        var apiKeyDetails = await _organizationHelper.CreateNewServiceAccountApiKeyAsync();
+        await _loginHelper.LoginWithApiKeyAsync(apiKeyDetails);
+
+        var response =
+            await _client.GetAsync(
+                $"/organizations/{org.Id}/access-policies/people/potential-grantees");
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
     [Theory]
     [InlineData(PermissionType.RunAsAdmin)]
     [InlineData(PermissionType.RunAsUserWithPermission)]

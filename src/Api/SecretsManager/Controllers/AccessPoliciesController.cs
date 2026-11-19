@@ -75,7 +75,14 @@ public class AccessPoliciesController : Controller
             throw new NotFoundException();
         }
 
-        var userId = _userService.GetProperUserId(User)!.Value;
+        var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(User, id);
+
+        // Machine accounts must not be able to enumerate the people in an organization.
+        if (accessClient == AccessClientType.ServiceAccount)
+        {
+            throw new NotFoundException();
+        }
+
         var peopleGrantees = await _accessPolicyRepository.GetPeopleGranteesAsync(id, userId);
 
         var userResponses = peopleGrantees.UserGrantees.Select(ug => new PotentialGranteeResponseModel(ug));
