@@ -72,6 +72,26 @@ public static class HttpContextExtensions
                ?? throw new InvalidOperationException(NoOrgIdError);
 
         /// <summary>
+        /// Parses the {orgId} or {organizationId} route parameter into a Guid.
+        /// Returns null if neither is present or the value is not a valid Guid.
+        /// Use <see cref="HasOrganizationIdRouteValue"/> to tell those two cases apart.
+        /// </summary>
+        public Guid? TryGetOrganizationId()
+            => httpContext.TryGetRouteParameterAsGuid("orgId")
+               ?? httpContext.TryGetRouteParameterAsGuid("organizationId");
+
+        /// <summary>
+        /// Returns true if the route has a non-null {orgId} or {organizationId} value, whether or not it is a valid Guid.
+        /// A route that has none is misconfigured; a route that has an unparseable one is a bad request.
+        /// </summary>
+        public bool HasOrganizationIdRouteValue()
+        {
+            var routeValues = httpContext.GetRouteData().Values;
+            return routeValues.TryGetValue("orgId", out var orgId) && orgId != null
+                   || routeValues.TryGetValue("organizationId", out var organizationId) && organizationId != null;
+        }
+
+        /// <summary>
         /// Parses the {providerId} route parameter into a Guid, or throws if it is not present or is not a valid Guid.
         /// </summary>
         /// <exception cref="InvalidOperationException"></exception>

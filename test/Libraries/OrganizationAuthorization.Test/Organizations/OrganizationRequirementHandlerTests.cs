@@ -17,8 +17,7 @@ public class OrganizationRequirementHandlerTests
 {
     [Theory]
     [BitAutoData((string)null)]
-    [BitAutoData("malformed guid")]
-    public async Task IfInvalidOrganizationId_Throws(string orgId, Guid userId, SutProvider<OrganizationRequirementHandler> sutProvider)
+    public async Task IfNoOrganizationId_Throws(string orgId, Guid userId, SutProvider<OrganizationRequirementHandler> sutProvider)
     {
         // Arrange
         ArrangeRouteAndUser(sutProvider, orgId, userId);
@@ -29,6 +28,25 @@ public class OrganizationRequirementHandlerTests
         var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.HandleAsync(authContext));
         Assert.Contains(HttpContextExtensions.NoOrgIdError, exception.Message);
         Assert.False(authContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData("malformed guid")]
+    [BitAutoData("notaguid")]
+    public async Task IfMalformedOrganizationId_DoesNotAuthorizeOrThrow(string orgId, Guid userId, SutProvider<OrganizationRequirementHandler> sutProvider)
+    {
+        // Arrange
+        ArrangeRouteAndUser(sutProvider, orgId, userId);
+        var testRequirement = Substitute.For<IOrganizationRequirement>();
+        var authContext = new AuthorizationHandlerContext([testRequirement], new ClaimsPrincipal(), null);
+
+        // Act
+        await sutProvider.Sut.HandleAsync(authContext);
+
+        // Assert: requirement left unmet, so the middleware responds 403 rather than the request failing with a 500
+        await testRequirement.DidNotReceiveWithAnyArgs().AuthorizeAsync(null, null!);
+        Assert.False(authContext.HasSucceeded);
+        Assert.False(authContext.HasFailed);
     }
 
     [Theory, BitAutoData]
@@ -45,17 +63,37 @@ public class OrganizationRequirementHandlerTests
         Assert.False(authContext.HasSucceeded);
     }
 
-    [Theory, BitAutoData]
-    public async Task IfUserIdIsNull_Throws(Guid orgId, SutProvider<OrganizationRequirementHandler> sutProvider)
+    [Theory]
+    [BitAutoData]
+    public async Task IfUserIdIsNull_DoesNotAuthorizeOrThrow(Guid orgId, SutProvider<OrganizationRequirementHandler> sutProvider)
     {
-        // Arrange
+        // Arrange: anonymous callers must be denied (401 via the middleware) rather than failing with a 500
         ArrangeRouteAndUser(sutProvider, orgId.ToString(), null);
         var testRequirement = Substitute.For<IOrganizationRequirement>();
         var authContext = new AuthorizationHandlerContext([testRequirement], new ClaimsPrincipal(), null);
 
         // Act
-        var exception = await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.HandleAsync(authContext));
-        Assert.Contains(OrganizationRequirementHandler.NoUserIdError, exception.Message);
+        await sutProvider.Sut.HandleAsync(authContext);
+
+        // Assert
+        await testRequirement.DidNotReceiveWithAnyArgs().AuthorizeAsync(null, null!);
+        Assert.False(authContext.HasSucceeded);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task IfUserIdIsNull_AndMalformedOrganizationId_DoesNotAuthorizeOrThrow(
+        SutProvider<OrganizationRequirementHandler> sutProvider)
+    {
+        // Arrange
+        ArrangeRouteAndUser(sutProvider, "notaguid", null);
+        var testRequirement = Substitute.For<IOrganizationRequirement>();
+        var authContext = new AuthorizationHandlerContext([testRequirement], new ClaimsPrincipal(), null);
+
+        // Act
+        await sutProvider.Sut.HandleAsync(authContext);
+
+        // Assert
         Assert.False(authContext.HasSucceeded);
     }
 

@@ -65,4 +65,44 @@ public class HttpContextExtensionsTests
         var exception = Assert.Throws<InvalidOperationException>(() => httpContext.GetOrganizationId());
         Assert.Equal(HttpContextExtensions.NoOrgIdError, exception.Message);
     }
+
+    [Theory]
+    [InlineAutoData("orgId")]
+    [InlineAutoData("organizationId")]
+    public void TryGetOrganizationId_GivenValidParameter_ReturnsOrganizationId(string paramName, Guid orgId)
+    {
+        var httpContext = new DefaultHttpContext
+        {
+            Request = { RouteValues = new RouteValueDictionary { { paramName, orgId.ToString() } } }
+        };
+
+        Assert.Equal(orgId, httpContext.TryGetOrganizationId());
+        Assert.True(httpContext.HasOrganizationIdRouteValue());
+    }
+
+    [Theory]
+    [InlineData("orgId")]
+    [InlineData("organizationId")]
+    public void TryGetOrganizationId_GivenInvalidGuid_ReturnsNullButHasRouteValue(string paramName)
+    {
+        var httpContext = new DefaultHttpContext
+        {
+            Request = { RouteValues = new RouteValueDictionary { { paramName, "notaguid" } } }
+        };
+
+        Assert.Null(httpContext.TryGetOrganizationId());
+        Assert.True(httpContext.HasOrganizationIdRouteValue());
+    }
+
+    [Fact]
+    public void TryGetOrganizationId_GivenNoParameter_ReturnsNullAndHasNoRouteValue()
+    {
+        var httpContext = new DefaultHttpContext
+        {
+            Request = { RouteValues = new RouteValueDictionary { { "userId", "someGuid" }, { "orgId", null } } }
+        };
+
+        Assert.Null(httpContext.TryGetOrganizationId());
+        Assert.False(httpContext.HasOrganizationIdRouteValue());
+    }
 }

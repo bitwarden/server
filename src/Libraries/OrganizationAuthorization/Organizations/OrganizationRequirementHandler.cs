@@ -19,7 +19,6 @@ public class OrganizationRequirementHandler(
     : AuthorizationHandler<IOrganizationRequirement>
 {
     public const string NoHttpContextError = "This method should only be called in the context of an HTTP Request.";
-    public const string NoUserIdError = "This method should only be called on the private api with a logged in user.";
 
     protected override async Task HandleRequirementAsync(AuthorizationHandlerContext context, IOrganizationRequirement requirement)
     {
@@ -29,13 +28,27 @@ public class OrganizationRequirementHandler(
             throw new InvalidOperationException(NoHttpContextError);
         }
 
-        var organizationId = httpContext.GetOrganizationId();
-        var organizationClaims = httpContext.User.GetCurrentContextOrganization(organizationId);
-
+        // Without a user id there is nobody to authorize. Leave the requirement unmet rather than throwing, so the
+        // authorization middleware responds with 401 for anonymous callers and 403 for other principals.
         if (!currentUserContext.TryGetUserId(out var userId))
         {
-            throw new InvalidOperationException(NoUserIdError);
+            return;
         }
+
+        var parsedOrganizationId = httpContext.TryGetOrganizationId();
+        if (parsedOrganizationId is not { } organizationId)
+        {
+            // A route value that is present but not a Guid is a bad caller, not a bug in the route: deny the request.
+            // A route with no organization id at all is a programming error and must still fail loudly.
+            if (httpContext.HasOrganizationIdRouteValue())
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(HttpContextExtensions.NoOrgIdError);
+        }
+
+        var organizationClaims = httpContext.User.GetCurrentContextOrganization(organizationId);
 
         Task<bool> IsProviderUserForOrg() => httpContext.IsProviderUserForOrgAsync(providerUserRepository, userId, organizationId);
 
