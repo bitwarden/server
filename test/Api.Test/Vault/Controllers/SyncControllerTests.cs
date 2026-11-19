@@ -574,10 +574,6 @@ public class SyncControllerTests
         Assert.Contains(result.Ciphers, c => c.Id == visible.Id);
     }
 
-    /// <summary>
-    /// Arranges a sync over two ciphers where only <c>visible</c> is authorized for full data, i.e.
-    /// <c>gated</c> is leasing-gated. Returns (gated, visible).
-    /// </summary>
     private const string RestrictedTypesData = """{"restrictedTypes":[3,6]}""";
 
     [Theory]
@@ -678,6 +674,10 @@ public class SyncControllerTests
         return restricted;
     }
 
+    /// <summary>
+    /// Arranges a sync over two ciphers where only <c>visible</c> is authorized for full data, i.e.
+    /// <c>gated</c> is leasing-gated. Returns (gated, visible).
+    /// </summary>
     private static (CipherDetails Gated, CipherDetails Visible) SetupLeasingSync(
         User user, SutProvider<SyncController> sutProvider)
     {
