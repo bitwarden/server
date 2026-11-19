@@ -155,6 +155,17 @@ public class OrganizationSubscriptionChangeSetBuilder(Plan currentPlan)
         return this;
     }
 
+    /// <summary>
+    /// Removes the Privileged Controls seat line item from the subscription. Charges immediately, so the
+    /// credit is issued right away.
+    /// </summary>
+    public OrganizationSubscriptionChangeSetBuilder RemovePrivilegedControlsSeats()
+    {
+        _changes.Add(new RemoveItem(currentPlan.PrivilegedControls.StripeSeatPlanId));
+        _chargeImmediately = true;
+        return this;
+    }
+
     // Structural operations (charge immediately)
 
     /// <summary>

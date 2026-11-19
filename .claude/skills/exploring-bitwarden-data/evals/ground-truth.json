@@ -1,13 +1,13 @@
 {
-  "captured": "2026-07-07",
+  "captured": "2026-10-25",
   "fixture": {
     "preset": "scale.md-balanced-sterling-cooper"
   },
   "slugs": {
-    "ORG_NAME": "8f387838-Sterling Cooper",
-    "ORG_ID": "ade4fafe-0067-46fb-9216-b480009536b9",
-    "PROBE_USER_EMAIL": "8f387838+user5@sterlingcooper.example",
-    "PERM_PROBE_USER_EMAIL": "8f387838+user90@sterlingcooper.example"
+    "ORG_NAME": "43bb865c-Sterling Cooper",
+    "ORG_ID": "35E4557F-03A3-4318-9E3E-B4ED009A69A6",
+    "PROBE_USER_EMAIL": "43bb865c+user43@sterlingcooper.example",
+    "PERM_PROBE_USER_EMAIL": "43bb865c+user90@sterlingcooper.example"
   },
   "values": {
     "members_by_status": {
@@ -37,33 +37,37 @@
     },
     "top_direct_collection_access": [
       {
-        "email": "8f387838+owner@sterlingcooper.example",
+        "email": "43bb865c+owner@sterlingcooper.example",
         "collections": 10
       },
       {
-        "email": "8f387838+user0@sterlingcooper.example",
+        "email": "43bb865c+user0@sterlingcooper.example",
         "collections": 5
       },
       {
-        "email": "8f387838+user1@sterlingcooper.example",
+        "email": "43bb865c+user1@sterlingcooper.example",
         "collections": 3
       },
       {
-        "email": "8f387838+user2@sterlingcooper.example",
+        "email": "43bb865c+user2@sterlingcooper.example",
         "collections": 3
       },
       {
-        "email": "8f387838+user3@sterlingcooper.example",
+        "email": "43bb865c+user3@sterlingcooper.example",
         "collections": 2
       }
     ],
     "probe_user": {
-      "email": "8f387838+user5@sterlingcooper.example",
-      "id": "40B4D9AF-7033-4EE7-9D1F-B48000953717",
-      "visible_ciphers_via_UserCipherDetails": 138
+      "email": "43bb865c+user43@sterlingcooper.example",
+      "id": "EEC493EC-2ED2-4082-A88E-B4ED009A6A2E",
+      "visible_ciphers_via_UserCipherDetails": 138,
+      "rows_before_distinct": 141,
+      "visible_active_only": 137
     },
-    "sends_total_db": 0,
-    "auth_requests_total_db": 0,
+    "sends_total_db": 11,
+    "live_sends": 0,
+    "auth_requests_total_db": 13,
+    "pending_auth_requests": 0,
     "members_by_status_names": {
       "-1": "Revoked",
       "0": "Invited",
@@ -71,17 +75,17 @@
       "2": "Confirmed"
     },
     "permission_probe_user90": {
-      "email": "8f387838+user90@sterlingcooper.example",
-      "id": "41B8B063-6841-4347-BE14-B48000953719",
+      "email": "43bb865c+user90@sterlingcooper.example",
+      "id": "CC14EE70-1F65-44E3-99F4-B4ED009A69FB",
       "total_accessible_collections": 13,
       "editable_correct_direct_precedence": 7,
       "editable_if_most_restrictive_wins": 6,
       "conflict": {
-        "collection": "96DC0C08-3EEE-45CD-8B69-B4800095382E",
+        "collection": "06F16B97-2E10-4094-BAC1-B4ED009A6B06",
         "direct_ReadOnly": 0,
         "group_ReadOnly": 1
       },
-      "note": "Most-permissive-wins coincides with correct here; grader must inspect SQL for direct-precedence (COALESCE(CU.x, CG.x, 0)) to award full marks. capture-ground-truth.sh does not yet capture this block \u2014 regenerate manually if re-seeded while eval-13 exists."
+      "note": "Most-permissive-wins coincides with correct here; grader must inspect SQL for direct-precedence (COALESCE(CU.x, CG.x, 0), or MIN(ReadOnly) per collection over UserCollectionDetails) to award full marks."
     }
   }
 }

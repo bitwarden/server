@@ -1,0 +1,54 @@
+<mjml>
+  <mj-head>
+    <mj-include path="../../../components/head.mjml" />
+  </mj-head>
+  <mj-body css-class="border-fix">
+    <!-- Blue Header Section -->
+    <mj-wrapper css-class="border-fix" padding="20px 20px 10px 20px">
+      <mj-bw-hero
+        img-src="https://assets.bitwarden.com/email/v1/spot-enterprise.png"
+        title="Update your IdP's SSO encryption method"
+      />
+    </mj-wrapper>
+
+    <!-- Main Content -->
+    <mj-wrapper padding="5px 20px 10px 20px">
+      <mj-section background-color="#fff" padding="24px 0px">
+        <mj-column padding="0px 25px">
+          <mj-text font-size="16px" line-height="24px" padding="0px">
+            <p>
+              Bitwarden has detected that the connection to your identity
+              provider (IdP) for SSO is using an outdated encryption scheme
+              (RSAES-PKCS1 v1.5) for the SAML data exchanged at login. To
+              protect the security of your organization, Bitwarden will stop
+              supporting this encryption method on {{ DeprecationDate }}.
+            </p>
+            <p>
+              You must update your SSO configuration to use a modern encryption
+              method or your users will not be able to log into Bitwarden using
+              SSO. Visit the Bitwarden Help Center to see which encryption
+              methods are accepted.
+            </p>
+          </mj-text>
+          <mj-button
+            padding="0px"
+            inner-padding="12px 24px"
+            border-radius="20px"
+            font-weight="600"
+            align="left"
+            href="{{HelpPageUrl}}"
+            >Learn more</mj-button
+          >
+        </mj-column>
+      </mj-section>
+    </mj-wrapper>
+
+    <!-- Learn More Section -->
+    <mj-wrapper padding="5px 20px 10px 20px">
+      <mj-bw-learn-more-footer />
+    </mj-wrapper>
+
+    <!-- Footer -->
+    <mj-include path="../../../components/footer.mjml" />
+  </mj-body>
+</mjml>

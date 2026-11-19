@@ -19,6 +19,7 @@ using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserVerification;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -59,6 +60,7 @@ public class AccountsController : Controller
     private readonly IUserRepository _userRepository;
     private readonly IRotateUserApiKeyCommand _rotateUserApiKeyCommand;
     private readonly ISelfServiceChangeEmailCommand _selfServiceChangeEmailCommand;
+    private readonly IUserVerificationOtpCommand _userVerificationOtpCommand;
     private readonly ICurrentContext _currentContext;
     private readonly ILogger<AccountsController> _logger;
 
@@ -82,6 +84,7 @@ public class AccountsController : Controller
         IUserRepository userRepository,
         IRotateUserApiKeyCommand rotateUserApiKeyCommand,
         ISelfServiceChangeEmailCommand selfServiceChangeEmailCommand,
+        IUserVerificationOtpCommand userVerificationOtpCommand,
         ICurrentContext currentContext,
         ILogger<AccountsController> logger
         )
@@ -105,6 +108,7 @@ public class AccountsController : Controller
         _userRepository = userRepository;
         _rotateUserApiKeyCommand = rotateUserApiKeyCommand;
         _selfServiceChangeEmailCommand = selfServiceChangeEmailCommand;
+        _userVerificationOtpCommand = userVerificationOtpCommand;
         _currentContext = currentContext;
         _logger = logger;
     }
@@ -528,13 +532,6 @@ public class AccountsController : Controller
         return response;
     }
 
-    [HttpPost("profile")]
-    [Obsolete("This endpoint is deprecated. Use PUT /profile instead.")]
-    public async Task<ProfileResponseModel> PostProfile([FromBody] UpdateProfileRequestModel model)
-    {
-        return await PutProfile(model);
-    }
-
     [HttpPut("avatar")]
     public async Task<ProfileResponseModel> PutAvatar([FromBody] UpdateAvatarRequestModel model)
     {
@@ -552,13 +549,6 @@ public class AccountsController : Controller
 
         var response = new ProfileResponseModel(user, accountKeys, null, null, null, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationIdsClaimingActiveUser);
         return response;
-    }
-
-    [HttpPost("avatar")]
-    [Obsolete("This endpoint is deprecated. Use PUT /avatar instead.")]
-    public async Task<ProfileResponseModel> PostAvatar([FromBody] UpdateAvatarRequestModel model)
-    {
-        return await PutAvatar(model);
     }
 
     [HttpGet("revision-date")]
@@ -666,13 +656,6 @@ public class AccountsController : Controller
         }
 
         throw new BadRequestException(ModelState);
-    }
-
-    [HttpPost("delete")]
-    [Obsolete("This endpoint is deprecated. Use DELETE / instead.")]
-    public async Task PostDelete([FromBody] SecretVerificationRequestModel model)
-    {
-        await Delete(model);
     }
 
     [AllowAnonymous]
@@ -862,7 +845,7 @@ public class AccountsController : Controller
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
 
-        await _userService.SendOTPAsync(user);
+        await _userVerificationOtpCommand.SendOtpAsync(user);
     }
 
     [HttpPost("verify-otp")]
@@ -870,9 +853,8 @@ public class AccountsController : Controller
     {
         var user = await _userService.GetUserByPrincipalAsync(User);
 
-        if (!await _userService.VerifyOTPAsync(user, model.OTP))
+        if (!await _userVerificationOtpCommand.VerifyOtpAsync(user, model.OTP))
         {
-            await Task.Delay(2000);
             throw new BadRequestException("Token", "Invalid token");
         }
     }

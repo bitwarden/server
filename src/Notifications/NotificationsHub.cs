@@ -1,100 +1,65 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using Bit.Core.Context;
-using Bit.Core.Enums;
-using Bit.Core.Settings;
-using Bit.Core.Utilities;
+﻿using Bit.Core.Enums;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Notifications;
 
 [Authorize("Application")]
 public class NotificationsHub : Microsoft.AspNetCore.SignalR.Hub
 {
-    private readonly ConnectionCounter _connectionCounter;
-    private readonly GlobalSettings _globalSettings;
+    private readonly IOptions<NotificationsSettings> _settings;
 
-    public NotificationsHub(ConnectionCounter connectionCounter, GlobalSettings globalSettings)
+    public NotificationsHub(IOptions<NotificationsSettings> settings)
     {
-        _connectionCounter = connectionCounter;
-        _globalSettings = globalSettings;
+        _settings = settings;
     }
 
     public override async Task OnConnectedAsync()
     {
-        var currentContext = new CurrentContext(null, null);
-        await currentContext.BuildAsync(Context.User, _globalSettings);
-
-        var clientType = DeviceTypes.ToClientType(currentContext.DeviceType);
-        if (clientType != ClientType.All && currentContext.UserId.HasValue)
+        foreach (var group in GetGroups(HubConnectionClaims.From(Context.User)))
         {
-            await Groups.AddToGroupAsync(Context.ConnectionId, GetUserGroup(currentContext.UserId.Value, clientType));
+            await Groups.AddToGroupAsync(Context.ConnectionId, group);
         }
 
-        if (_globalSettings.Installation.Id != Guid.Empty)
-        {
-            await Groups.AddToGroupAsync(Context.ConnectionId, GetInstallationGroup(_globalSettings.Installation.Id));
-            if (clientType != ClientType.All)
-            {
-                await Groups.AddToGroupAsync(Context.ConnectionId,
-                    GetInstallationGroup(_globalSettings.Installation.Id, clientType));
-            }
-        }
-
-        if (currentContext.Organizations != null)
-        {
-            foreach (var org in currentContext.Organizations)
-            {
-                await Groups.AddToGroupAsync(Context.ConnectionId, GetOrganizationGroup(org.Id));
-                if (clientType != ClientType.All)
-                {
-                    await Groups.AddToGroupAsync(Context.ConnectionId, GetOrganizationGroup(org.Id, clientType));
-                }
-            }
-        }
-
-        _connectionCounter.Increment();
         await base.OnConnectedAsync();
     }
 
-    public override async Task OnDisconnectedAsync(Exception exception)
+    public override async Task OnDisconnectedAsync(Exception? exception)
     {
-        var currentContext = new CurrentContext(null, null);
-        await currentContext.BuildAsync(Context.User, _globalSettings);
-
-        var clientType = DeviceTypes.ToClientType(currentContext.DeviceType);
-        if (clientType != ClientType.All && currentContext.UserId.HasValue)
+        foreach (var group in GetGroups(HubConnectionClaims.From(Context.User)))
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId,
-                GetUserGroup(currentContext.UserId.Value, clientType));
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, group);
         }
 
-        if (_globalSettings.Installation.Id != Guid.Empty)
+        await base.OnDisconnectedAsync(exception);
+    }
+
+    private IEnumerable<string> GetGroups(HubConnectionClaims claims)
+    {
+        var clientType = claims.ClientType;
+        if (clientType != ClientType.All && claims.UserId.HasValue)
         {
-            await Groups.RemoveFromGroupAsync(Context.ConnectionId,
-                GetInstallationGroup(_globalSettings.Installation.Id));
+            yield return GetUserGroup(claims.UserId.Value, clientType);
+        }
+
+        var installationId = _settings.Value.InstallationId;
+        if (installationId != Guid.Empty)
+        {
+            yield return GetInstallationGroup(installationId);
             if (clientType != ClientType.All)
             {
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId,
-                    GetInstallationGroup(_globalSettings.Installation.Id, clientType));
+                yield return GetInstallationGroup(installationId, clientType);
             }
         }
 
-        if (currentContext.Organizations != null)
+        foreach (var organizationId in claims.OrganizationIds)
         {
-            foreach (var org in currentContext.Organizations)
+            yield return GetOrganizationGroup(organizationId);
+            if (clientType != ClientType.All)
             {
-                await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetOrganizationGroup(org.Id));
-                if (clientType != ClientType.All)
-                {
-                    await Groups.RemoveFromGroupAsync(Context.ConnectionId, GetOrganizationGroup(org.Id, clientType));
-                }
+                yield return GetOrganizationGroup(organizationId, clientType);
             }
         }
-
-        _connectionCounter.Decrement();
-        await base.OnDisconnectedAsync(exception);
     }
 
     public static string GetInstallationGroup(Guid installationId, ClientType? clientType = null)

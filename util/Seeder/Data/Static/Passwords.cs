@@ -197,9 +197,15 @@ internal static class Passwords
     /// <summary>
     /// Gets a password using the provided distribution to select strength.
     /// </summary>
-    internal static string GetPassword(int index, int total, Distribution<PasswordStrength> distribution)
+    internal static string GetPassword(int index, int total, Distribution<PasswordStrength> distribution) =>
+        GetPassword(index, distribution.Select(index, total));
+
+    /// <summary>
+    /// Gets the password at <paramref name="index"/> from the pool of <paramref name="strength"/>, wrapping around
+    /// when <paramref name="index"/> is past the end of the pool.
+    /// </summary>
+    internal static string GetPassword(int index, PasswordStrength strength)
     {
-        var strength = distribution.Select(index, total);
         var passwords = GetByStrength(strength);
         return passwords[index % passwords.Length];
     }

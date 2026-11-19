@@ -8,19 +8,19 @@ namespace Bit.Seeder.Factories;
 internal static class ProviderPlanSeeder
 {
     /// <summary>
-    /// Creates a configured ProviderPlan for the provider. Seat minimum, purchased, and allocated seats
-    /// are all set to <paramref name="seats"/> so that <see cref="ProviderPlan.IsConfigured"/> returns true.
+    /// Creates a configured ProviderPlan for the provider. Mirrors <c>CreateProviderCommand</c> and the provider
+    /// billing seat scaling: seats allocated beyond <paramref name="seatMinimum"/> are counted as purchased.
     /// </summary>
-    internal static ProviderPlan Create(Provider provider, PlanType planType, int seats)
+    internal static ProviderPlan Create(Provider provider, PlanType planType, int seatMinimum, int allocatedSeats)
     {
         return new ProviderPlan
         {
             Id = CombGuid.Generate(),
             ProviderId = provider.Id,
             PlanType = planType,
-            SeatMinimum = seats,
-            PurchasedSeats = seats,
-            AllocatedSeats = seats
+            SeatMinimum = seatMinimum,
+            PurchasedSeats = Math.Max(0, allocatedSeats - seatMinimum),
+            AllocatedSeats = allocatedSeats
         };
     }
 }

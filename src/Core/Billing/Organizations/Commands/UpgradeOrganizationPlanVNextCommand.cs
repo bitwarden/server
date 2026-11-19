@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Models;
@@ -9,7 +10,6 @@ using Bit.Core.Billing.Services;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models.Business;
 using Bit.Core.Models.StaticStore;
-using Bit.Core.Services;
 using Microsoft.Extensions.Logging;
 using OneOf.Types;
 using static Bit.Core.Billing.Constants.StripeConstants;
@@ -44,7 +44,7 @@ public interface IUpgradeOrganizationPlanVNextCommand
 public class UpgradeOrganizationPlanVNextCommand(
     ILogger<UpgradeOrganizationPlanVNextCommand> logger,
     IOrganizationBillingService organizationBillingService,
-    IOrganizationService organizationService,
+    IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
     IPricingClient pricingClient,
     IPriceIncreaseScheduler priceIncreaseScheduler,
     IStripeAdapter stripeAdapter,
@@ -191,6 +191,6 @@ public class UpgradeOrganizationPlanVNextCommand(
             organization.BackfillPublicPrivateKeys(keys);
         }
 
-        await organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
     }
 }

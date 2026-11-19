@@ -1,0 +1,30 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "organization": {
+    "name": "Massive Dynamic",
+    "domain": "massivedynamic.example",
+    "planType": "enterprise-annually",
+    "seats": 100
+  },
+  "users": {
+    "count": 80,
+    "adminCount": 2,
+    "statusMix": { "confirmed": 70, "invited": 4, "accepted": 2, "revoked": 4 }
+  },
+  "policies": { "enable": ["singleOrg", "organizationDataOwnership"] },
+  "collections": { "count": 10 },
+  "ciphers": { "count": 300 },
+  "defaultCollections": {
+    "name": "My Items",
+    "nonEmptyRate": 0.5,
+    "largest": [120, 60],
+    "deletedRate": 0.1,
+    "policyEnabledDaysAgo": 14,
+    "sizes": [
+      { "min": 1, "max": 3, "weight": 0.45 },
+      { "min": 4, "max": 10, "weight": 0.3 },
+      { "min": 11, "max": 40, "weight": 0.25 }
+    ]
+  },
+  "density": { "personalCiphers": { "shape": "pendingMigration" } }
+}

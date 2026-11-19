@@ -1,61 +1,56 @@
 ﻿using Bit.Pam.Enums;
+using Bit.Pam.Models;
+using Bit.Services.Pam.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
-/// <summary>One access connector's try at executing a rotation job. An element of
-/// <see cref="PamRotationJobResponseModel.Attempts"/>.</summary>
+/// <summary>One access connector's try at executing a rotation job.</summary>
 public class PamRotationAttemptResponseModel
 {
-    /// <summary>
-    /// The attempt's unique identifier.
-    /// </summary>
+    public PamRotationAttemptResponseModel(PamRotationAttemptDetails attempt)
+    {
+        ArgumentNullException.ThrowIfNull(attempt);
+
+        Id = attempt.Id;
+        JobId = attempt.JobId;
+        ClaimedByAccessConnectorId = attempt.ClaimedByAccessConnectorId;
+        CipherUpdated = attempt.CipherUpdated;
+        Status = attempt.Status;
+        FailureReason = attempt.FailureReason;
+        SyncState = attempt.SyncState;
+        SessionTermination = attempt.SessionTermination;
+        CreationDate = attempt.CreationDate.AsUtc();
+        ResolvedDate = attempt.ResolvedDate.AsUtc();
+    }
+
     public Guid Id { get; set; }
 
-    /// <summary>
-    /// The rotation job this attempt was made against.
-    /// </summary>
     public Guid JobId { get; set; }
 
-    /// <summary>
-    /// The access connector that executed this attempt, fixed for the attempt's lifetime.
-    /// </summary>
+    /// <summary>The access connector that executed this attempt, fixed for its lifetime.</summary>
     public Guid ClaimedByAccessConnectorId { get; set; }
 
-    /// <summary>
-    /// Whether the access connector wrote the rotated secret back to the cipher.
-    /// </summary>
     public bool CipherUpdated { get; set; }
 
-    /// <summary>
-    /// Where the attempt stands -- see <see cref="PamRotationAttemptStatus"/>.
-    /// </summary>
     public PamRotationAttemptStatus Status { get; set; }
 
     /// <summary>
-    /// Why the attempt failed -- the access connector's error code and its optional detail, combined. Null unless
-    /// <see cref="Status"/> is <see cref="PamRotationAttemptStatus.Errored"/>.
+    /// The access connector's error code and optional detail, combined. Null unless <see cref="Status"/> is
+    /// <see cref="PamRotationAttemptStatus.Errored"/>.
     /// </summary>
     public string? FailureReason { get; set; }
 
     /// <summary>
-    /// Whether the failure left the target system's password changed -- see <see cref="PamRotationSyncState"/>.
-    /// Null unless the attempt errored.
+    /// Whether the failure left the target system's password changed. Null unless the attempt errored.
     /// </summary>
     public PamRotationSyncState? SyncState { get; set; }
 
-    /// <summary>
-    /// The result of the rotation's optional session-termination step -- see
-    /// <see cref="PamSessionTerminationOutcome"/>. Null unless the attempt reported success.
-    /// </summary>
+    /// <summary>The outcome of the optional session-termination step. Null unless the attempt succeeded.</summary>
     public PamSessionTerminationOutcome? SessionTermination { get; set; }
 
-    /// <summary>
-    /// When the attempt was created, at claim time (UTC).
-    /// </summary>
+    /// <summary>When the attempt was created, at claim time.</summary>
     public DateTime CreationDate { get; set; }
 
-    /// <summary>
-    /// When the attempt reached a terminal status (UTC). Null while it is still executing.
-    /// </summary>
+    /// <summary>When the attempt reached a terminal status. Null while it is still executing.</summary>
     public DateTime? ResolvedDate { get; set; }
 }

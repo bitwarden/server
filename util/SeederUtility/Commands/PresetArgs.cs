@@ -26,6 +26,9 @@ public class PresetArgs : IArgumentModel
     [Option("mangle", Description = "Enable mangling for test isolation")]
     public bool Mangle { get; set; }
 
+    [Option("no-data-protection", Description = "Write User.Key and User.MasterPassword without the server's data protection, so a server with different data-protection keys can read them. DEV/QA only")]
+    public bool NoDataProtection { get; set; }
+
     [Option("password", Description = "Password for all seeded accounts (default: asdfasdfasdf)")]
     public string? Password { get; set; }
 
@@ -47,11 +50,17 @@ public class PresetArgs : IArgumentModel
     [Option("trial-days", Description = "Trial length in days, 1-30 (default: 30). Requires --stripe-billing; not valid with --skip-trial.")]
     public int? TrialDays { get; set; }
 
+    [Option("stripe-card", Description = "Stripe test card: visa (default), mastercard, amex, fails-on-charge, or requires-authentication. Requires --stripe-billing.")]
+    public string? StripeCard { get; set; }
+
+    [Option("stripe-address", Description = "Billing address: us (default), us-alaska, de, de-vat, or ph. Requires --stripe-billing.")]
+    public string? StripeAddress { get; set; }
+
     /// <summary>
     /// Billing configuration for this run, or null when <c>--stripe-billing</c> was not requested.
     /// </summary>
     public StripeBillingOptions? ToStripeBillingOptions() =>
-        StripeBillingArgs.ToOptions(StripeBilling, SkipTrial, TrialDays);
+        StripeBillingArgs.ToOptions(StripeBilling, SkipTrial, TrialDays, StripeCard, StripeAddress);
 
     public void Validate()
     {
@@ -62,7 +71,7 @@ public class PresetArgs : IArgumentModel
         }
 
         // Before the --list short-circuit: `--list --trial-days 99` should not silently pass.
-        StripeBillingArgs.Validate(StripeBilling, SkipTrial, TrialDays);
+        StripeBillingArgs.Validate(StripeBilling, SkipTrial, TrialDays, StripeCard, StripeAddress);
 
         if (List)
         {

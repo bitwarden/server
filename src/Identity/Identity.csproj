@@ -13,10 +13,13 @@
   <ItemGroup>
     <ProjectReference Include="..\SharedWeb\SharedWeb.csproj" />
     <ProjectReference Include="..\Core\Core.csproj" />
+    <ProjectReference Include="..\Libraries\Subscriptions.Organization\Subscriptions.Organization.csproj" />
+    <ProjectReference Include="..\Pam.Domain\Pam.Domain.csproj" />
   </ItemGroup>
 
   <ItemGroup>
     <InternalsVisibleTo Include="Identity.Test" />
+    <InternalsVisibleTo Include="Identity.IntegrationTest" />
   </ItemGroup>
 
 </Project>

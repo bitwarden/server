@@ -163,9 +163,6 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
-            .Returns(true);
 
         var previouslyDisabledSend1 = new Send
         {
@@ -214,9 +211,6 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
-            .Returns(true);
 
         var otherwiseCompliantSend1 = new Send
         {
@@ -274,9 +268,6 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
-            .Returns(true);
 
         var compliantSend = new Send
         {
@@ -326,9 +317,6 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
-            .Returns(true);
 
         var compliantSend = new Send
         {
@@ -383,9 +371,6 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
-            .Returns(true);
 
         var compliantSend = new Send
         {
@@ -440,9 +425,6 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
-            .Returns(true);
 
         var compliantSend = new Send
         {
@@ -504,9 +486,6 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
-            .Returns(true);
 
         var compliantSend = new Send
         {
@@ -556,9 +535,6 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
-            .Returns(true);
 
         var twoDaysAgo = DateTime.UtcNow.AddDays(-2);
         var nonCompliantSend = new Send
@@ -611,9 +587,6 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
-            .Returns(true);
 
         var adminOrganizationUser = new OrganizationUserUserDetails
         {
@@ -676,9 +649,6 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
-            .Returns(true);
 
         // There is no mechanism to distinguish a Send the policy previously disabled from one its
         // owner disabled themselves. Without that provenance, a relaxed (but still enabled) policy
@@ -730,9 +700,6 @@ public class SendControlsSyncPolicyEventTests
         sutProvider.GetDependency<IPolicyRepository>()
             .GetByOrganizationIdTypeAsync(policyUpdate.OrganizationId, PolicyType.SendOptions)
             .Returns(existingSendOptionsPolicy);
-        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.SendControlsExistingSends)
-            .Returns(true);
 
         var previouslyDisabledSend = new Send { Id = Guid.NewGuid(), UserId = Guid.NewGuid(), Disabled = true };
         var sendIds = new List<Guid>([previouslyDisabledSend.Id]);

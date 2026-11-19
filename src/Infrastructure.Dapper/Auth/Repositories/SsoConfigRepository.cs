@@ -33,6 +33,19 @@ public class SsoConfigRepository : Repository<SsoConfig, long>, ISsoConfigReposi
         }
     }
 
+    public async Task<ICollection<SsoConfig>> GetManyByOrganizationIdsAsync(IEnumerable<Guid> organizationIds)
+    {
+        using (var connection = new SqlConnection(ConnectionString))
+        {
+            var results = await connection.QueryAsync<SsoConfig>(
+                $"[{Schema}].[{Table}_ReadManyByOrganizationIds]",
+                new { OrganizationIds = organizationIds.ToGuidIdArrayTVP() },
+                commandType: CommandType.StoredProcedure);
+
+            return results.ToList();
+        }
+    }
+
     public async Task<SsoConfig?> GetByIdentifierAsync(string identifier)
     {
         using (var connection = new SqlConnection(ConnectionString))

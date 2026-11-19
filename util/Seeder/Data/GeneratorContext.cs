@@ -12,9 +12,8 @@ namespace Bit.Seeder.Data;
 /// </summary>
 /// <remarks>
 /// Adding a new generator:
-///   1. Add private nullable field
-///   2. Add public property with lazy initialization
-///   3. Use in Recipe via _ctx.NewGenerator.Method()
+///   1. Add a public property that creates the generator on first access with <c>field ??= new ...</c>
+///   2. Use in Recipe via _ctx.NewGenerator.Method()
 /// </remarks>
 internal sealed class GeneratorContext
 {
@@ -56,32 +55,25 @@ internal sealed class GeneratorContext
     /// </summary>
     public int Seed => _seed;
 
-    /// <summary>
-    /// Total cipher count from options. Used for distribution calculations.
-    /// </summary>
-    public int CipherCount => _options.Ciphers;
-
-    private CipherUsernameGenerator? _username;
-
-    public CipherUsernameGenerator Username => _username ??= new(
+    public CipherUsernameGenerator Username => field ??= new CipherUsernameGenerator(
         _seed,
         _options.UsernameDistribution,
         _region,
         _options.UsernamePattern);
 
-    private FolderNameGenerator? _folder;
+    public FolderNameGenerator Folder => field ??= new FolderNameGenerator(_seed);
 
-    public FolderNameGenerator Folder => _folder ??= new(_seed);
+    public CardDataGenerator Card => field ??= new CardDataGenerator(_seed, _region);
 
-    private CardDataGenerator? _card;
+    public IdentityDataGenerator Identity => field ??= new IdentityDataGenerator(_seed, _region);
 
-    public CardDataGenerator Card => _card ??= new(_seed, _region);
+    public SecureNoteDataGenerator SecureNote => field ??= new SecureNoteDataGenerator(_seed);
 
-    private IdentityDataGenerator? _identity;
+    public UniquePasswordGenerator UniquePassword => field ??= new UniquePasswordGenerator(_seed);
 
-    public IdentityDataGenerator Identity => _identity ??= new(_seed, _region);
+    public LoginNotesGenerator LoginNotes => field ??= new LoginNotesGenerator(_seed);
 
-    private SecureNoteDataGenerator? _secureNote;
+    public CustomFieldGenerator CustomField => field ??= new CustomFieldGenerator(_seed);
 
-    public SecureNoteDataGenerator SecureNote => _secureNote ??= new(_seed);
+    public TotpSecretGenerator TotpSecret => field ??= new TotpSecretGenerator(_seed);
 }

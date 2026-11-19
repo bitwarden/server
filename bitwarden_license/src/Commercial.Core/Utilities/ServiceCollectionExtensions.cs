@@ -1,7 +1,7 @@
-﻿using Bit.Commercial.Core.AdminConsole.Providers;
-using Bit.Commercial.Core.AdminConsole.Services;
-using Bit.Commercial.Core.Billing.Providers.Queries;
+﻿using Bit.Commercial.Core.Billing.Providers.Queries;
 using Bit.Commercial.Core.Billing.Providers.Services;
+using Bit.Commercial.Core.Providers;
+using Bit.Commercial.Core.Providers.Services;
 using Bit.Core.AdminConsole.Providers.Interfaces;
 using Bit.Core.AdminConsole.Services;
 using Bit.Core.Billing.Providers.Queries;

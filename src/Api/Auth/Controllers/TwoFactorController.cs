@@ -4,7 +4,6 @@
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Request.Accounts;
 using Bit.Api.Auth.Models.Response.TwoFactor;
-using Bit.Api.Models.Request;
 using Bit.Api.Models.Response;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
@@ -25,7 +24,6 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Api.Auth.Controllers;
 
-// TODO: PM-39393 - Clean up Obsolete endpoints in this controller 
 [Route("two-factor")]
 [Authorize(Policies.Web)]
 public class TwoFactorController : Controller
@@ -153,14 +151,6 @@ public class TwoFactorController : Controller
         return new TwoFactorAuthenticatorUpdateResponseModel(user);
     }
 
-    [HttpPost("authenticator")]
-    [Obsolete("This endpoint is deprecated. Use PUT /authenticator instead.")]
-    public async Task<TwoFactorAuthenticatorUpdateResponseModel> PostAuthenticator(
-        [FromBody] TwoFactorAuthenticatorUpdateRequestModel model)
-    {
-        return await PutAuthenticator(model);
-    }
-
     [HttpDelete("authenticator")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> DeleteAuthenticator(
@@ -216,13 +206,6 @@ public class TwoFactorController : Controller
         return new TwoFactorYubiKeyUpdateResponseModel(user);
     }
 
-    [HttpPost("yubikey")]
-    [Obsolete("This endpoint is deprecated. Use PUT /yubikey instead.")]
-    public async Task<TwoFactorYubiKeyUpdateResponseModel> PostYubiKey([FromBody] TwoFactorYubiKeyUpdateRequestModel model)
-    {
-        return await PutYubiKey(model);
-    }
-
     [HttpPost("get-duo")]
     public async Task<TwoFactorDuoResponseModel> GetDuo([FromBody] SecretVerificationRequestModel model)
     {
@@ -254,13 +237,6 @@ public class TwoFactorController : Controller
         model.ToUser(user);
         await _userService.UpdateTwoFactorProviderAsync(user, TwoFactorProviderType.Duo);
         return new TwoFactorDuoUpdateResponseModel(user);
-    }
-
-    [HttpPost("duo")]
-    [Obsolete("This endpoint is deprecated. Use PUT /duo instead.")]
-    public async Task<TwoFactorDuoUpdateResponseModel> PostDuo([FromBody] TwoFactorDuoUpdateRequestModel model)
-    {
-        return await PutDuo(model);
     }
 
     [HttpPost("~/organizations/{id}/two-factor/get-duo")]
@@ -323,14 +299,6 @@ public class TwoFactorController : Controller
         return new TwoFactorOrganizationDuoUpdateResponseModel(organization);
     }
 
-    [HttpPost("~/organizations/{id}/two-factor/duo")]
-    [Obsolete("This endpoint is deprecated. Use PUT /organizations/{id}/two-factor/duo instead.")]
-    public async Task<TwoFactorOrganizationDuoUpdateResponseModel> PostOrganizationDuo(string id,
-        [FromBody] TwoFactorDuoUpdateRequestModel model)
-    {
-        return await PutOrganizationDuo(id, model);
-    }
-
     [HttpPost("get-webauthn")]
     public async Task<TwoFactorWebAuthnResponseModel> GetWebAuthn([FromBody] SecretVerificationRequestModel model)
     {
@@ -362,13 +330,6 @@ public class TwoFactorController : Controller
         }
 
         return new TwoFactorWebAuthnUpdateResponseModel(user);
-    }
-
-    [HttpPost("webauthn")]
-    [Obsolete("This endpoint is deprecated. Use PUT /webauthn instead.")]
-    public async Task<TwoFactorWebAuthnUpdateResponseModel> PostWebAuthn([FromBody] TwoFactorWebAuthnUpdateRequestModel model)
-    {
-        return await PutWebAuthn(model);
     }
 
     [HttpDelete("webauthn")]
@@ -426,15 +387,33 @@ public class TwoFactorController : Controller
     public async Task SendEmailSetup([FromBody] TwoFactorEmailSetupRequestModel model)
     {
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Email);
+        var deviceIdentifier = GetEmailSetupDeviceIdentifier();
         // Add email to the user's 2FA providers, with the email address they've provided.
         model.ToUser(user);
-        await _twoFactorEmailService.SendTwoFactorSetupEmailAsync(user);
+        await _twoFactorEmailService.SendTwoFactorSetupEmailAsync(user, deviceIdentifier);
     }
 
     [AllowAnonymous]
     [HttpPost("send-email-login")]
     public async Task SendEmailLoginAsync([FromBody] TwoFactorEmailLoginRequestModel requestModel)
     {
+        // The emailed code is bound to the requesting device. This endpoint is anonymous, so the current context
+        // takes the device from the Device-Identifier header.
+        var deviceIdentifier = _currentContext.DeviceIdentifier;
+
+        // TODO: PM-44555 - Delete this body fallback, and TwoFactorEmailLoginRequestModel.DeviceIdentifier, once
+        // every supported mobile client version sends the Device-Identifier header on this request.
+        if (string.IsNullOrWhiteSpace(deviceIdentifier))
+        {
+            deviceIdentifier = requestModel.DeviceIdentifier;
+        }
+
+        // Checked before the user lookup, so this rejection never reveals whether the email or credential is valid.
+        if (string.IsNullOrWhiteSpace(deviceIdentifier) || deviceIdentifier.Length > Device.MaxIdentifierLength)
+        {
+            throw new BadRequestException("Device-Identifier", "A valid device identifier is required.");
+        }
+
         var user = await _userManager.FindByEmailAsync(requestModel.Email.ToLowerInvariant());
 
         if (user != null)
@@ -446,7 +425,7 @@ public class TwoFactorController : Controller
                 if (authRequest != null &&
                     authRequest.IsValidForAuthentication(user.Id, requestModel.AuthRequestAccessCode))
                 {
-                    await _twoFactorEmailService.SendTwoFactorEmailAsync(user);
+                    await _twoFactorEmailService.SendTwoFactorLoginEmailAsync(user, deviceIdentifier);
                     return;
                 }
             }
@@ -454,7 +433,7 @@ public class TwoFactorController : Controller
             {
                 if (ValidateSsoEmail2FaToken(requestModel.SsoEmail2FaSessionToken, user))
                 {
-                    await _twoFactorEmailService.SendTwoFactorEmailAsync(user);
+                    await _twoFactorEmailService.SendTwoFactorLoginEmailAsync(user, deviceIdentifier);
                     return;
                 }
 
@@ -463,7 +442,7 @@ public class TwoFactorController : Controller
             }
             else if (await _userService.VerifySecretAsync(user, requestModel.Secret))
             {
-                await _twoFactorEmailService.SendTwoFactorEmailAsync(user);
+                await _twoFactorEmailService.SendTwoFactorLoginEmailAsync(user, deviceIdentifier);
                 return;
             }
         }
@@ -475,10 +454,10 @@ public class TwoFactorController : Controller
     public async Task<TwoFactorEmailUpdateResponseModel> PutEmail([FromBody] TwoFactorEmailUpdateRequestModel model)
     {
         var user = await ValidateUserVerificationTokenAsync(model.UserVerificationToken, TwoFactorProviderType.Email);
+        var deviceIdentifier = GetEmailSetupDeviceIdentifier();
         model.ToUser(user);
 
-        if (!await _userManager.VerifyTwoFactorTokenAsync(user,
-                CoreHelpers.CustomProviderName(TwoFactorProviderType.Email), model.Token))
+        if (!await _twoFactorEmailService.VerifyTwoFactorSetupTokenAsync(user, deviceIdentifier, model.Token))
         {
             throw new BadRequestException("Token", "Invalid token.");
         }
@@ -487,34 +466,12 @@ public class TwoFactorController : Controller
         return new TwoFactorEmailUpdateResponseModel(user);
     }
 
-    [HttpPost("email")]
-    [Obsolete("This endpoint is deprecated. Use PUT /email instead.")]
-    public async Task<TwoFactorEmailUpdateResponseModel> PostEmail([FromBody] TwoFactorEmailUpdateRequestModel model)
-    {
-        return await PutEmail(model);
-    }
-
     [HttpPost("get-recover")]
     public async Task<TwoFactorRecoverResponseModel> GetRecover([FromBody] SecretVerificationRequestModel model)
     {
         var user = await ValidateUserBySecretAsync(model);
         var response = new TwoFactorRecoverResponseModel(user);
         return response;
-    }
-
-    [Obsolete("Leaving this for backwards compatibility on clients")]
-    [HttpGet("get-device-verification-settings")]
-    public Task<DeviceVerificationResponseModel> GetDeviceVerificationSettings()
-    {
-        return Task.FromResult(new DeviceVerificationResponseModel(false, false));
-    }
-
-    [Obsolete("Leaving this for backwards compatibility on clients")]
-    [HttpPut("device-verification-settings")]
-    public Task<DeviceVerificationResponseModel> PutDeviceVerificationSettings(
-        [FromBody] DeviceVerificationRequestModel model)
-    {
-        return Task.FromResult(new DeviceVerificationResponseModel(false, false));
     }
 
     /// <summary>Verifies the principal user's secret (master password or OTP) and returns the user.</summary>
@@ -552,6 +509,25 @@ public class TwoFactorController : Controller
             throw new BadRequestException("UserVerificationToken", "User verification failed.");
         }
         return user;
+    }
+
+    /// <summary>Returns the requesting device identifier from the current context.</summary>
+    /// <remarks>
+    /// Every login issues an access token with a device claim, and refreshed access tokens keep it. A token without
+    /// one belongs to a session the user can renew by logging in again.
+    /// </remarks>
+    /// <exception cref="BadRequestException">The current context has no device identifier.</exception>
+    private string GetEmailSetupDeviceIdentifier()
+    {
+        var deviceIdentifier = _currentContext.DeviceIdentifier;
+        if (string.IsNullOrWhiteSpace(deviceIdentifier))
+        {
+            // TODO: PM-45528 - One release after this ships, replace this message with a generic missing-device
+            // message, keep the 400, drop the log-in-again remarks above, and update the NoDevice controller tests.
+            throw new BadRequestException("Log out and log back in to set up email two-step login.");
+        }
+
+        return deviceIdentifier;
     }
 
     /// <summary>Verifies the user has premium access.</summary>

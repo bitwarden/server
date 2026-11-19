@@ -22,9 +22,10 @@ public class UserEditModel
         BillingHistoryInfo billingHistoryInfo,
         GlobalSettings globalSettings,
         bool? claimedAccount,
-        bool? activeNewDeviceVerificationException)
+        bool? activeNewDeviceVerificationException,
+        bool needsRecoveryKeyV2Update)
     {
-        User = UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, claimedAccount);
+        User = UserViewModel.MapViewModel(user, isTwoFactorEnabled, ciphers, claimedAccount, needsRecoveryKeyV2Update);
 
         ActiveNewDeviceVerificationException = activeNewDeviceVerificationException ?? false;
 

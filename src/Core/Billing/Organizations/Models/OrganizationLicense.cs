@@ -163,6 +163,7 @@ public class OrganizationLicense : ILicense
     public bool UseMyItems { get; set; }
     public bool UseInviteLinks { get; set; }
     public bool UsePam { get; set; }
+    public int? PamSeats { get; set; }
     public string Hash { get; set; }
     public string Signature { get; set; }
     public string Token { get; set; }
@@ -242,7 +243,8 @@ public class OrganizationLicense : ILicense
                     !p.Name.Equals(nameof(UsePhishingBlocker)) &&
                     !p.Name.Equals(nameof(UseMyItems)) &&
                     !p.Name.Equals(nameof(UseInviteLinks)) &&
-                    !p.Name.Equals(nameof(UsePam)))
+                    !p.Name.Equals(nameof(UsePam)) &&
+                    !p.Name.Equals(nameof(PamSeats)))
                 .OrderBy(p => p.Name)
                 .Select(p => $"{p.Name}:{Core.Utilities.CoreHelpers.FormatLicenseSignatureValue(p.GetValue(this, null))}")
                 .Aggregate((c, n) => $"{c}|{n}");
@@ -439,6 +441,7 @@ public class OrganizationLicense : ILicense
         var useMyItems = claimsPrincipal.GetValue<bool>(nameof(UseMyItems));
         var useInviteLinks = claimsPrincipal.GetValue<bool>(nameof(UseInviteLinks));
         var usePam = claimsPrincipal.GetValue<bool>(nameof(UsePam));
+        var pamSeats = claimsPrincipal.GetValue<int?>(nameof(PamSeats));
         var useRiskInsights = claimsPrincipal.GetValue<bool>(nameof(UseRiskInsights));
 
         var claimedPlanType = claimsPrincipal.GetValue<PlanType>(nameof(PlanType));
@@ -489,6 +492,10 @@ public class OrganizationLicense : ILicense
                    || useInviteLinks == organization.UseInviteLinks) &&
                (!claimsPrincipal.HasClaim(c => c.Type == nameof(UsePam))
                    || usePam == organization.UsePam) &&
+               // A null PamSeats means the claim was never applied to the organization, not that it was altered.
+               (!claimsPrincipal.HasClaim(c => c.Type == nameof(PamSeats))
+                   || organization.PamSeats is null
+                   || pamSeats == organization.PamSeats) &&
                // UseRiskInsights is additive and plan-derived (backfilled for existing
                // Enterprise orgs). Licenses issued since 2025-04 carry the claim with the
                // org's value at generation time, which is False for orgs backfilled later.

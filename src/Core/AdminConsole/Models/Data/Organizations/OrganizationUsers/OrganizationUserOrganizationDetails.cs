@@ -42,6 +42,7 @@ public class OrganizationUserOrganizationDetails : IProfileOrganizationDetails
     public string? ResetPasswordKey { get; set; }
     public string? PublicKey { get; set; }
     public string? PrivateKey { get; set; }
+    public string? OrganizationKeyId { get; set; }
     public Guid? ProviderId { get; set; }
     [JsonConverter(typeof(HtmlEncodingStringConverter))]
     public string? ProviderName { get; set; }

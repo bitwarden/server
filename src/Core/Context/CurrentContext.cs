@@ -524,6 +524,8 @@ public class CurrentContext(
             ManageUsers = hasClaim("manageusers"),
             ManageResetPassword = hasClaim("manageresetpassword"),
             ManageScim = hasClaim("managescim"),
+            ManageAccessRules = hasClaim(Claims.CustomPermissions.ManageAccessRules),
+            ManageRotation = hasClaim(Claims.CustomPermissions.ManageCredentialRotation),
         };
     }
 

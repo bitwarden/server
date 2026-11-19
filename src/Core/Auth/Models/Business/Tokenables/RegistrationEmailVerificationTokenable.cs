@@ -24,13 +24,22 @@ public class RegistrationEmailVerificationTokenable : ExpiringTokenable
     public string Email { get; set; }
     public bool ReceiveMarketingEmails { get; set; }
 
+    /// <summary>
+    /// True when this token was delivered by email, so presenting it proves ownership of <see cref="Email"/>.
+    /// False when it was returned directly to the caller without an email being sent.
+    /// Null for tokens issued before this property existed.
+    /// </summary>
+    // TODO: PM-45479 - Make this a non-nullable bool and drop the null case from the doc comment.
+    public bool? EmailSent { get; set; }
+
     [JsonConstructor]
     public RegistrationEmailVerificationTokenable()
     {
         ExpirationDate = DateTime.UtcNow.Add(GetTokenLifetime());
     }
 
-    public RegistrationEmailVerificationTokenable(string email, string name = default, bool receiveMarketingEmails = default) : this()
+    public RegistrationEmailVerificationTokenable(string email, string name = default, bool receiveMarketingEmails = default,
+        bool emailSent = false) : this()
     {
         if (string.IsNullOrEmpty(email))
         {
@@ -40,6 +49,7 @@ public class RegistrationEmailVerificationTokenable : ExpiringTokenable
         Email = email;
         Name = name;
         ReceiveMarketingEmails = receiveMarketingEmails;
+        EmailSent = emailSent;
     }
 
     public bool TokenIsValid(string email)

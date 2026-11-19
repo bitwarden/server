@@ -17,33 +17,6 @@ namespace Bit.Core.Test.Billing.TrialInitiation;
 public class SendTrialInitiationEmailForRegistrationCommandTests
 {
     [Theory]
-    [BitAutoData]
-    public async Task Handle_ForwardsPamSeatMinimumToMailService(
-        string email,
-        string name,
-        SutProvider<SendTrialInitiationEmailForRegistrationCommand> sutProvider)
-    {
-        var products = new[] { ProductType.PasswordManager, ProductType.PrivilegedControls };
-        const ProductTierType productTier = ProductTierType.Enterprise;
-        const int trialLength = 7;
-        const int pamSeatMinimum = 25;
-
-        sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>().EnableEmailVerification = true;
-        sutProvider.GetDependency<IUserRepository>().GetByEmailAsync(email).Returns((User?)null);
-        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
-            .Protect(Arg.Any<RegistrationEmailVerificationTokenable>())
-            .Returns("protected-token");
-
-        await sutProvider.Sut.Handle(
-            email, name, false, productTier, products, trialLength, false, pamSeatMinimum);
-
-        await sutProvider.GetDependency<IMailService>().Received(1).SendTrialInitiationSignupEmailAsync(
-            false, email, "protected-token", productTier,
-            Arg.Is<IEnumerable<ProductType>>(p => p.SequenceEqual(products)),
-            trialLength, false, pamSeatMinimum);
-    }
-
-    [Theory]
     [BitAutoData(ProductTierType.Teams)]
     [BitAutoData(ProductTierType.Families)]
     [BitAutoData(ProductTierType.Free)]
@@ -175,7 +148,7 @@ public class SendTrialInitiationEmailForRegistrationCommandTests
         Assert.Null(result);
         await sutProvider.GetDependency<IMailService>().Received(1).SendTrialInitiationSignupEmailAsync(
             true, email, "protected-token", ProductTierType.Enterprise,
-            Arg.Any<IEnumerable<ProductType>>(), 7, false, null);
+            Arg.Any<IEnumerable<ProductType>>(), 7, false);
     }
 
     [Theory]
@@ -195,6 +168,9 @@ public class SendTrialInitiationEmailForRegistrationCommandTests
 
         Assert.Equal("protected-token", result);
         await AssertNoEmailSent(sutProvider);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .Received(1)
+            .Protect(Arg.Is<RegistrationEmailVerificationTokenable>(t => t.EmailSent == false));
     }
 
     [Theory]
@@ -231,12 +207,15 @@ public class SendTrialInitiationEmailForRegistrationCommandTests
         Assert.Null(result);
         await sutProvider.GetDependency<IMailService>().Received(1).SendTrialInitiationSignupEmailAsync(
             false, email, "protected-token", ProductTierType.Enterprise,
-            Arg.Any<IEnumerable<ProductType>>(), 7, false, null);
+            Arg.Any<IEnumerable<ProductType>>(), 7, false);
+        sutProvider.GetDependency<IDataProtectorTokenFactory<RegistrationEmailVerificationTokenable>>()
+            .Received(1)
+            .Protect(Arg.Is<RegistrationEmailVerificationTokenable>(t => t.EmailSent == true));
     }
 
     private static async Task AssertNoEmailSent(SutProvider<SendTrialInitiationEmailForRegistrationCommand> sutProvider)
     {
         await sutProvider.GetDependency<IMailService>().DidNotReceiveWithAnyArgs().SendTrialInitiationSignupEmailAsync(
-            default, default!, default!, default, default!, default, default, default);
+            default, default!, default!, default, default!, default, default);
     }
 }

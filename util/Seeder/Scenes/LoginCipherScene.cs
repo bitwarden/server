@@ -2,6 +2,7 @@
 using System.Text.Json;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
+using Bit.Seeder.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
 using Bit.Seeder.Services;
@@ -32,6 +33,8 @@ public abstract class LoginCipherScene<TRequest>(IManglerService manglerService)
         public bool Deleted { get; set; }
         public bool Archived { get; set; }
         public bool Favorite { get; set; }
+        /// <summary>Gives the cipher its own item key (<c>Cipher.Key</c>) and encrypts its fields under it.</summary>
+        public bool UseCipherKey { get; set; }
         public Guid? FolderId { get; set; }
         public IEnumerable<FieldRequest>? Fields { get; set; }
         public IEnumerable<PasskeyRequest>? Passkeys { get; set; }
@@ -48,6 +51,10 @@ public abstract class LoginCipherScene<TRequest>(IManglerService manglerService)
             public required string RpId { get; set; }
             public required string RpName { get; set; }
             public required string UserName { get; set; }
+            public string? CredentialId { get; set; }
+            public string? KeyValue { get; set; }
+            public string? UserHandle { get; set; }
+            public string? UserDisplayName { get; set; }
         }
     }
 
@@ -75,6 +82,7 @@ public abstract class LoginCipherScene<TRequest>(IManglerService manglerService)
             Name = request.Name,
             Notes = request.Notes,
             EncryptionKey = owner.EncryptionKey,
+            CipherEncryption = request.UseCipherKey ? CipherEncryptionType.CipherKey : CipherEncryptionType.UserKey,
             OrganizationId = owner.OrganizationId,
             UserId = owner.UserId,
             Login = new LoginViewDto
@@ -84,7 +92,13 @@ public abstract class LoginCipherScene<TRequest>(IManglerService manglerService)
                 Totp = request.Totp,
                 Uris = string.IsNullOrEmpty(request.Uri) ? null : [new LoginUriViewDto { Uri = request.Uri }],
                 Fido2Credentials = request.Passkeys?
-                    .Select(p => LoginCipherSeeder.CreateFido2Credential(p.RpId, p.RpName, p.UserName)).ToList()
+                    .Select(p => LoginCipherSeeder.CreateFido2Credential(
+                        p.RpId, p.RpName, p.UserName,
+                        credentialId: p.CredentialId,
+                        keyValue: p.KeyValue,
+                        userHandle: p.UserHandle,
+                        userDisplayName: p.UserDisplayName))
+                    .ToList()
             },
             Fields = request.Fields?.Select(f => new FieldViewDto
             {

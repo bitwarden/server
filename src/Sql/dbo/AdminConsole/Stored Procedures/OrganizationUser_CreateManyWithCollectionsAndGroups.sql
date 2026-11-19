@@ -24,7 +24,10 @@ BEGIN
         [AccessSecretsManager],
         [RevocationReason],
         [StatusNew],
-        [AccessPam]
+        [AccessPam],
+        [InviteReminderDueDate],
+        [InviteRemindersSentCount],
+        [ExternalName]
     )
     SELECT
         OUI.[Id],
@@ -42,7 +45,10 @@ BEGIN
         OUI.[AccessSecretsManager],
         OUI.[RevocationReason],
         OUI.[StatusNew],
-        ISNULL(OUI.[AccessPam], 0)
+        ISNULL(OUI.[AccessPam], 0),
+        OUI.[InviteReminderDueDate],
+        OUI.[InviteRemindersSentCount],
+        OUI.[ExternalName]
     FROM
         OPENJSON(@organizationUserData)
                  WITH (
@@ -61,7 +67,10 @@ BEGIN
                      [AccessSecretsManager] BIT '$.AccessSecretsManager',
                      [RevocationReason] TINYINT '$.RevocationReason',
                      [StatusNew] SMALLINT '$.StatusNew',
-                     [AccessPam] BIT '$.AccessPam'
+                     [AccessPam] BIT '$.AccessPam',
+                     [InviteReminderDueDate] DATETIME2(7) '$.InviteReminderDueDate',
+                     [InviteRemindersSentCount] TINYINT '$.InviteRemindersSentCount',
+                     [ExternalName] NVARCHAR(300) '$.ExternalName'
                      ) OUI
 
     -- Only groups in the user's organization may be attached

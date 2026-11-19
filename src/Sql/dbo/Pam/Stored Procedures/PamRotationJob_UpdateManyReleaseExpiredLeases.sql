@@ -1,0 +1,79 @@
+CREATE PROCEDURE [dbo].[PamRotationJob_UpdateManyReleaseExpiredLeases]
+    @Now DATETIME2(7),
+    @OfflineAfterSeconds INT,
+    @ReleaseDelaySeconds INT
+AS
+BEGIN
+    SET NOCOUNT ON
+    -- Releases require an expired lease and a stale heartbeat, never Action alone. A Rotated attempt always comes
+    -- with a Succeeded job, so success wins without checking attempts.
+    SET XACT_ABORT ON
+
+    DECLARE @Affected TABLE
+    (
+        [JobId] UNIQUEIDENTIFIER NOT NULL,
+        [PreviousClaimedByAccessConnectorId] UNIQUEIDENTIFIER NULL
+    )
+
+    BEGIN TRY
+        BEGIN TRANSACTION
+
+        UPDATE
+            J
+        SET
+            J.[Action] = 0, -- None
+            -- Uses the pre-clear ClaimedDate, still visible here, so re-claim time equals ExecuteBy.
+            J.[NextClaimableDate] = DATEADD(SECOND, @ReleaseDelaySeconds, J.[ClaimedDate]),
+            J.[ClaimedByAccessConnectorId] = NULL,
+            J.[ClaimedDate] = NULL
+        OUTPUT
+            deleted.[Id],
+            deleted.[ClaimedByAccessConnectorId]
+        INTO @Affected ([JobId], [PreviousClaimedByAccessConnectorId])
+        FROM
+            [dbo].[PamRotationJob] J
+        INNER JOIN
+            [dbo].[PamAccessConnector] AC ON AC.[Id] = J.[ClaimedByAccessConnectorId]
+        WHERE
+            J.[Action] = 1 -- Claimed
+            AND J.[ExpirationDate] > @Now -- a timed-out claim is the timeout sweep's, not a release
+            AND DATEADD(SECOND, @ReleaseDelaySeconds, J.[ClaimedDate]) <= @Now
+            AND (
+                AC.[LastHeartbeatDate] IS NULL
+                OR AC.[LastHeartbeatDate] < DATEADD(SECOND, -@OfflineAfterSeconds, @Now)
+            )
+
+        -- Records when the released claim's attempt ended; it derives as Abandoned, which the retry budget never
+        -- charges.
+        UPDATE
+            [dbo].[PamRotationAttempt]
+        SET
+            [ResolvedDate] = @Now
+        WHERE
+            [JobId] IN (SELECT [JobId] FROM @Affected)
+            AND [Action] = 0 -- None
+            AND [ResolvedDate] IS NULL
+
+        COMMIT TRANSACTION
+
+        -- One row per released job; ClaimedByAccessConnectorId is the pre-clear claimant, always non-null.
+        SELECT
+            AF.[JobId],
+            C.[Id] AS [RotationConfigId],
+            C.[OrganizationId],
+            C.[CipherId],
+            J.[Source],
+            AF.[PreviousClaimedByAccessConnectorId] AS [ClaimedByAccessConnectorId]
+        FROM
+            @Affected AF
+        INNER JOIN
+            [dbo].[PamRotationJob] J ON J.[Id] = AF.[JobId]
+        INNER JOIN
+            [dbo].[PamRotationConfig] C ON C.[Id] = J.[RotationConfigId]
+    END TRY
+    BEGIN CATCH
+        IF @@TRANCOUNT > 0
+            ROLLBACK TRANSACTION;
+        THROW;
+    END CATCH
+END

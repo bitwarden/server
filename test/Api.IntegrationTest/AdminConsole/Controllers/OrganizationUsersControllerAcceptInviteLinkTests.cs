@@ -4,6 +4,7 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Auth.Helpers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -12,6 +13,8 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bitwarden.Server.Sdk.Features;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -30,6 +33,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
     public OrganizationUsersControllerAcceptInviteLinkTests(ApiApplicationFactory factory)
     {
         _factory = factory;
+        _factory.SubstituteService<IFeatureService>(featureService =>
+            featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true));
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -155,6 +160,18 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
         Assert.Equal(resetPasswordKey, organizationUser.ResetPasswordKey);
     }
 
+    [Fact]
+    public async Task AcceptInviteLink_WithWrongCode_ReturnsNotFoundProblem()
+    {
+        var (_, joinerClient) = await RegisterAndLoginJoinerAsync();
+
+        var response = await joinerClient.PostAsJsonAsync(
+            "/organizations/users/invite-link/accept",
+            new AcceptOrganizationInviteLinkRequestModel { OrganizationId = _organization.Id, Code = Guid.NewGuid() });
+
+        await ValidationProblemAssertions.AssertNotFoundProblemAsync(response, "code", "invite_link_not_found");
+    }
+
     // A user without two-step login must not be able to accept an invite link into an organization that
     // enforces the Require Two-Factor Authentication policy, mirroring the normal invite accept flow.
     [Fact]
@@ -169,7 +186,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
             "/organizations/users/invite-link/accept",
             new AcceptOrganizationInviteLinkRequestModel { OrganizationId = created.OrganizationId, Code = created.Code });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "two_factor_required_for_membership");
         await AssertNotMemberAsync(joinerEmail);
     }
 
@@ -188,7 +206,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
             "/organizations/users/invite-link/accept",
             new AcceptOrganizationInviteLinkRequestModel { OrganizationId = created.OrganizationId, Code = created.Code });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "member_of_another_organization");
         await AssertNotMemberAsync(joinerEmail);
     }
 
@@ -207,7 +226,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
             "/organizations/users/invite-link/accept",
             new AcceptOrganizationInviteLinkRequestModel { OrganizationId = created.OrganizationId, Code = created.Code });
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "auto_confirm_policy_violation_target_org");
         await AssertNotMemberAsync(joinerEmail);
     }
 
@@ -237,7 +257,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "single_organization_policy");
         await AssertNotMemberAsync(joinerEmail);
     }
 
@@ -266,7 +287,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "auto_confirm_policy_violation_other_org");
         await AssertNotMemberAsync(joinerEmail);
     }
 
@@ -312,7 +334,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "two_factor_required_for_membership");
         await AssertStillInvitedAsync(joinerEmail);
     }
 
@@ -346,7 +369,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "member_of_another_organization");
         await AssertStillInvitedAsync(joinerEmail);
     }
 
@@ -363,7 +387,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "auto_confirm_policy_violation_target_org");
         await AssertStillInvitedAsync(joinerEmail);
     }
 
@@ -420,7 +445,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "two_factor_required_for_membership");
         await AssertStillStagedAsync(joinerEmail);
     }
 
@@ -436,6 +462,23 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         await AssertAcceptedMemberAsync(joinerEmail);
+    }
+
+    // Staged path: a staged member given Privileged Controls joins without it when the organization is at its
+    // Privileged Controls seat limit.
+    [Fact]
+    public async Task AcceptInviteLink_WithStagedMembershipWithPrivilegedControls_AtPrivilegedControlsSeatLimit_JoinsWithoutPrivilegedControls()
+    {
+        await FillPrivilegedControlsSeatsAtLimitAsync();
+        var created = await CreateInviteLinkAsync();
+        var (joinerEmail, joinerClient) = await RegisterAndLoginJoinerAsync();
+        await CreateStagedMembershipAsync(joinerEmail, accessPam: true);
+
+        var response = await AcceptAsync(joinerClient, created);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var organizationUser = await AssertAcceptedMemberAsync(joinerEmail);
+        Assert.False(organizationUser.AccessPam);
     }
 
     // Staged path: a joiner with two-step login may accept the invite link into a 2FA org.
@@ -468,7 +511,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "member_of_another_organization");
         await AssertStillStagedAsync(joinerEmail);
     }
 
@@ -485,7 +529,8 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
         var response = await AcceptAsync(joinerClient, created);
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "auto_confirm_policy_violation_target_org");
         await AssertStillStagedAsync(joinerEmail);
     }
 
@@ -626,7 +671,7 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
 
     // Creates a Staged membership (Email set, no linked UserId), mirroring SCIM/Directory-Connector
     // provisioning, so the accept resolves it as an existing membership.
-    private async Task CreateStagedMembershipAsync(string joinerEmail)
+    private async Task CreateStagedMembershipAsync(string joinerEmail, bool accessPam = false)
     {
         var organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
         await organizationUserRepository.CreateAsync(new OrganizationUser
@@ -636,7 +681,23 @@ public class OrganizationUsersControllerAcceptInviteLinkTests : IClassFixture<Ap
             Email = joinerEmail,
             Type = OrganizationUserType.User,
             Status = OrganizationUserStatusType.Staged,
+            AccessPam = accessPam,
         });
+    }
+
+    // Gives the organization one Privileged Controls seat, already taken, with no room to autoscale.
+    private async Task FillPrivilegedControlsSeatsAtLimitAsync()
+    {
+        _organization.UsePam = true;
+        _organization.PamSeats = 1;
+        _organization.MaxAutoscalePamSeats = 1;
+        _organization.GatewaySubscriptionId = "sub_integration_test";
+        await _factory.GetService<IOrganizationRepository>().ReplaceAsync(_organization);
+
+        var (_, seatHolder) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory, _organization.Id,
+            OrganizationUserType.User);
+        seatHolder.AccessPam = true;
+        await _factory.GetService<IOrganizationUserRepository>().ReplaceAsync(seatHolder);
     }
 
     private async Task SetJoinerTwoFactorEnabledAsync(string joinerEmail)

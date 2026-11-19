@@ -3,10 +3,8 @@
 namespace Bit.Services.Pam.Engine;
 
 /// <summary>
-/// Combines the results of an access rule's flat list of <see cref="AccessCondition"/>s into one decision. Each
-/// condition evaluates itself (<see cref="AccessCondition.Evaluate"/>); the engine only folds those results, with
-/// deny taking precedence over a pending approval, which in turn takes precedence over allow. An empty list is
-/// vacuously satisfied (allow). Unparseable inputs fail closed before they reach the engine.
+/// Folds the results of an access rule's <see cref="AccessCondition"/>s, each evaluated by the condition itself, into
+/// one decision. Unparseable rules fail closed before they reach the engine.
 /// </summary>
 public sealed class AccessRuleEngine : IAccessRuleEngine
 {

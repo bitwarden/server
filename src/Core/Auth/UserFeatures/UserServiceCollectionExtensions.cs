@@ -13,6 +13,7 @@ using Bit.Core.Auth.UserFeatures.UserApiKey.Interfaces;
 using Bit.Core.Auth.UserFeatures.UserEmail;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
+using Bit.Core.Auth.UserFeatures.UserVerification;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin;
 using Bit.Core.Auth.UserFeatures.WebAuthnLogin.Implementations;
 using Bit.Core.KeyManagement.UserKey;
@@ -39,6 +40,19 @@ public static class UserServiceCollectionExtensions
         services.AddTwoFactorCommandsQueries();
         services.AddUserApiKeyCommands();
         services.AddUserEmailCommands();
+        services.AddUserVerificationCommands();
+        services.AddSsoJitProvisionTrustedDeviceCommands();
+    }
+
+    private static void AddUserVerificationCommands(this IServiceCollection services)
+    {
+        services.AddScoped<IUserVerificationOtpCommand, UserVerificationOtpCommand>();
+    }
+
+    private static void AddSsoJitProvisionTrustedDeviceCommands(this IServiceCollection services)
+    {
+        services.TryAddScoped<DeviceTrust.IFinishSsoJitProvisionTrustedDeviceCommand,
+            DeviceTrust.FinishSsoJitProvisionTrustedDeviceCommand>();
     }
 
     private static void AddUserEmailCommands(this IServiceCollection services)
@@ -105,6 +119,9 @@ public static class UserServiceCollectionExtensions
         services.AddScoped<IDeleteTwoFactorWebAuthnCredentialCommand, DeleteTwoFactorWebAuthnCredentialCommand>();
         services.AddScoped<ITwoFactorIsEnabledQuery, TwoFactorIsEnabledQuery>();
         services.AddScoped<IResetUserTwoFactorCommand, ResetUserTwoFactorCommand>();
+        services.AddScoped<IIssueTwoFactorRememberTokenCommand, IssueTwoFactorRememberTokenCommand>();
+        services.AddScoped<IValidateTwoFactorRememberTokenQuery, ValidateTwoFactorRememberTokenQuery>();
+        services.AddScoped<IRevokeTwoFactorRememberTokensCommand, RevokeTwoFactorRememberTokensCommand>();
     }
 
 }

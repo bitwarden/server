@@ -9,6 +9,9 @@ namespace Bit.Core.Settings;
 
 public class GlobalSettings : IGlobalSettings
 {
+    public const int DefaultOrganizationInviteReminderBatchSize = 500;
+    public const int DefaultOrganizationInviteReminderIntervalHours = 120; // 5 days
+
     private string _mailTemplateDirectory;
     private string _licenseDirectory;
 
@@ -49,8 +52,26 @@ public class GlobalSettings : IGlobalSettings
     public virtual bool DisableEmailNewDevice { get; set; }
     public virtual bool EnableNewDeviceVerification { get; set; }
     public virtual bool EnableCloudCommunication { get; set; } = false;
+    /// <summary>
+    /// Lifetime of organization member invite links, in hours.
+    /// </summary>
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
+    public virtual int OrganizationInviteReminderBatchSize { get; set; } = DefaultOrganizationInviteReminderBatchSize; // Set to 0 to turn off invite reminders
+    /// <summary>
+    /// Hours from the invite to the first reminder, and between each later reminder.
+    /// 0 sends each reminder on the next job run. Negative values use the default.
+    /// </summary>
+    public virtual int OrganizationInviteReminderIntervalHours { get; set; } = DefaultOrganizationInviteReminderIntervalHours;
+    /// <summary>
+    /// Lifetime of emergency access invite links, in hours.
+    /// </summary>
+    public virtual int EmergencyAccessInviteExpirationHours { get; set; } = 120; // 5 days
+    /// <summary>
+    /// Lifetime of provider setup, provider member, and business unit conversion invite links, in hours.
+    /// </summary>
+    public virtual int ProviderInviteExpirationHours { get; set; } = 120; // 5 days
     public virtual int TwoFactorUserVerificationTokenLifetimeInMinutes { get; set; } = 30;
+    public virtual int TwoFactorRememberTokenLifetimeInDays { get; set; } = 30;
     public virtual int DeviceLastActivityCacheTtlHours { get; set; } = 120; // 5 days
     public virtual string EventGridKey { get; set; }
     public virtual bool TestPlayIdTrackingEnabled { get; set; } = false;
@@ -94,6 +115,7 @@ public class GlobalSettings : IGlobalSettings
     public virtual IWebPushSettings WebPush { get; set; } = new WebPushSettings();
     public virtual int SendAccessTokenLifetimeInMinutes { get; set; } = 5;
     public virtual bool EnableEmailVerification { get; set; }
+    public virtual bool EnableOpenInviteLinkEmailVerification { get; set; } = true;
     public virtual string KdfDefaultHashKey { get; set; }
     public virtual string PricingUri { get; set; }
     public virtual string PricingApiKey { get; set; }
@@ -770,9 +792,25 @@ public class GlobalSettings : IGlobalSettings
 
     public class SsoSettings : ISsoSettings
     {
+        private string _rsa15DeprecationDate;
+
         public int CacheLifetimeInSeconds { get; set; } = 60;
         public double SsoTokenLifetimeInSeconds { get; set; } = 5;
         public bool EnforceSsoPolicyForAllUsers { get; set; }
+        /// <summary>
+        /// Minimum number of days between RSA 1.5 deprecation emails to one organization.
+        /// The default is 7. A value of 0 or less turns the email off.
+        /// </summary>
+        public int Rsa15DeprecationEmailCooldownInDays { get; set; } = 7;
+        /// <summary>
+        /// Date shown in the RSA 1.5 deprecation email, as display text.
+        /// The default is "January 19, 2027". An empty or whitespace value uses the default.
+        /// </summary>
+        public string Rsa15DeprecationDate
+        {
+            get => string.IsNullOrWhiteSpace(_rsa15DeprecationDate) ? "January 19, 2027" : _rsa15DeprecationDate;
+            set => _rsa15DeprecationDate = value;
+        }
     }
 
     public class StripeSettings

@@ -29,11 +29,19 @@ public sealed class Distribution<T>
     /// Remainder items go to buckets with the largest fractional parts,
     /// not unconditionally to the last bucket.
     /// </summary>
-    /// <param name="index">Zero-based index of the item.</param>
-    /// <param name="total">Total number of items being distributed.</param>
+    /// <param name="index">Zero-based index of the item; must be in [0, <paramref name="total"/>).</param>
+    /// <param name="total">Total number of items being distributed; must be positive.</param>
     /// <returns>The value assigned to this index position.</returns>
+    /// <exception cref="ArgumentOutOfRangeException">
+    /// Thrown when <paramref name="total"/> is not positive, or <paramref name="index"/> is outside [0, <paramref name="total"/>).
+    /// A silent fallback here once put every generated preset login in the last password bucket.
+    /// </exception>
     public T Select(int index, int total)
     {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(total);
+        ArgumentOutOfRangeException.ThrowIfNegative(index);
+        ArgumentOutOfRangeException.ThrowIfGreaterThanOrEqual(index, total);
+
         var cumulative = 0;
         foreach (var (value, count) in GetCounts(total))
         {

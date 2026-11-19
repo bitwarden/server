@@ -17,7 +17,6 @@ namespace Bit.Services.Pam.Test.Api.Endpoints.Handlers;
 [SutProviderCustomize]
 public class AuditEndpointsHandlerTests
 {
-    // The kill switch withdraws the trail.
     [Theory, BitAutoData]
     public async Task GetTrail_WithSqlAuditLoggingDisabled_ThrowsNotFound(
         Guid organizationId, SutProvider<AuditEndpointsHandler> sutProvider)

@@ -22,4 +22,6 @@ public class OrganizationSignup : OrganizationUpgrade
     public bool SkipTrial { get; set; }
     public int? TrialLength { get; set; }
     public string[] Coupons { get; set; }
+    public bool UsePrivilegedControls { get; set; }
+    public int? PamSeats { get; set; }
 }

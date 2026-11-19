@@ -75,12 +75,9 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 
     // NOTE: Feature flags with progressive rollout (device-keyed or user-keyed) cannot be
     // evaluated from inside this validator without first populating CurrentContext.UserId /
-    // CurrentContext.DeviceIdentifier. CurrentContextMiddleware only sees /connect/token
-    // headers, which do not carry either value. For refresh, populate CurrentContext inline
-    // immediately before the flag check from the server-signed Subject claims (see
-    // TryUpdateDeviceLastActivityForRefreshAsync below). Do not populate CurrentContext
-    // from raw form-body input before validation — pre-validation client values would become
-    // visible to any downstream reader in the same request.
+    // CurrentContext.DeviceIdentifier. CurrentContextMiddleware reads only /connect/token
+    // headers, which carry neither value, so LaunchDarkly cannot bucket these flags unless code
+    // first sets both values manually from the validated refresh-token Subject claims.
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
     {
         Debug.Assert(context.Result is not null);
@@ -98,6 +95,9 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             await TryUpdateDeviceLastActivityForRefreshAsync(context);
         }
 
+        // Every token request that passes IdentityServer's own grant validation reaches this validator. Only SSO
+        // (authorization_code) and user API key (client_credentials) logins are validated as user logins here; every
+        // other request returns early.
         string[] allowedGrantTypes = ["authorization_code", "client_credentials"];
         string clientId = context.Result.ValidatedRequest.ClientId;
         if (!allowedGrantTypes.Contains(context.Result.ValidatedRequest.GrantType)
@@ -143,13 +143,9 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         context.Result.CustomResponse = customResponse;
         if (claims?.Any() ?? false)
         {
-            context.Result.ValidatedRequest.Client.AlwaysSendClientClaims = true;
-            context.Result.ValidatedRequest.Client.ClientClaimsPrefix = string.Empty;
-            foreach (var claim in claims)
-            {
-                context.Result.ValidatedRequest.ClientClaims.Add(claim);
-            }
+            AddClaimsToNewAccessToken(context.Result.ValidatedRequest, claims);
         }
+
         if (context.Result.CustomResponse == null || user.MasterPassword != null)
         {
             return Task.CompletedTask;
@@ -168,6 +164,40 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         }
 
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Adds the claims to the access token issued for this request.
+    /// </summary>
+    /// <remarks>
+    /// The grant is already validated when this validator runs, so this method can only add to the request's existing
+    /// subject, if any.
+    /// <list type="bullet">
+    ///   <item>
+    ///     With a subject: the claims go on the subject, which IdentityServer stores with any refresh token. Only claim
+    ///     types in <see cref="Claims.UserIdentityClaimTypes"/> carry over to the access token, at issuance and on
+    ///     refresh. Today, this applies only to the SSO authorization_code flow.
+    ///   </item>
+    ///   <item>
+    ///     Without a subject: the claims go out as client claims, on this request's access token only. Today, this
+    ///     applies only to the user API key client_credentials flow.
+    ///   </item>
+    /// </list>
+    /// </remarks>
+    private static void AddClaimsToNewAccessToken(ValidatedTokenRequest request, List<Claim> claims)
+    {
+        if (request.Subject?.Identity is ClaimsIdentity subjectIdentity)
+        {
+            subjectIdentity.AddClaims(claims);
+            return;
+        }
+
+        request.Client.AlwaysSendClientClaims = true;
+        request.Client.ClientClaimsPrefix = string.Empty;
+        foreach (var claim in claims)
+        {
+            request.ClientClaims.Add(claim);
+        }
     }
 
     protected override ClaimsPrincipal? GetSubject(CustomTokenRequestValidationContext context)
@@ -220,25 +250,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             var identifier = string.IsNullOrWhiteSpace(rawIdentifier) ? null : rawIdentifier;
             var userIdString = subject?.FindFirstValue(JwtClaimTypes.Subject);
             Guid.TryParse(userIdString, out var userId);
-
-            // Populate CurrentContext for the LD bucketing decision below. Both values come
-            // from the server-signed refresh-token Subject claims.
-            // TODO: PM-34091 - delete when cleaning up the feature flag; the bump call reads
-            // userId / identifier directly.
-            if (userId != Guid.Empty)
-            {
-                CurrentContext.UserId ??= userId;
-            }
-            if (identifier is not null)
-            {
-                CurrentContext.DeviceIdentifier ??= identifier;
-            }
-
-            // TODO: PM-34091 - remove feature flag check when cleaning up
-            if (!_featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
-            {
-                return;
-            }
 
             if (identifier is null || userId == Guid.Empty)
             {

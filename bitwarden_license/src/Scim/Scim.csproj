@@ -9,6 +9,7 @@
   <PropertyGroup Condition=" '$(RunConfiguration)' == 'Scim' " />
   <ItemGroup>
     <ProjectReference Include="..\..\..\src\Core\Core.csproj" />
+    <ProjectReference Include="..\..\..\src\Libraries\Subscriptions.Organization\Subscriptions.Organization.csproj" />
     <ProjectReference Include="..\..\..\src\SharedWeb\SharedWeb.csproj" />
   </ItemGroup>
 

@@ -23,7 +23,6 @@ public class SendControlsSyncPolicyEvent(
     IPolicyRepository policyRepository,
     TimeProvider timeProvider,
     ISendRepository sendRepository,
-    Bitwarden.Server.Sdk.Features.IFeatureService featureService,
     IOrganizationUserRepository orgUserRepository,
     IEventService eventService) : IOnPolicyPostUpdateEvent, IPolicyValidationEvent
 {
@@ -50,10 +49,7 @@ public class SendControlsSyncPolicyEvent(
             enabled: postUpsertedPolicyState.Enabled && sendControlsPolicyData.DisableHideEmail,
             policyData: sendOptionsData);
 
-        if (featureService.IsEnabled(FeatureFlagKeys.SendControlsExistingSends))
-        {
-            await UpdateSendsByPolicyAsync(postUpsertedPolicyState, sendControlsPolicyData);
-        }
+        await UpdateSendsByPolicyAsync(postUpsertedPolicyState, sendControlsPolicyData);
     }
 
     private async Task UpsertLegacyPolicyAsync<T>(

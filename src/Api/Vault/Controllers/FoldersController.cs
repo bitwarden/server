@@ -5,11 +5,11 @@ using Bit.Api.Models.Response;
 using Bit.Api.Vault.Models.Request;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
+using Bit.CurrentUser;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -21,20 +21,20 @@ public class FoldersController : Controller
 {
     private readonly IFolderRepository _folderRepository;
     private readonly ICipherService _cipherService;
-    private readonly IUserService _userService;
+    private readonly ICurrentUserContext _currentUserContext;
     private readonly IDeleteManyFoldersCommand _deleteManyFoldersCommand;
     private readonly GlobalSettings _globalSettings;
 
     public FoldersController(
         IFolderRepository folderRepository,
         ICipherService cipherService,
-        IUserService userService,
+        ICurrentUserContext currentUserContext,
         IDeleteManyFoldersCommand deleteManyFoldersCommand,
         GlobalSettings globalSettings)
     {
         _folderRepository = folderRepository;
         _cipherService = cipherService;
-        _userService = userService;
+        _currentUserContext = currentUserContext;
         _deleteManyFoldersCommand = deleteManyFoldersCommand;
         _globalSettings = globalSettings;
     }
@@ -42,7 +42,7 @@ public class FoldersController : Controller
     [HttpGet("{id}")]
     public async Task<FolderResponseModel> Get(string id)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _currentUserContext.UserId;
         var folder = await _folderRepository.GetByIdAsync(new Guid(id), userId);
         if (folder == null)
         {
@@ -55,7 +55,7 @@ public class FoldersController : Controller
     [HttpGet("")]
     public async Task<ListResponseModel<FolderResponseModel>> GetAll()
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _currentUserContext.UserId;
         var folders = await _folderRepository.GetManyByUserIdAsync(userId);
         var responses = folders.Select(f => new FolderResponseModel(f));
         return new ListResponseModel<FolderResponseModel>(responses);
@@ -64,8 +64,8 @@ public class FoldersController : Controller
     [HttpPost("")]
     public async Task<FolderResponseModel> Post([FromBody] FolderRequestModel model)
     {
-        var userId = _userService.GetProperUserId(User).Value;
-        var folder = model.ToFolder(_userService.GetProperUserId(User).Value);
+        var userId = _currentUserContext.UserId;
+        var folder = model.ToFolder(userId);
         await _cipherService.SaveFolderAsync(folder);
         return new FolderResponseModel(folder);
     }
@@ -73,7 +73,7 @@ public class FoldersController : Controller
     [HttpPut("{id}")]
     public async Task<FolderResponseModel> Put(string id, [FromBody] FolderRequestModel model)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _currentUserContext.UserId;
         var folder = await _folderRepository.GetByIdAsync(new Guid(id), userId);
         if (folder == null)
         {
@@ -94,7 +94,7 @@ public class FoldersController : Controller
     [HttpDelete("{id}")]
     public async Task Delete(string id)
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _currentUserContext.UserId;
         var folder = await _folderRepository.GetByIdAsync(new Guid(id), userId);
         if (folder == null)
         {
@@ -119,14 +119,14 @@ public class FoldersController : Controller
             throw new BadRequestException("You can only delete up to 500 folders at a time.");
         }
 
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _currentUserContext.UserId;
         await _deleteManyFoldersCommand.DeleteManyAsync(model.Ids, userId);
     }
 
     [HttpDelete("all")]
     public async Task DeleteAll()
     {
-        var userId = _userService.GetProperUserId(User).Value;
+        var userId = _currentUserContext.UserId;
         var allFolders = await _folderRepository.GetManyByUserIdAsync(userId);
 
         foreach (var folder in allFolders)

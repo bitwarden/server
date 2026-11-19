@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Context;
 using Bit.Core.SecretsManager.Repositories;
@@ -7,9 +8,8 @@ using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
 using Bit.Sso.Utilities;
-using Bit.Sso.Utilities.Saml2;
+using Bit.Subscriptions.Organization;
 using Duende.IdentityServer.Services;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Stripe;
 
 namespace Bit.Sso;
@@ -47,9 +47,6 @@ public class Startup
         // Context
         services.AddScoped<ICurrentContext, CurrentContext>();
 
-        // Metrics
-        services.TryAddSingleton<Saml2AssertionMetrics>();
-
         // Caching
         services.AddMemoryCache();
         services.AddDistributedCache(globalSettings);
@@ -73,7 +70,7 @@ public class Startup
         // Authentication
         services.AddDistributedIdentityServices();
         services.AddAuthentication()
-            .AddCookie(AuthenticationSchemes.BitwardenExternalCookieAuthenticationScheme);
+            .AddCookie(AuthenticationSchemes.SsoExternalCookie);
         services.AddSsoServices(globalSettings);
 
         // IdentityServer
@@ -87,6 +84,7 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddCoreLocalizationServices();
         services.AddBillingOperations();
+        services.AddPrivilegedControlsSeatAutoscaling();
 
         // TODO: Remove when OrganizationUser methods are moved out of OrganizationService, this noop dependency should
         // TODO: no longer be required - see PM-1880

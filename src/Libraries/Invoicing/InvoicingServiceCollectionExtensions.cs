@@ -10,7 +10,7 @@ namespace Bit.Invoicing;
 /// <summary>Registration entry point for the Invoicing library.</summary>
 public static class InvoicingServiceCollectionExtensions
 {
-    /// <summary>Registers everything <c>Bit.Invoicing</c> needs, including its owned feature flag keys. Resolving <see cref="IInvoicePreviewService"/> in a self-hosted environment throws — the library is cloud-only.</summary>
+    /// <summary>Registers everything <c>Bit.Invoicing</c> needs, including any feature flag keys it owns (none today). Resolving <see cref="IInvoicePreviewService"/> in a self-hosted environment throws — the library is cloud-only.</summary>
     public static IServiceCollection AddInvoicing(this IServiceCollection services)
     {
         services.TryAddSingleton<InvoicePreviewService>();

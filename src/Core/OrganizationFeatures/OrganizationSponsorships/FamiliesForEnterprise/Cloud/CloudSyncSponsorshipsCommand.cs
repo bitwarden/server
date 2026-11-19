@@ -8,6 +8,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationSponsorships;
 using Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Interfaces;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 
 namespace Bit.Core.OrganizationFeatures.OrganizationSponsorships.FamiliesForEnterprise.Cloud;
 
@@ -15,13 +16,16 @@ public class CloudSyncSponsorshipsCommand : ICloudSyncSponsorshipsCommand
 {
     private readonly IOrganizationSponsorshipRepository _organizationSponsorshipRepository;
     private readonly IEventService _eventService;
+    private readonly IGlobalSettings _globalSettings;
 
     public CloudSyncSponsorshipsCommand(
     IOrganizationSponsorshipRepository organizationSponsorshipRepository,
-    IEventService eventService)
+    IEventService eventService,
+    IGlobalSettings globalSettings)
     {
         _organizationSponsorshipRepository = organizationSponsorshipRepository;
         _eventService = eventService;
+        _globalSettings = globalSettings;
     }
 
     public async Task<(OrganizationSponsorshipSyncData, IEnumerable<OrganizationSponsorship>)> SyncOrganization(Organization sponsoringOrg, IEnumerable<OrganizationSponsorshipData> sponsorshipsData)
@@ -70,6 +74,11 @@ public class CloudSyncSponsorshipsCommand : ICloudSyncSponsorshipsCommand
                 if (OrgDisabledForMoreThanGracePeriod(sponsoringOrg))
                 {
                     continue; // prevent new sponsorships from disabled orgs
+                }
+                if (Enum.TryParse<CloudRegion>(_globalSettings.BaseServiceUri.CloudRegion, ignoreCase: true, out var cloudRegion) &&
+                    cloudRegion == CloudRegion.Gov)
+                {
+                    continue; // prevent new sponsorships in the Gov region
                 }
                 cloudSponsorship = new OrganizationSponsorship
                 {

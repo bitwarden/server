@@ -13,6 +13,23 @@ public class PartialCipherDataTests
     private const string Sentinel = "2.SENTINEL|encrypted";
 
     [Fact]
+    public void KeptKeys_CoverEveryKeyStripEmits()
+    {
+        var data = JsonSerializer.Serialize(new CipherLoginData
+        {
+            Name = Sentinel,
+            Notes = Sentinel,
+            Username = Sentinel,
+            Uris = [new CipherLoginData.CipherLoginUriData { Uri = Sentinel }],
+        });
+
+        using var stripped = JsonDocument.Parse(PartialCipherData.Strip(CipherType.Login, data));
+
+        Assert.All(stripped.RootElement.EnumerateObject(),
+            p => Assert.True(PartialCipherData.KeptKeys.Contains(p.Name), p.Name));
+    }
+
+    [Fact]
     public void Strip_Login_KeepsNameAndUris()
     {
         var data = JsonSerializer.Serialize(new CipherLoginData

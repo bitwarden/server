@@ -1,24 +1,35 @@
-﻿using Bit.HttpExtensions;
+﻿using Bit.Core.Context;
+using Bit.HttpExtensions;
+using Bit.Pam.Repositories;
+using Bit.Services.Pam.AccessConnector.Commands.Interfaces;
 using Bit.Services.Pam.AccessConnector.Rotation.Api.Models.Response;
 
 namespace Bit.Services.Pam.AccessConnector.Rotation.Api.Endpoints.Handlers;
 
 /// <summary>
-/// Handler for the connector-facing <c>access-connectors/rotation/jobs</c> actions: the poll, which is the only
-/// request an idle access connector makes, and the atomic first-claim-wins claim, which hands back the work snapshot
-/// the access connector executes against. The Minimal API endpoints (see <c>RotationJobEndpoints</c>) resolve this
-/// handler from DI.
+/// Handler for the connector-facing <c>access-connectors/rotation/jobs</c> actions. The poll serves only an enabled
+/// access connector, and only jobs on its organization's assigned target systems.
 /// </summary>
-/// <remarks>
-/// Scaffold only: the method signatures define the wire contract (request/response models, status codes) that the
-/// generated OpenAPI spec and client bindings are built from. The bodies are intentionally unimplemented — the behavior
-/// lands with the rest of the rotation feature.
-/// </remarks>
-public class RotationJobEndpointsHandler
+public class RotationJobEndpointsHandler(
+    ICurrentContext currentContext,
+    IPamRotationJobRepository jobRepository,
+    TimeProvider timeProvider,
+    IClaimRotationJobCommand claimRotationJobCommand)
 {
-    public Task<ListResponseModel<ClaimableRotationJobResponseModel>> GetJobs()
-        => throw new NotImplementedException();
+    public async Task<ListResponseModel<ClaimableRotationJobResponseModel>> GetJobs()
+    {
+        var connectorId = currentContext.PamAccessConnectorId!.Value;
+        var jobs = await jobRepository.GetManyClaimableByAccessConnectorIdAsync(
+            connectorId, timeProvider.GetUtcNow().UtcDateTime);
 
-    public Task<RotationClaimResponseModel> Claim(Guid id)
-        => throw new NotImplementedException();
+        return new ListResponseModel<ClaimableRotationJobResponseModel>(
+            jobs.Select(job => new ClaimableRotationJobResponseModel(job)));
+    }
+
+    public async Task<RotationClaimResponseModel> Claim(Guid id)
+    {
+        var connectorId = currentContext.PamAccessConnectorId!.Value;
+        var result = await claimRotationJobCommand.ClaimAsync(connectorId, id);
+        return new RotationClaimResponseModel(result);
+    }
 }

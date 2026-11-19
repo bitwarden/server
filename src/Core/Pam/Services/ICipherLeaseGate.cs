@@ -12,6 +12,8 @@ namespace Bit.Core.Pam.Services;
 /// </summary>
 /// <remarks>
 /// Members resolve leasing from their own collections; administrators resolve it from the organization's.
+/// The "/admin" decisions need no lease from an Owner or Admin when the organization lets admins access all
+/// collection items.
 /// </remarks>
 public interface ICipherLeaseGate
 {
@@ -43,10 +45,24 @@ public interface ICipherLeaseGate
 
     /// <summary>
     /// Self-loading variant of the bulk member decision, for callers that have not already loaded the
-    /// caller's collections and mappings. Loads them once — but only when the flag is on, so the flag-off
-    /// path stays query-free.
+    /// caller's collections and mappings. Loads them once, and only when the flag is on and one of
+    /// <paramref name="ciphers"/> belongs to an organization in which an access rule can gate.
     /// </summary>
     Task<FullCipherAccess> AuthorizeReadManyAsync(Guid userId, IEnumerable<Cipher> ciphers);
+
+    /// <summary>
+    /// Variant of the self-loading bulk member decision for callers that have already loaded the caller's
+    /// cipher-to-collection mappings, so only the caller's collections are loaded, and under the same
+    /// conditions.
+    /// </summary>
+    /// <param name="collectionCiphersByCipher">
+    /// The caller's cipher-to-collection mappings, or <c>null</c> when the caller has not loaded them, in which
+    /// case the gate loads them itself, under the same conditions.
+    /// </param>
+    Task<FullCipherAccess> AuthorizeReadManyAsync(
+        Guid userId,
+        IEnumerable<Cipher> ciphers,
+        IDictionary<Guid, IGrouping<Guid, CollectionCipher>>? collectionCiphersByCipher);
 
     /// <summary>
     /// Read decision for a <em>write-return</em>: the response echoing back a cipher the caller has just
@@ -111,11 +127,31 @@ public interface ICipherLeaseGate
         IEnumerable<Cipher> ciphers);
 
     /// <summary>
-    /// Mints an unrestricted witness for whole-vault organization export — the only context in which
-    /// leasing is waived, and so the only sanctioned way to obtain full data without a decision. A
-    /// whole-vault exporter already holds an organization-wide read grant scoped to export, and a
-    /// partially stripped export is not a usable backup. The caller establishes that the requester may
-    /// export the whole vault; this only mints.
+    /// Per-cipher write via an "/admin" endpoint: the <see cref="AuthorizeAdminReadAsync"/> decision, throwing
+    /// <see cref="NotFoundException"/> where that returns <c>null</c>.
+    /// </summary>
+    Task<FullCipherAccess> EnsureCanMutateAsAdminAsync(Guid userId, Cipher cipher);
+
+    /// <summary>
+    /// Bulk counterpart of <see cref="EnsureCanMutateAsAdminAsync"/>; refuses the batch if any cipher is gated
+    /// with no valid lease.
+    /// </summary>
+    Task<FullCipherAccess> EnsureCanMutateManyAsAdminAsync(
+        Guid userId,
+        Guid organizationId,
+        IEnumerable<Cipher> ciphers);
+
+    /// <summary>
+    /// Mints the witness for the cipher an access connector reads to rotate its credential. The caller must have
+    /// verified the executing attempt's capability for this cipher; that capability, not a lease, is the authorization.
+    /// </summary>
+    FullCipherAccess AuthorizeAccessConnectorRotationRead(Cipher cipher);
+
+    /// <summary>
+    /// Mints an unrestricted witness for whole-vault organization export — the only sanctioned way to
+    /// obtain full data without a decision. A whole-vault exporter already holds an organization-wide
+    /// read grant scoped to export, and a partially stripped export is not a usable backup. The caller
+    /// establishes that the requester may export the whole vault; this only mints.
     /// </summary>
     FullCipherAccess UnrestrictedForWholeVaultExport();
 }

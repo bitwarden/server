@@ -29,7 +29,8 @@ public class PresetCommand
                 {
                     throw new ArgumentException(
                         $"--stripe-billing is not supported for individual preset '{args.Name}'. " +
-                        "Only organization presets can be billed today; premium billing is a separate task.");
+                        "Only organization presets can be billed; for a billed premium user, run " +
+                        "'individual --subscription premium --stripe-billing'.");
                 }
 
                 await RunIndividualPresetAsync(args);
@@ -48,7 +49,7 @@ public class PresetCommand
 
     private static async Task RunOrganizationPresetAsync(PresetArgs args)
     {
-        using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
+        using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle, DisableDataProtection = args.NoDataProtection });
 
         await Console.Error.WriteLineAsync($"Seeding organization from preset '{args.Name}'...");
         var result = await ConsoleProgressReporter.RunWithProgressAsync(
@@ -92,7 +93,7 @@ public class PresetCommand
 
     private static async Task RunIndividualPresetAsync(PresetArgs args)
     {
-        using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle });
+        using var deps = SeederServiceFactory.Create(new SeederServiceOptions { EnableMangling = args.Mangle, DisableDataProtection = args.NoDataProtection });
 
         await Console.Error.WriteLineAsync($"Seeding individual user from preset '{args.Name}'...");
         var result = await ConsoleProgressReporter.RunWithProgressAsync(

@@ -1,4 +1,6 @@
-﻿using Bit.SeederUtility.Commands;
+﻿using Bit.Seeder.Data.Enums;
+using Bit.Seeder.Options;
+using Bit.SeederUtility.Commands;
 using Xunit;
 
 namespace Bit.SeederApi.IntegrationTest.Cli;
@@ -162,6 +164,77 @@ public class OrganizationArgsTests
 
         Assert.NotNull(billing);
         Assert.True(billing.SkipTrial);
+    }
+
+    [Fact]
+    public void ToOptions_StripeBillingDefaults_VisaAtTheUsAddress()
+    {
+        var args = BaseArgs();
+        args.StripeBilling = true;
+
+        var billing = args.ToOptions().StripeBilling;
+
+        Assert.NotNull(billing);
+        Assert.Equal(new StripeBillingProfile(), billing.Profile);
+    }
+
+    [Theory]
+    [InlineData("visa", null)]
+    [InlineData(null, "de")]
+    public void Validate_CardOrAddressWithoutStripeBilling_Throws(string? card, string? address)
+    {
+        var args = BaseArgs();
+        args.StripeCard = card;
+        args.StripeAddress = address;
+
+        var ex = Assert.Throws<ArgumentException>(args.Validate);
+        Assert.Contains("--stripe-billing", ex.Message);
+    }
+
+    [Theory]
+    [InlineData("bogus", null)]
+    [InlineData(null, "bogus")]
+    public void Validate_UnknownCardOrAddress_Throws(string? card, string? address)
+    {
+        var args = BaseArgs();
+        args.StripeBilling = true;
+        args.StripeCard = card;
+        args.StripeAddress = address;
+
+        var ex = Assert.Throws<ArgumentException>(args.Validate);
+        Assert.Contains("'bogus'", ex.Message);
+    }
+
+    [Fact]
+    public void ToOptions_CardAndAddress_MapIntoTheProfile()
+    {
+        var args = BaseArgs();
+        args.StripeBilling = true;
+        args.StripeCard = "fails-on-charge";
+        args.StripeAddress = "de-vat";
+
+        var billing = args.ToOptions().StripeBilling;
+
+        Assert.NotNull(billing);
+        Assert.Equal(
+            new StripeBillingProfile { Card = StripeTestCard.FailsOnCharge, Address = StripeTestAddress.GermanyWithVatId },
+            billing.Profile);
+    }
+
+    [Fact]
+    public void ToOptions_UsePam_MapsToOverrides()
+    {
+        var args = BaseArgs();
+        args.UsePam = true;
+
+        Assert.True(args.ToOptions().Overrides?.UsePam);
+    }
+
+    [Fact]
+    public void ToOptions_UsePamUnset_LeavesOverrideNull()
+    {
+        // Null means "leave the plan default alone" rather than explicitly turning PAM off.
+        Assert.Null(BaseArgs().ToOptions().Overrides?.UsePam);
     }
 
     private static OrganizationArgs BaseArgs() => new()

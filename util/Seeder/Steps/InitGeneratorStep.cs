@@ -1,4 +1,5 @@
 ﻿using Bit.Seeder.Data;
+using Bit.Seeder.Data.Enums;
 using Bit.Seeder.Options;
 using Bit.Seeder.Pipeline;
 
@@ -22,14 +23,15 @@ internal sealed class InitGeneratorStep : IStep
         _options = options;
     }
 
-    internal static InitGeneratorStep FromDomain(string domain, int? seed = null)
+    internal static InitGeneratorStep FromDomain(string domain, int? seed = null, GeographicRegion? region = null)
     {
         var options = new OrganizationVaultOptions
         {
             Name = domain,
             Domain = domain,
             Users = 0,
-            Seed = seed
+            Seed = seed,
+            Region = region
         };
         return new InitGeneratorStep(options);
     }

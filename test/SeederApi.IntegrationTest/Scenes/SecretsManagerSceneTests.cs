@@ -270,6 +270,33 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
         Assert.False(await db.Secret.AnyAsync(s => s.OrganizationId == organizationId));
     }
 
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task OrganizationSecretScene_MultipleProjectIds_ReturnsBadRequestWithoutWrites(bool sameProject)
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var ownerUserId = await SeedUserAsync(playId);
+        var (organizationId, _, organizationKeyB64) = await SeedSmOrganizationAsync(playId, ownerUserId);
+        var firstProjectId = await SeedProjectAsync(playId, organizationId, organizationKeyB64);
+        var secondProjectId = sameProject
+            ? firstProjectId
+            : await SeedProjectAsync(playId, organizationId, organizationKeyB64);
+
+        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationSecretScene), new OrganizationSecretScene.Request
+        {
+            OrganizationId = organizationId,
+            OrganizationKeyB64 = organizationKeyB64,
+            Key = "DB_PASSWORD",
+            ProjectIds = [firstProjectId, secondProjectId]
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Only one project assignment is supported", await response.Content.ReadAsStringAsync());
+        Assert.False(await _factory.QueryAsync(db => db.Secret.AnyAsync(s => s.OrganizationId == organizationId)));
+    }
+
     [Fact]
     public async Task OrganizationAccessPolicyScene_GrantableNotInOrganization_ReturnsBadRequest()
     {
@@ -397,17 +424,102 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
         Assert.False(await db.GroupProjectAccessPolicy.AnyAsync(ap => ap.GrantedProjectId == projectId));
     }
 
-    private async Task<Guid> SeedUserAsync(string playId)
+    [Fact]
+    public async Task OrganizationAccessPolicyScene_DuplicateIdenticalGrants_CreatesPolicyOnce()
     {
-        var result = await PostSceneAsync(playId, "SingleUserScene", new SingleUserScene.Request
+        var playId = Guid.NewGuid().ToString();
+
+        var ownerUserId = await SeedUserAsync(playId);
+        var (organizationId, orgUserId, organizationKeyB64) = await SeedSmOrganizationAsync(playId, ownerUserId);
+        var projectId = await SeedProjectAsync(playId, organizationId, organizationKeyB64);
+
+        var result = await PostSceneAsync(playId, nameof(OrganizationAccessPolicyScene), new OrganizationAccessPolicyScene.Request
         {
-            Email = $"user-{Guid.NewGuid():N}@example.com",
-            Password = "asdfasdfasdf",
-            EmailVerified = true
+            OrganizationId = organizationId,
+            Grants = [UserProjectGrant(orgUserId, projectId, write: true), UserProjectGrant(orgUserId, projectId, write: true)]
+        });
+        Assert.Equal(1, result.GetProperty("count").GetInt32());
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+
+        var policy = await db.UserProjectAccessPolicy.SingleAsync(ap =>
+            ap.OrganizationUserId == orgUserId && ap.GrantedProjectId == projectId);
+        Assert.True(policy.Read);
+        Assert.True(policy.Write);
+    }
+
+    [Fact]
+    public async Task OrganizationAccessPolicyScene_ConflictingGrantPermissions_ReturnsBadRequestWithoutWrites()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var ownerUserId = await SeedUserAsync(playId);
+        var (organizationId, orgUserId, organizationKeyB64) = await SeedSmOrganizationAsync(playId, ownerUserId);
+        var projectId = await SeedProjectAsync(playId, organizationId, organizationKeyB64);
+
+        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationAccessPolicyScene), new OrganizationAccessPolicyScene.Request
+        {
+            OrganizationId = organizationId,
+            Grants = [UserProjectGrant(orgUserId, projectId), UserProjectGrant(orgUserId, projectId, write: true)]
         });
 
-        return result.GetProperty("userId").GetGuid();
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Conflicting permissions requested for grantee", await response.Content.ReadAsStringAsync());
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        Assert.False(await db.UserProjectAccessPolicy.AnyAsync(ap => ap.GrantedProjectId == projectId));
     }
+
+    [Fact]
+    public async Task OrganizationAccessPolicyScene_GrantWithoutRead_ReturnsBadRequestWithoutWrites()
+    {
+        var playId = Guid.NewGuid().ToString();
+
+        var ownerUserId = await SeedUserAsync(playId);
+        var (organizationId, orgUserId, organizationKeyB64) = await SeedSmOrganizationAsync(playId, ownerUserId);
+        var projectId = await SeedProjectAsync(playId, organizationId, organizationKeyB64);
+
+        var response = await _client.PostSceneRequestAsync(playId, nameof(OrganizationAccessPolicyScene), new OrganizationAccessPolicyScene.Request
+        {
+            OrganizationId = organizationId,
+            Grants = [UserProjectGrant(orgUserId, projectId, read: false, write: true)]
+        });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("must be Read = true", await response.Content.ReadAsStringAsync());
+
+        using var scope = _factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        Assert.False(await db.UserProjectAccessPolicy.AnyAsync(ap => ap.GrantedProjectId == projectId));
+    }
+
+    private static OrganizationAccessPolicyScene.Grant UserProjectGrant(
+        Guid orgUserId, Guid projectId, bool read = true, bool write = false) =>
+        new()
+        {
+            GranteeType = AccessPolicySeeder.GranteeType.OrganizationUser,
+            GranteeId = orgUserId,
+            GrantableType = AccessPolicySeeder.GrantableType.Project,
+            GrantableId = projectId,
+            Read = read,
+            Write = write
+        };
+
+    private async Task<Guid> SeedProjectAsync(string playId, Guid organizationId, string organizationKeyB64)
+    {
+        var result = await PostSceneAsync(playId, nameof(OrganizationProjectScene), new OrganizationProjectScene.Request
+        {
+            OrganizationId = organizationId,
+            OrganizationKeyB64 = organizationKeyB64,
+            Name = "Production"
+        });
+
+        return result.GetProperty("projectId").GetGuid();
+    }
+
+    private async Task<Guid> SeedUserAsync(string playId) => (await _client.SeedUserAsync(playId)).UserId;
 
     private async Task<(Guid OrganizationId, Guid OrgUserId, string OrganizationKeyB64)> SeedSmOrganizationAsync(
         string playId, Guid ownerUserId)

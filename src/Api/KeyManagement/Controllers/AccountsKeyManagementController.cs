@@ -153,6 +153,7 @@ public class AccountsKeyManagementController : Controller
                 Ciphers = await _cipherValidator.ValidateAsync(user, model.AccountData.Ciphers),
                 Folders = await _folderValidator.ValidateAsync(user, model.AccountData.Folders),
                 Sends = await _sendValidator.ValidateAsync(user, model.AccountData.Sends),
+                OldUserKeyId = KeyId.FromHexEncodedString(model.OldUserKeyId),
                 NewUserKeyId = KeyId.FromHexEncodedString(model.NewUserKeyId)
             }
         };
@@ -305,6 +306,7 @@ public class AccountsKeyManagementController : Controller
             Ciphers = await _cipherValidator.ValidateAsync(user, request.AccountData.Ciphers),
             Folders = await _folderValidator.ValidateAsync(user, request.AccountData.Folders),
             Sends = await _sendValidator.ValidateAsync(user, request.AccountData.Sends),
+            OldUserKeyId = KeyId.FromHexEncodedString(request.OldUserKeyId),
             NewUserKeyId = KeyId.FromHexEncodedString(request.NewUserKeyId)
         };
     }

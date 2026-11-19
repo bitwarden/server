@@ -9,7 +9,7 @@ public class AccessRuleEngineTests
 {
     private readonly AccessRuleEngine _sut = new();
 
-    // Fixed instant: none of these cases carry a time-of-day condition, so the value only has to be deterministic.
+    // No case here has a time-of-day condition, so the instant only has to be deterministic.
     private static AccessSignals Signals() => new()
     {
         IpAddress = IPAddress.Parse("10.1.2.3"),
@@ -19,15 +19,13 @@ public class AccessRuleEngineTests
     [Fact]
     public void Evaluate_NoConditions_Allows()
     {
-        // A rule with no conditions is vacuously satisfied: access is auto-granted while still flowing through
-        // PAM for audit logging.
+        // A rule with no conditions auto-grants, while the access still flows through PAM for auditing.
         Assert.Equal(AccessEvaluationOutcome.Allow, _sut.Evaluate([], Signals()).Outcome);
     }
 
     [Fact]
     public void Evaluate_DefersToEachConditionsOwnResult()
     {
-        // The engine does not decide anything itself; it returns what the condition's Evaluate reports.
         Assert.Equal(AccessEvaluationOutcome.RequiresApproval,
             _sut.Evaluate([new StubCondition(AccessEvaluation.RequiresApproval)], Signals()).Outcome);
     }
@@ -35,8 +33,7 @@ public class AccessRuleEngineTests
     [Fact]
     public void Evaluate_CombinesConditionResults_DenyWins()
     {
-        // Folding is delegated to AccessEvaluation.Combine (deny > approval > allow); a single denying condition
-        // drives the whole rule to deny. The full precedence matrix is covered in AccessEvaluationTests.
+        // AccessEvaluation.Combine does the folding; AccessEvaluationTests covers its full precedence.
         var conditions = new AccessCondition[]
         {
             new StubCondition(AccessEvaluation.Allow),
@@ -63,15 +60,14 @@ public class AccessRuleEngineTests
     [Fact]
     public void Evaluate_NullConditionEntry_DeniesClosed()
     {
-        // A null entry (only reachable from a malformed stored document) cannot be evaluated, so it fails closed.
-        // An unknown condition kind can no longer reach the engine: it is rejected at JSON deserialization.
+        // Only a malformed stored document yields a null entry, and it fails closed. Unknown kinds never reach
+        // the engine, since deserialization rejects them.
         var evaluation = _sut.Evaluate([null!], Signals());
 
         Assert.Equal(AccessEvaluationOutcome.Deny, evaluation.Outcome);
         Assert.Equal(DenyReason.UnsupportedCondition, evaluation.Reason);
     }
 
-    /// <summary>A condition with a fixed result, isolating the engine's folding from any real condition logic.</summary>
     private sealed class StubCondition(AccessEvaluation result) : AccessCondition
     {
         public AccessSignals? ReceivedSignals { get; private set; }

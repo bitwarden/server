@@ -24,6 +24,8 @@ Seeded ciphers and attachments reproduce Bitwarden's historical encryption schem
 
 **Invariant:** a cipher and its attachments use the same strategy — a `v2` attachment requires a `cipherKey` host; `v0`/`v1` require a `userKey` host.
 
+Generated ciphers (not fixtures) mix both cipher encryption values: the `CipherComposer.ItemKeysPer100` share of the items of each type (see [Data/README.md](Data/README.md#calibrated-login-rates)) get a `cipherKey`, the rest stay `userKey`.
+
 > **Not the same as account "Encryption V1/V2".** The attachment `v0/v1/v2` axis is about attachment key wrapping. Everything the seeder emits is Encryption-V1 (AES-256-CBC-HMAC, type-2 EncString) — there is no XChaCha20/COSE (Encryption V2) path. See the [cryptography guide](https://contributing.bitwarden.com/architecture/cryptography/crypto-guide).
 
 ### Data Structure Differences
@@ -60,7 +62,7 @@ The Seeder is organized around six core patterns, each with a specific responsib
 - **Mix & Match**: Fixtures + generation in one preset
 - **Extensible**: Add entity types via new step implementations
 
-**Phase order (org)**: Org → OrgApiKey → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → PersonalCiphers
+**Phase order (org)**: Org → OrgApiKey → Policies → Roster → Owner (conditional) → Generator (conditional) → Users → Groups → Collections → Folders → Ciphers → CipherAttachments → CipherCollections → CipherFolders → CipherFavorites → DefaultCollections → PersonalCiphers
 **Phase order (individual)**: IndividualUser → NamedFolders → Generator → Folders → Ciphers → CipherAttachments → FolderAssignments → FavoriteAssignments
 
 **Files**: `Pipeline/` folder
@@ -143,14 +145,13 @@ The Seeder is organized around six core patterns, each with a specific responsib
 
 **Purpose:** Reusable, realistic test data collections that provide the foundation for cipher generation.
 
-**When to use:** Need realistic, filterable data for cipher content (company names, passwords, usernames).
+**When to use:** Need realistic data for cipher content (company names, passwords, usernames).
 
 **Key characteristics:**
 
 - Static readonly arrays and classes
-- Filterable by region, type, category
 - Deterministic (seeded randomness for reproducibility)
-- Composable across regions
+- `GeographicRegion` sets the name locale for login usernames, the card brands, and identity names, titles, addresses, country code and SSN format
 - Enums provide the public API
 
 See `Data/README.md` for Generators and Distributions details.

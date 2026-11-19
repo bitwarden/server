@@ -190,6 +190,70 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
                 }));
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task FinishProvisionAsync_AcceptOrganizationInviteTrue_AcceptsOrgUser(
+        SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
+        User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings,
+        Organization org, OrganizationUser orgUser, string masterPasswordHint)
+    {
+        // Arrange
+        user.Key = null;
+        orgUser.Status = OrganizationUserStatusType.Invited;
+        var model = CreateValidModel(user, accountKeys, kdfSettings, org.Identifier, masterPasswordHint);
+        ArrangeOrgAndOrgUser(sutProvider, user, org, orgUser);
+
+        // Act
+        await sutProvider.Sut.FinishProvisionAsync(user, model, acceptOrganizationInvite: true);
+
+        // Assert
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().Received(1)
+            .AcceptOrgUserAsync(orgUser, user, sutProvider.GetDependency<IUserService>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task FinishProvisionAsync_AcceptOrganizationInviteFalse_SetsPasswordAndKeysAndDoesNotAcceptOrgUser(
+        SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
+        User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings,
+        Organization org, OrganizationUser orgUser, string masterPasswordHint)
+    {
+        // Arrange
+        user.Key = null;
+        orgUser.Status = OrganizationUserStatusType.Invited;
+        var model = CreateValidModel(user, accountKeys, kdfSettings, org.Identifier, masterPasswordHint);
+        ArrangeOrgAndOrgUser(sutProvider, user, org, orgUser);
+
+        UpdateUserData mockUpdateUserData = (connection, transaction) => Task.CompletedTask;
+        sutProvider.GetDependency<IMasterPasswordService>()
+            .BuildUpdateUserDelegateSetInitialMasterPassword(user, Arg.Any<SetInitialPasswordData>())
+            .Returns(mockUpdateUserData);
+
+        // Act
+        await sutProvider.Sut.FinishProvisionAsync(user, model, acceptOrganizationInvite: false);
+
+        // Assert
+        await sutProvider.GetDependency<IUserRepository>().Received(1)
+            .SetV2AccountCryptographicStateAsync(user.Id, model.AccountKeys, Arg.Any<IEnumerable<UpdateUserData>>());
+        await sutProvider.GetDependency<IEventService>().Received(1)
+            .LogUserEventAsync(user.Id, EventType.User_ChangedPassword);
+        await sutProvider.GetDependency<IAcceptOrgUserCommand>().DidNotReceiveWithAnyArgs()
+            .AcceptOrgUserAsync(default!, default!, default!);
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
+    }
+
+    private static void ArrangeOrgAndOrgUser(SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
+        User user, Organization org, OrganizationUser orgUser)
+    {
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetByIdentifierAsync(org.Identifier)
+            .Returns(org);
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetByOrganizationAsync(org.Id, user.Id)
+            .Returns(orgUser);
+    }
+
     private static SetInitialMasterPasswordDataModel CreateValidModel(
         User user, UserAccountKeysData? accountKeys, KdfSettings kdfSettings,
         string orgSsoIdentifier, string? masterPasswordHint, KeyId? containedKeyId = null)

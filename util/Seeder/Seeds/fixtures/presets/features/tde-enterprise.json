@@ -12,7 +12,12 @@
     "fixture": "enterprise-basic"
   },
   "policies": {
-    "enable": ["requireSso"]
+    "enable": ["singleOrg", "requireSso", "resetPassword"],
+    "data": {
+      "resetPassword": {
+        "autoEnrollEnabled": true
+      }
+    }
   },
   "sso": {
     "identifier": "obsidian-labs",

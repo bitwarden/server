@@ -51,6 +51,19 @@
 
             clearSecretsManagerConfiguration();
         });
+        document.getElementById('@(nameof(Model.UsePam))')?.addEventListener('change', (event) => {
+            const pamConfiguration = document.getElementById('organization-pam-configuration');
+            if (!pamConfiguration) {
+                return;
+            }
+
+            pamConfiguration.hidden = !event.target.checked;
+
+            // Unticking keeps the values: the server leaves the seat count and limit alone while PAM is off.
+            if (event.target.checked) {
+                setInitialPamConfiguration();
+            }
+        });
     })();
 
     function togglePlanFeatures(planType) {
@@ -140,6 +153,14 @@
         document.getElementById('@(nameof(Model.SmServiceAccounts))').value = '';
         document.getElementById('@(nameof(Model.MaxAutoscaleSmSeats))').value = '';
         document.getElementById('@(nameof(Model.MaxAutoscaleSmServiceAccounts))').value = '';
+    }
+
+    function setInitialPamConfiguration() {
+        // Keep a seat count saved from when PAM was last on; otherwise default to the members who have access.
+        const pamSeats = document.getElementById('@(nameof(Model.PamSeats))');
+        if (pamSeats.value === '') {
+            pamSeats.value = Math.max(@Model.OccupiedPamSeatsCount, 1);
+        }
     }
 
     function getPlan(planType) {

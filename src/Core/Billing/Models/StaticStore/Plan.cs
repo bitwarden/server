@@ -87,8 +87,6 @@ public abstract record Plan
         public string StripeSeatPlanId { get; init; }
         public decimal SeatPrice { get; init; }
         public int BaseSeats { get; init; }
-        public int DefaultSeatMinimum { get; init; }
-        public int[] PromotionalSeatMinimums { get; init; }
     }
 
     public record PasswordManagerPlanFeatures

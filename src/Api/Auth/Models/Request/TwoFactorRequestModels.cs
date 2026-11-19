@@ -254,6 +254,13 @@ public class TwoFactorEmailLoginRequestModel : SecretVerificationRequestModel
     // An auth session token used for obtaining email and as an authN factor for the sending of emailed 2FA OTPs.
     public string SsoEmail2FaSessionToken { get; set; }
 
+    // TODO: PM-44555 - Delete this property, and the controller fallback that reads it, once every supported
+    // mobile client version sends the Device-Identifier header on this request.
+    /// <summary>
+    /// Identifier of the requesting device, read only when the request has no <c>Device-Identifier</c> header.
+    /// </summary>
+    public string DeviceIdentifier { get; set; }
+
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         if (string.IsNullOrEmpty(Secret)

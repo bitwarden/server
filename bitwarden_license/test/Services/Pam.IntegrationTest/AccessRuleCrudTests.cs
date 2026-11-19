@@ -16,15 +16,9 @@ using Xunit;
 namespace Bit.Services.Pam.IntegrationTest;
 
 /// <summary>
-/// The access-rule CRUD contract over the real request pipeline: routing, the feature gate, model validation, the
-/// exception → <c>ErrorResponseModel</c> translation, and the round trip through SQLite.
+/// The access-rule CRUD contract over the real request pipeline and SQLite, covering what the Pam.Test unit tests
+/// mock away. Every test acts as the owner; authorization is <see cref="AccessRuleAuthorizationTests"/>'s subject.
 /// </summary>
-/// <remarks>
-/// These tests cover the seams that the Pam.Test unit tests necessarily mock away — the conditions document surviving
-/// HTTP binding and storage unchanged, the collection links actually being written, and validator failures arriving as
-/// the documented 400 body. Authorization is <see cref="AccessRuleAuthorizationTests"/>'s subject; every test here
-/// acts as the organization owner.
-/// </remarks>
 public class AccessRuleCrudTests(ApiApplicationFactory factory)
     : AccessRuleIntegrationTestBase(factory, "pam-access-rule-crud")
 {
@@ -64,10 +58,7 @@ public class AccessRuleCrudTests(ApiApplicationFactory factory)
         Assert.Equal(HttpStatusCode.NotFound, afterDelete.StatusCode);
     }
 
-    /// <summary>
-    /// The conditions document is stored verbatim and handed back unparsed, so the engine that reads it later sees
-    /// exactly what the client sent — including properties this version does not model.
-    /// </summary>
+    /// <summary>Properties this version does not model survive too, so the engine reads what the client sent.</summary>
     [Fact]
     public async Task Post_StoresTheConditionsDocumentVerbatim()
     {
@@ -100,10 +91,7 @@ public class AccessRuleCrudTests(ApiApplicationFactory factory)
         Assert.Equal(id, await AccessRuleIdOfAsync(other.Id));
     }
 
-    /// <summary>
-    /// A validator failure has to surface as Bitwarden's <c>ErrorResponseModel</c> 400 rather than a 500, which is
-    /// what the exception filter being outermost in the PAM group's chain buys.
-    /// </summary>
+    /// <summary>The exception filter turns a validator failure into an <c>ErrorResponseModel</c> 400.</summary>
     [Fact]
     public async Task Post_WithACidrThatDoesNotParse_ReturnsBadRequestWithTheValidatorMessage()
     {
@@ -117,10 +105,7 @@ public class AccessRuleCrudTests(ApiApplicationFactory factory)
         Assert.Contains("not-a-cidr", body["message"]!.GetValue<string>());
     }
 
-    /// <summary>
-    /// Conditions is declared required, so an omitted value has to be rejected by the group's validation filter
-    /// before any handler runs — not dereferenced into a 500.
-    /// </summary>
+    /// <summary>Rejected by the validation filter before the handler can dereference the null.</summary>
     [Fact]
     public async Task Post_WithoutConditions_ReturnsBadRequestFromModelValidation()
     {
@@ -136,8 +121,8 @@ public class AccessRuleCrudTests(ApiApplicationFactory factory)
     }
 
     /// <summary>
-    /// Authorization only proves the caller belongs to the organization on the route, so the handler is what stops a
-    /// rule ID from another organization being read through it.
+    /// Authorization only proves membership of the route's organization, so the handler has to refuse a rule from
+    /// another one.
     /// </summary>
     [Fact]
     public async Task Get_ARuleBelongingToAnotherOrganization_ReturnsNotFound()
@@ -161,9 +146,6 @@ public class AccessRuleCrudTests(ApiApplicationFactory factory)
         Assert.NotNull(await Factory.GetService<IAccessRuleRepository>().GetByIdAsync(foreignRule.Id));
     }
 
-    /// <summary>
-    /// The whole surface is unreleased and reachable only behind the PAM flag.
-    /// </summary>
     [Fact]
     public async Task AccessRuleEndpoints_WithThePamFeatureFlagOff_AreNotRoutable()
     {
@@ -186,10 +168,7 @@ public class AccessRuleCrudTests(ApiApplicationFactory factory)
         Assert.Equal(owner!.Id, stored!.LastEditedBy);
     }
 
-    /// <summary>
-    /// A kind-less DateTime serializes with no timezone designator, which a JavaScript client reads as local time —
-    /// shifting the instant for any client not sitting on UTC.
-    /// </summary>
+    /// <summary>A kind-less DateTime serializes without a designator, which JavaScript reads as local time.</summary>
     [Fact]
     public async Task Post_ReturnsTimestampsMarkedAsUtc()
     {
@@ -199,10 +178,7 @@ public class AccessRuleCrudTests(ApiApplicationFactory factory)
         Assert.EndsWith("Z", created["revisionDate"]!.GetValue<string>(), StringComparison.Ordinal);
     }
 
-    /// <summary>
-    /// Rules predating a conditions-format change still have to be readable, so a document that no longer parses
-    /// reads back as no conditions instead of failing the request.
-    /// </summary>
+    /// <summary>Rules stored in an earlier conditions format have to stay readable.</summary>
     [Fact]
     public async Task Get_WithStoredConditionsThatNoLongerParse_ReturnsNullConditions()
     {
@@ -265,8 +241,7 @@ public class AccessRuleCrudTests(ApiApplicationFactory factory)
             plan: PlanType.EnterpriseAnnually, ownerEmail: otherOwnerEmail, passwordManagerSeats: 10,
             paymentMethod: PaymentMethodType.Card);
 
-        // Seeded through the repository rather than the API: the point is a rule this caller can name but must not
-        // reach, and logging in as the other organization's owner would only get in the way.
+        // Seeded through the repository, so the test never acts as the other organization's owner.
         var rule = await Factory.GetService<IAccessRuleRepository>().CreateAsync(new AccessRule
         {
             OrganizationId = otherOrganization.Id,

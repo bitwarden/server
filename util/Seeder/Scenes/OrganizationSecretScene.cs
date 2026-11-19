@@ -10,7 +10,7 @@ namespace Bit.Seeder.Scenes;
 
 /// <summary>
 /// Creates a Secrets Manager secret (key/value/note encrypted with the organization's symmetric key)
-/// for an existing Secrets Manager-enabled organization, optionally associating it with projects.
+/// for an existing Secrets Manager-enabled organization, optionally associating it with one project.
 /// </summary>
 public class OrganizationSecretScene(
     IOrganizationRepository organizationRepository,
@@ -40,7 +40,13 @@ public class OrganizationSecretScene(
     {
         var organization = await organizationRepository.GetSecretsManagerOrganizationOrThrowAsync(request.OrganizationId);
 
-        await projectRepository.ThrowIfProjectsNotInOrganizationAsync(request.ProjectIds, organization.Id);
+        var projectIds = request.ProjectIds?.ToList();
+        if (projectIds is { Count: > 1 })
+        {
+            throw new InvalidOperationException("Only one project assignment is supported.");
+        }
+
+        await projectRepository.ThrowIfProjectsNotInOrganizationAsync(projectIds, organization.Id);
 
         var secret = SecretSeeder.Create(
             organization.Id,
@@ -48,7 +54,7 @@ public class OrganizationSecretScene(
             request.Key,
             request.Value,
             request.Note,
-            request.ProjectIds);
+            projectIds);
 
         // Seeded secrets start with the same initial version the API writes, so seeded data is
         // not a shape that only pre-versioning secrets have. No editor is attributed because the

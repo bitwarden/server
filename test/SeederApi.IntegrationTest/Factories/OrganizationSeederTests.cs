@@ -1,4 +1,5 @@
 ﻿using Bit.Core.Billing.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Seeder.Factories;
 using Bit.Seeder.Models;
@@ -41,6 +42,21 @@ public class OrganizationSeederTests
         Assert.Equal("Enterprise (Annually)", enterprise.Plan);
         Assert.Equal(PlanType.EnterpriseAnnually, enterprise.PlanType);
         Assert.True(enterprise.UseGroups);
+    }
+
+    [Fact]
+    public void Create_FamiliesAndEnterprise_AreSelfHostable()
+    {
+        var families = OrganizationSeeder.Create(
+            Seed() with { PlanType = PlanType.FamiliesAnnually }, new NoOpManglerService());
+        var teams = OrganizationSeeder.Create(
+            Seed() with { PlanType = PlanType.TeamsAnnually }, new NoOpManglerService());
+        var enterprise = OrganizationSeeder.Create(
+            Seed() with { PlanType = PlanType.EnterpriseAnnually }, new NoOpManglerService());
+
+        Assert.True(families.SelfHost);
+        Assert.False(teams.SelfHost);
+        Assert.True(enterprise.SelfHost);
     }
 
     [Fact]
@@ -88,6 +104,34 @@ public class OrganizationSeederTests
             },
             new NoOpManglerService());
         Assert.True(gateWins.UseSecretsManager);
+    }
+
+    [Fact]
+    public void Create_UsePamOverride_EnablesPamAndMemberAccess()
+    {
+        // No plan includes PAM, so the override is the only way a seeded org gets it.
+        var withoutPam = OrganizationSeeder.Create(
+            Seed() with { PlanType = PlanType.EnterpriseAnnually }, new NoOpManglerService());
+        Assert.False(withoutPam.UsePam);
+
+        var withPam = OrganizationSeeder.Create(
+            Seed() with
+            {
+                PlanType = PlanType.EnterpriseAnnually,
+                Overrides = new OrganizationOverrides { UsePam = true }
+            },
+            new NoOpManglerService());
+        Assert.True(withPam.UsePam);
+
+        // Members seed licensed for PAM, which is what the access guards check.
+        var user = new User { Id = Guid.NewGuid(), Email = "member@acme.test" };
+        var member = withPam.CreateOrganizationUserWithKey(
+            user, OrganizationUserType.User, OrganizationUserStatusType.Confirmed, "orgKey");
+        Assert.True(member.AccessPam);
+
+        var unlicensedMember = withoutPam.CreateOrganizationUserWithKey(
+            user, OrganizationUserType.User, OrganizationUserStatusType.Confirmed, "orgKey");
+        Assert.False(unlicensedMember.AccessPam);
     }
 
     [Fact]

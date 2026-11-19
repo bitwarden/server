@@ -10,9 +10,9 @@ namespace Bit.Core.Platform.Push.Internal;
 
 /// <summary>
 /// Sends notifications to the Notifications service by posting them to its <c>/send</c> endpoint,
-/// where SendController receives them and fans them out over SignalR. Registered for self-hosted
-/// installations that have an internal identity key and a notifications URI configured; the cloud
-/// equivalent is <see cref="AzureQueuePushEngine"/>.
+/// which fans them out over SignalR. That endpoint only exists on self-hosted installations. Registered
+/// for self-hosted installations that have an internal identity key and a notifications URI configured;
+/// the cloud equivalent is <see cref="AzureQueuePushEngine"/>.
 /// </summary>
 /// <remarks>
 /// Like <see cref="AzureQueuePushEngine"/>, this sends every notification whatever client type it is

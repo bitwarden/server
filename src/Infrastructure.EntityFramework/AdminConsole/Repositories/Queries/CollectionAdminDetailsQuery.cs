@@ -92,6 +92,9 @@ public class CollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
             RevisionDate = x.c.RevisionDate,
             Type = x.c.Type,
             DefaultUserCollectionEmail = x.c.DefaultUserCollectionEmail,
+            // A row for a group with no grant on this collection has Assigned = false and defaults ReadOnly and
+            // HidePasswords to false. Callers combining rows must ignore unassigned rows for those flags, otherwise
+            // an unrelated group membership overrides a real restriction.
             ReadOnly = (bool?)x.cu.ReadOnly ?? (bool?)x.cg.ReadOnly ?? false,
             HidePasswords = (bool?)x.cu.HidePasswords ?? (bool?)x.cg.HidePasswords ?? false,
             Manage = (bool?)x.cu.Manage ?? (bool?)x.cg.Manage ?? false,

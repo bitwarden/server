@@ -13,27 +13,27 @@ internal sealed class CipherUsernameGenerator
 {
     private static readonly ThreadLocal<Faker> _threadFaker = new(() => new Faker());
 
-    private const int NamePoolSize = 1500;
+    private const int _namePoolSize = 1500;
 
-    private static readonly string[] PersonalEmailDomains =
+    private static readonly string[] _personalEmailDomains =
         ["fake-gmail.com", "fake-yahoo.com", "fake-outlook.com", "fake-hotmail.com", "fake-icloud.com"];
 
-    private static readonly string[] SocialPlatformPrefixes =
+    private static readonly string[] _socialPlatformPrefixes =
         ["@", "@", "@", ""];  // 75% chance of @ prefix
 
-    private static readonly string[] EuropeanLocales =
+    private static readonly string[] _europeanLocales =
         ["en_GB", "de", "fr", "es", "it", "nl", "pl", "pt_PT", "sv"];
 
-    private static readonly string[] AsianLocales =
+    private static readonly string[] _asianLocales =
         ["ja", "ko", "zh_CN", "zh_TW", "vi"];
 
-    private static readonly string[] LatinAmericanLocales =
+    private static readonly string[] _latinAmericanLocales =
         ["es_MX", "pt_BR", "es"];
 
-    private static readonly string[] MiddleEastLocales =
+    private static readonly string[] _middleEastLocales =
         ["ar", "tr", "fa"];
 
-    private static readonly string[] AfricanLocales =
+    private static readonly string[] _africanLocales =
         ["en_ZA", "fr"];
 
     private readonly int _seed;
@@ -66,8 +66,8 @@ internal sealed class CipherUsernameGenerator
         // Build locale-aware name pools
         var locale = MapRegionToLocale(region, seed);
         var faker = new Faker(locale) { Random = new Randomizer(seed) };
-        _firstNames = Enumerable.Range(0, NamePoolSize).Select(_ => faker.Name.FirstName()).ToArray();
-        _lastNames = Enumerable.Range(0, NamePoolSize).Select(_ => faker.Name.LastName()).ToArray();
+        _firstNames = Enumerable.Range(0, _namePoolSize).Select(_ => faker.Name.FirstName()).ToArray();
+        _lastNames = Enumerable.Range(0, _namePoolSize).Select(_ => faker.Name.LastName()).ToArray();
     }
 
     /// <summary>
@@ -81,7 +81,7 @@ internal sealed class CipherUsernameGenerator
     {
         var category = _distribution.Select(index, totalHint);
         var seededFaker = _threadFaker.Value!;
-        seededFaker.Random = new Randomizer(_seed + index);
+        seededFaker.Random = new Randomizer(ItemSeedMixer.Mix(_seed, index));
 
         var offset = GetDeterministicOffset(index);
         var firstName = _firstNames[(index + offset) % _firstNames.Length];
@@ -121,7 +121,7 @@ internal sealed class CipherUsernameGenerator
 
     private static string GeneratePersonalEmail(Faker faker, string firstName, string lastName, int index)
     {
-        var domain = PersonalEmailDomains[index % PersonalEmailDomains.Length];
+        var domain = _personalEmailDomains[index % _personalEmailDomains.Length];
         var style = index % 5;
 
         return style switch
@@ -136,7 +136,7 @@ internal sealed class CipherUsernameGenerator
 
     private static string GenerateSocialHandle(Faker faker, string firstName, string lastName, int index)
     {
-        var prefix = SocialPlatformPrefixes[index % SocialPlatformPrefixes.Length];
+        var prefix = _socialPlatformPrefixes[index % _socialPlatformPrefixes.Length];
         var style = index % 6;
 
         var handle = style switch
@@ -220,11 +220,11 @@ internal sealed class CipherUsernameGenerator
     private static string MapRegionToLocale(GeographicRegion region, int seed) => region switch
     {
         GeographicRegion.NorthAmerica => "en_US",
-        GeographicRegion.Europe => PickLocale(EuropeanLocales, seed),
-        GeographicRegion.AsiaPacific => PickLocale(AsianLocales, seed),
-        GeographicRegion.LatinAmerica => PickLocale(LatinAmericanLocales, seed),
-        GeographicRegion.MiddleEast => PickLocale(MiddleEastLocales, seed),
-        GeographicRegion.Africa => PickLocale(AfricanLocales, seed),
+        GeographicRegion.Europe => PickLocale(_europeanLocales, seed),
+        GeographicRegion.AsiaPacific => PickLocale(_asianLocales, seed),
+        GeographicRegion.LatinAmerica => PickLocale(_latinAmericanLocales, seed),
+        GeographicRegion.MiddleEast => PickLocale(_middleEastLocales, seed),
+        GeographicRegion.Africa => PickLocale(_africanLocales, seed),
         GeographicRegion.Global => "en",
         _ => throw new ArgumentOutOfRangeException(nameof(region), region, null)
     };

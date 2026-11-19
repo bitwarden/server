@@ -12,6 +12,5 @@ public interface IApproverCollectionAccessQuery
     /// </summary>
     Task<HashSet<Guid>> GetManageableCollectionIdsAsync(Guid userId);
 
-    /// <summary>Whether the user can Manage the given collection.</summary>
     Task<bool> CanManageCollectionAsync(Guid userId, Guid collectionId);
 }

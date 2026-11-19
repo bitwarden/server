@@ -1,15 +1,17 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Models.Business.Tokenables;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteReminders;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Utilities.DebuggingInstruments;
 using Bit.Core.Auth.Models.Business;
-using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Entities;
 using Bit.Core.Models.Mail;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Core.Settings;
 using Bit.Core.Tokens;
 using Microsoft.Extensions.Logging;
 
@@ -17,11 +19,14 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUse
 
 public class SendOrganizationInvitesCommand(
     IUserRepository userRepository,
+    IOrganizationUserRepository organizationUserRepository,
     ISsoConfigRepository ssoConfigurationRepository,
     IPolicyQuery policyQuery,
     IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
     IDataProtectorTokenFactory<OrgUserInviteTokenable> dataProtectorTokenFactory,
     IMailService mailService,
+    TimeProvider timeProvider,
+    IGlobalSettings globalSettings,
     ILogger<SendOrganizationInvitesCommand> logger) : ISendOrganizationInvitesCommand
 {
     public async Task SendInvitesAsync(SendInvitesRequest request)
@@ -35,6 +40,12 @@ public class SendOrganizationInvitesCommand(
         var inviterEmail = await GetInviterEmailAsync(request.InvitingUserId);
         var orgInvitesInfo = await BuildOrganizationInvitesInfoAsync(orgUsers, request.Organization, request.InitOrganization, inviterEmail);
         await mailService.SendUpdatedOrganizationInviteEmailsAsync(orgInvitesInfo);
+
+        if (!request.InitOrganization)
+        {
+            var dueDate = timeProvider.GetUtcNow().UtcDateTime.AddHours(InviteReminderSchedule.GetIntervalHours(globalSettings, logger));
+            await organizationUserRepository.StartInviteReminderSequencesAsync(orgUsers.Select(ou => ou.Id), dueDate);
+        }
     }
 
     /// <summary>

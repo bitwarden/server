@@ -64,16 +64,18 @@ internal sealed class RecipeExecutor
             context.Owner?.Email,
             context.Owner?.ApiKey,
             context.OrganizationApiKey?.ApiKey,
-            context.GetPassword(),
+            context.Password,
             context.Owner?.Premium ?? false,
             context.Users.Count,
             context.Groups.Count,
             context.Collections.Count,
             context.Ciphers.Count,
             context.Folders.Count,
-            context.SsoIdentifier);
+            context.SsoIdentifier,
+            context.Owner?.GatewayCustomerId,
+            context.Owner?.GatewaySubscriptionId);
 
-        var progress = context.GetProgress();
+        var progress = context.Progress;
         progress?.Report(new PhaseStarted(SeederPhases.CommittingToDatabase, null));
         try
         {
@@ -102,11 +104,17 @@ internal sealed class RecipeExecutor
         }
 
         // The sanctioned post-commit extension documented above: gateway IDs are written onto the
-        // organization by FinalizeOrganizationBillingStep, long after the snapshot was taken.
+        // organization by CreateOrganizationBillingStep, long after the snapshot was taken.
+        if (context.Organization is null)
+        {
+            // An individual run keeps the owner's IDs from the snapshot; CreatePremiumSubscriptionStep runs pre-commit.
+            return result;
+        }
+
         return result with
         {
-            GatewayCustomerId = context.Organization?.GatewayCustomerId,
-            GatewaySubscriptionId = context.Organization?.GatewaySubscriptionId,
+            GatewayCustomerId = context.Organization.GatewayCustomerId,
+            GatewaySubscriptionId = context.Organization.GatewaySubscriptionId,
         };
     }
 }

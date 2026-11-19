@@ -6,6 +6,7 @@ using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Constants;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.Caching.Distributed;
 using Xunit;
 
 #nullable enable
@@ -45,6 +46,30 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
             {
                 options.BackchannelHttpHandler = _identityApplicationFactory.Server.CreateHandler();
             });
+        });
+    }
+
+    /// <summary>
+    /// Makes the API host use the Identity host's persistent cache, so a value one host writes (for example an
+    /// emailed two-factor code) is readable by the other, as in a deployed environment.
+    /// </summary>
+    /// <remarks>Call before the API host starts.</remarks>
+    public void ShareIdentityPersistentCache()
+    {
+        ConfigureServices(services =>
+        {
+            var persistentCacheDescriptors = services
+                .Where(descriptor => descriptor.ServiceType == typeof(IDistributedCache)
+                                     && descriptor.IsKeyedService
+                                     && Equals(descriptor.ServiceKey, "persistent"))
+                .ToList();
+            foreach (var descriptor in persistentCacheDescriptors)
+            {
+                services.Remove(descriptor);
+            }
+
+            services.AddKeyedSingleton<IDistributedCache>("persistent", (_, _) =>
+                _identityApplicationFactory.Services.GetRequiredKeyedService<IDistributedCache>("persistent"));
         });
     }
 

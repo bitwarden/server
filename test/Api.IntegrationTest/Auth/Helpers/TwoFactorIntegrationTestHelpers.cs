@@ -1,11 +1,18 @@
 ﻿using System.Text;
 using System.Text.Json;
+using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Entities;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Core.Tokens;
 using Bit.Test.Common.Fakes;
+using Core.Auth.Enums;
+using NSubstitute;
 
 namespace Bit.Api.IntegrationTest.Auth.Helpers;
 
@@ -18,6 +25,23 @@ internal static class TwoFactorIntegrationTestHelpers
 {
     public const string MasterPasswordHash = "master_password_hash";
     public const string AuthenticatorKey = "JBSWY3DPEHPK3PXP";
+
+    // ---------------------------------------------------------------------
+    // Fixture setup
+    // ---------------------------------------------------------------------
+
+    /// <summary>
+    /// Substitutes push delivery and the Duo and WebAuthn registration checks, so two-factor provider requests
+    /// succeed without external services.
+    /// </summary>
+    public static void SubstituteTwoFactorProviderServices(ApiApplicationFactory factory)
+    {
+        factory.SubstituteService<IPushNotificationService>(_ => { });
+        factory.SubstituteService<IDuoUniversalTokenService>(svc =>
+            svc.ValidateDuoConfiguration(default, default, default).ReturnsForAnyArgs(true));
+        factory.SubstituteService<ICompleteTwoFactorWebAuthnRegistrationCommand>(svc =>
+            svc.CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!).ReturnsForAnyArgs(true));
+    }
 
     // ---------------------------------------------------------------------
     // Token minting
@@ -109,6 +133,25 @@ internal static class TwoFactorIntegrationTestHelpers
         user.Premium = true;
         await userRepository.UpsertAsync(user);
     }
+
+    // ---------------------------------------------------------------------
+    // Emailed two-factor codes
+    // ---------------------------------------------------------------------
+
+    public sealed record EmailedTwoFactorCode(string Recipient, string Code, TwoFactorEmailPurpose Purpose);
+
+    /// <summary>
+    /// Returns the most recent two-factor email the substituted mail service was asked to send for an account, or
+    /// null. Calls are filtered by account email, so tests that share one substitute do not see each other's emails.
+    /// </summary>
+    public static EmailedTwoFactorCode? FindLatestEmailedTwoFactorCode(IMailService mailService, string accountEmail) =>
+        mailService.ReceivedCalls()
+            .Where(call => call.GetMethodInfo().Name == nameof(IMailService.SendTwoFactorEmailAsync))
+            .Select(call => call.GetArguments())
+            .Where(arguments => (string?)arguments[1] == accountEmail)
+            .Select(arguments => new EmailedTwoFactorCode(
+                (string)arguments[0]!, (string)arguments[2]!, (TwoFactorEmailPurpose)arguments[5]!))
+            .LastOrDefault();
 
     // ---------------------------------------------------------------------
     // JSON response parsing

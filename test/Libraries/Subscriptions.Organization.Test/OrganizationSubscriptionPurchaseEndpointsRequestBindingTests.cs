@@ -11,6 +11,7 @@ using Bit.Invoicing.InvoicePreviews.Models;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Models.Requests;
 using Bit.Subscriptions.Organization.Queries;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.Features;
@@ -269,6 +270,7 @@ public class OrganizationSubscriptionPurchaseEndpointsRequestBindingTests
         Substitute.For<IPricingClient>(),
         Substitute.For<ISubscriptionDiscountService>(),
         Substitute.For<ITaxService>(),
+        Substitute.For<IFeatureService>(),
         Substitute.For<IInvoicePreviewService>());
 
     private static async Task<string> ReadBodyAsync(HttpContext context)

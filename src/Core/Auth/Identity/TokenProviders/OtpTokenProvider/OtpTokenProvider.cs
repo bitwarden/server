@@ -10,10 +10,12 @@ namespace Bit.Core.Auth.Identity.TokenProviders;
 public class OtpTokenProvider<TOptions>(
     [FromKeyedServices("persistent")]
     IDistributedCache distributedCache,
-    IOptions<TOptions> options) : IOtpTokenProvider<TOptions>
+    IOptions<TOptions> options,
+    TimeProvider timeProvider) : IOtpTokenProvider<TOptions>
         where TOptions : DefaultOtpTokenProviderOptions
 {
     private readonly TOptions _otpTokenProviderOptions = options.Value;
+    private readonly TimeProvider _timeProvider = timeProvider;
 
     /// <summary>
     /// This is where the OTP tokens are stored.
@@ -43,35 +45,95 @@ public class OtpTokenProvider<TOptions>(
             false,
             _otpTokenProviderOptions.TokenNumeric,
             false);
-        var entry = new OtpCacheEntry { Token = token, BoundValue = boundValue };
-        await _distributedCache.SetAsync(cacheKey, JsonSerializer.SerializeToUtf8Bytes(entry), _otpTokenProviderOptions.DistributedCacheEntryOptions);
+        var cacheEntryOptions = _otpTokenProviderOptions.DistributedCacheEntryOptions;
+        var entry = new OtpCacheEntry
+        {
+            Token = token,
+            BoundValue = boundValue,
+            ExpiresAt = cacheEntryOptions.AbsoluteExpiration
+                ?? _timeProvider.GetUtcNow() + cacheEntryOptions.AbsoluteExpirationRelativeToNow,
+        };
+        await _distributedCache.SetAsync(cacheKey, JsonSerializer.SerializeToUtf8Bytes(entry), cacheEntryOptions);
         return token;
     }
 
     public async Task<bool> ValidateTokenAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier, string? boundValue = null)
+    {
+        if (await MatchStoredTokenAsync(token, tokenProviderName, purpose, uniqueIdentifier, boundValue)
+            is not { } match)
+        {
+            return false;
+        }
+
+        if (match.Valid)
+        {
+            await _distributedCache.RemoveAsync(match.CacheKey);
+        }
+
+        return match.Valid;
+    }
+
+    public async Task<bool> ValidateTokenWithFailureLimitAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier, int maxFailedAttempts, string? boundValue = null)
+    {
+        ArgumentOutOfRangeException.ThrowIfNegativeOrZero(maxFailedAttempts);
+
+        if (await MatchStoredTokenAsync(token, tokenProviderName, purpose, uniqueIdentifier, boundValue)
+            is not { } match)
+        {
+            return false;
+        }
+
+        if (match.Valid)
+        {
+            await _distributedCache.RemoveAsync(match.CacheKey);
+            return true;
+        }
+
+        var entry = match.Entry;
+        entry.FailedAttempts++;
+
+        // Rewriting an entry with no stored expiry, or one already past it, would extend its lifetime.
+        if (entry.FailedAttempts >= maxFailedAttempts
+            || entry.ExpiresAt == null
+            || entry.ExpiresAt <= _timeProvider.GetUtcNow())
+        {
+            await _distributedCache.RemoveAsync(match.CacheKey);
+            return false;
+        }
+
+        await _distributedCache.SetAsync(
+            match.CacheKey,
+            JsonSerializer.SerializeToUtf8Bytes(entry),
+            new DistributedCacheEntryOptions { AbsoluteExpiration = entry.ExpiresAt });
+        return false;
+    }
+
+    /// <summary>
+    /// Reads the stored entry and compares it with the provided token and bound value. Does not change the cache.
+    /// </summary>
+    /// <returns>
+    /// The cache key, the stored entry, and whether the token and bound value match it; or <see langword="null"/>
+    /// if an input is empty or no readable entry is stored.
+    /// </returns>
+    private async Task<(string CacheKey, OtpCacheEntry Entry, bool Valid)?> MatchStoredTokenAsync(string token, string tokenProviderName, string purpose, string uniqueIdentifier, string? boundValue)
     {
         if (string.IsNullOrEmpty(token)
             || string.IsNullOrEmpty(tokenProviderName)
             || string.IsNullOrEmpty(purpose)
             || string.IsNullOrEmpty(uniqueIdentifier))
         {
-            return false;
+            return null;
         }
 
         var cacheKey = BuildCacheKey(tokenProviderName, purpose, uniqueIdentifier);
         var entry = await GetEntryAsync(cacheKey);
         if (entry == null)
         {
-            return false;
+            return null;
         }
 
         var valid = entry.BoundValue == boundValue && CoreHelpers.FixedTimeEquals(token, entry.Token);
-        if (valid)
-        {
-            await _distributedCache.RemoveAsync(cacheKey);
-        }
-
-        return valid;
+        return (cacheKey, entry, valid);
     }
 
     private string BuildCacheKey(string tokenProviderName, string purpose, string uniqueIdentifier)
@@ -102,5 +164,15 @@ public class OtpTokenProvider<TOptions>(
     {
         public string Token { get; set; } = "";
         public string? BoundValue { get; set; }
+
+        /// <summary>
+        /// When the entry expires. Stored so a rewrite can keep the expiry set at generation.
+        /// </summary>
+        public DateTimeOffset? ExpiresAt { get; set; }
+
+        /// <summary>
+        /// Failed attempts counted by <see cref="ValidateTokenWithFailureLimitAsync"/>.
+        /// </summary>
+        public int FailedAttempts { get; set; }
     }
 }

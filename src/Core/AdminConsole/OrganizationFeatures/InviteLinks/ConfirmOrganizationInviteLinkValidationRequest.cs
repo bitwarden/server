@@ -23,4 +23,9 @@ public record ConfirmOrganizationInviteLinkValidationRequest
     /// The authenticated user attempting to confirm their membership.
     /// </summary>
     public required User User { get; init; }
+
+    /// <summary>
+    /// The user's account recovery (reset password) key, if supplied.
+    /// </summary>
+    public string? ResetPasswordKey { get; init; }
 }

@@ -1,6 +1,7 @@
 ﻿using Bit.Admin.Auth.Models.SalesAssistedTrial;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.TrialInitiation.Registration;
 using Bit.Core.Exceptions;
@@ -35,8 +36,8 @@ public class SalesAssistedTrialController(
         return View(new SalesAssistedTrialInviteModel
         {
             ProductTier = ProductTierType.Enterprise,
-            Product = ProductType.PasswordManager,
-            TrialLength = 30
+            Products = [ProductType.PasswordManager],
+            TrialLength = TrialInitiationConstants.DefaultTrialLengthDays
         });
     }
 
@@ -54,18 +55,12 @@ public class SalesAssistedTrialController(
 
         try
         {
-            // Client /trial-initiation prioritizes a single product via parseInt
-            // and Secrets Manager trial initiation also provides Password Manager trial
-            // initiation at the selected product tier. PM-41426
-            // Self-service trial command has an IEnumerable shape for Product(s), however
-            // to ensure proper parsing and enrollment, sales-assisted will enforce a
-            // single product selection policy.
             await sendCommand.HandleAsync(
                 model.Email,
                 model.Name,
                 senderEmail,
                 model.ProductTier,
-                new[] { model.Product },
+                model.Products,
                 model.TrialLength);
         }
         catch (BadRequestException ex)

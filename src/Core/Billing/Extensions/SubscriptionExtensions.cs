@@ -14,6 +14,16 @@ public static class SubscriptionExtensions
             ? grace
             : 0;
 
+    /// <summary>
+    /// Whether the subscription carries a Privileged Controls seat line, identified by the price's
+    /// <see cref="StripeConstants.MetadataKeys.PurchasableReference"/> rather than its ID so the check holds across cadences.
+    /// </summary>
+    public static bool HasPrivilegedControlsSeats(this Subscription subscription) =>
+        subscription.Items?.Data?.Any(item =>
+            item.Price?.Metadata != null &&
+            item.Price.Metadata.TryGetValue(StripeConstants.MetadataKeys.PurchasableReference, out var reference) &&
+            reference == StripeConstants.PurchasableReferences.PrivilegedControlsSeat) ?? false;
+
     /*
      * For the time being, this is the simplest migration approach from v45 to v48 as
      * we do not support multi-cadence subscriptions. Each subscription item should be on the
