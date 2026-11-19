@@ -26,14 +26,13 @@ public class OrganizationLoginCipherScene(
         public required Guid OrganizationId { get; set; }
         [Required]
         public required string OrganizationKeyB64 { get; set; }
-        [Required]
-        public required IEnumerable<Guid> CollectionIds { get; set; }
+        public IEnumerable<Guid>? CollectionIds { get; set; }
     }
 
     protected override async Task<CipherOwner> ResolveOwnerAsync(Request request)
     {
         await organizationRepository.GetDistinctCollectionIdsOrThrowAsync(
-            collectionRepository, request.OrganizationId, request.CollectionIds);
+            collectionRepository, request.OrganizationId, request.CollectionIds ?? []);
 
         if (request.Favorite || request.Archived || request.FolderId.HasValue)
         {
@@ -47,5 +46,5 @@ public class OrganizationLoginCipherScene(
     }
 
     protected override Task PersistAsync(Cipher cipher, Request request)
-        => cipherRepository.CreateAsync(cipher, request.CollectionIds.Distinct());
+        => cipherRepository.CreateAsync(cipher, (request.CollectionIds ?? []).Distinct());
 }

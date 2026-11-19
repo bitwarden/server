@@ -1,8 +1,12 @@
 ﻿using System.Text;
 using System.Text.Json;
+using Bit.Api.IntegrationTest.Factories;
 using Bit.Core.Auth.Enums;
+using Bit.Core.Auth.Identity.TokenProviders;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Entities;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
@@ -21,6 +25,23 @@ internal static class TwoFactorIntegrationTestHelpers
 {
     public const string MasterPasswordHash = "master_password_hash";
     public const string AuthenticatorKey = "JBSWY3DPEHPK3PXP";
+
+    // ---------------------------------------------------------------------
+    // Fixture setup
+    // ---------------------------------------------------------------------
+
+    /// <summary>
+    /// Substitutes push delivery and the Duo and WebAuthn registration checks, so two-factor provider requests
+    /// succeed without external services.
+    /// </summary>
+    public static void SubstituteTwoFactorProviderServices(ApiApplicationFactory factory)
+    {
+        factory.SubstituteService<IPushNotificationService>(_ => { });
+        factory.SubstituteService<IDuoUniversalTokenService>(svc =>
+            svc.ValidateDuoConfiguration(default, default, default).ReturnsForAnyArgs(true));
+        factory.SubstituteService<ICompleteTwoFactorWebAuthnRegistrationCommand>(svc =>
+            svc.CompleteTwoFactorWebAuthnRegistrationAsync(default!, default, default!, default!).ReturnsForAnyArgs(true));
+    }
 
     // ---------------------------------------------------------------------
     // Token minting

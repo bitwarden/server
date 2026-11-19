@@ -153,7 +153,9 @@ itself, while the claim is still visible.
 
 A second sweep, [`PamLeaseExpirySweepService`](../Jobs/PamLeaseExpirySweepService.cs), flips active
 leases whose window has closed to expired, records that, and fires the rotation access-end trigger for
-each. It exists because a lease reaching its own end otherwise produced no record and no rotation —
+each. Each lease is stamped swept in the same atomic write that returns it, so it is reported once even
+when sweeps overlap; the stamp lives on the lease itself and an extension can't revive a swept lease, since
+extending requires a window still open. It exists because a lease reaching its own end otherwise produced no record and no rotation —
 only an explicit revocation did.
 
 Emitting the audit event and firing the rotation trigger are in separate error-handling blocks on
