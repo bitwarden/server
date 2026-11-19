@@ -607,6 +607,8 @@ public class SyncControllerTests
         var context = sutProvider.GetDependency<ICurrentContext>();
         context.DeviceType.Returns(DeviceType.ChromeBrowser);
         context.ClientVersion.Returns(new Version(Constants.PM35389RestrictedItemTypesDataMinimumVersion));
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
         SetupRestrictedItemTypesSync(user, orgId, sutProvider);
 
         var result = await sutProvider.Sut.Get();
@@ -615,6 +617,24 @@ public class SyncControllerTests
             Assert.Single(result.Policies, p => p.Type == PolicyType.RestrictedItemTypesPolicy).Data);
         Assert.Equal(RestrictedTypesData,
             Assert.Single(result.PoliciesNew!, p => p.Type == PolicyType.RestrictedItemTypesPolicy).Data);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_RestrictedItemTypesData_WithheldWhenFlagOffEvenForSupportedClients(
+        User user, Guid orgId, SutProvider<SyncController> sutProvider)
+    {
+        var context = sutProvider.GetDependency<ICurrentContext>();
+        context.DeviceType.Returns(DeviceType.ChromeBrowser);
+        context.ClientVersion.Returns(new Version(Constants.PM35389RestrictedItemTypesDataMinimumVersion));
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(false);
+        SetupRestrictedItemTypesSync(user, orgId, sutProvider);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.Null(Assert.Single(result.Policies, p => p.Type == PolicyType.RestrictedItemTypesPolicy).Data);
+        Assert.Null(Assert.Single(result.PoliciesNew!, p => p.Type == PolicyType.RestrictedItemTypesPolicy).Data);
     }
 
     [Theory]

@@ -155,8 +155,9 @@ public class SyncController : Controller
         var organizationUserDetailsNew = await _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
 
         // Response shaping as part of PM-35389, remove after outdated client support no is longer required.
-        var shapedPolicies = LegacyClientPolicyShaping.ShapeForClient(policies, _currentContext.DeviceType, _currentContext.ClientVersion);
-        var shapedPoliciesNew = LegacyClientPolicyShaping.ShapeForClient(policiesNew, _currentContext.DeviceType, _currentContext.ClientVersion);
+        var newPolicyPayloadEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes);
+        var shapedPolicies = LegacyClientPolicyShaping.ShapeForClient(policies, _currentContext.DeviceType, _currentContext.ClientVersion, newPolicyPayloadEnabled);
+        var shapedPoliciesNew = LegacyClientPolicyShaping.ShapeForClient(policiesNew, _currentContext.DeviceType, _currentContext.ClientVersion, newPolicyPayloadEnabled);
 
         var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,

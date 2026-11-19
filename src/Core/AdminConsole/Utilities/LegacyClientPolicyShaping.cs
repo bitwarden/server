@@ -13,8 +13,8 @@ namespace Bit.Core.AdminConsole.Utilities;
 /// Clients older than <see cref="Constants.PM35389RestrictedItemTypesDataMinimumVersion"/> cast the
 /// <see cref="PolicyType.RestrictedItemTypesPolicy"/> data straight to a list of cipher types and throw on the
 /// <c>{ "restrictedTypes": [...] }</c> object. For them the data is replaced with <c>null</c>, which they already read
-/// as "Card restricted". The projection never mutates the stored entity and does not depend on a feature flag, so
-/// rolling a flag back never re-exposes the object to an old client.
+/// as "Card restricted". The projection never mutates the stored entity. The object shape is sent only when the
+/// client version is supported AND the feature flag is on; rolling the flag back reverts all clients to the legacy shape.
 /// </para>
 /// <para>
 /// Apply this to every <b>member-facing</b> endpoint that serializes policies into client state. Admin endpoints
@@ -40,12 +40,14 @@ public static class LegacyClientPolicyShaping
         || (clientVersion is not null && clientVersion >= _minimumVersion);
 
     /// <summary>
-    /// Returns the policies as the calling client should see them. Policies that need no change are returned as the
+    /// Returns the policies as the calling client should see them. The new payload is only sent when
+    /// <paramref name="newPayloadEnabled"/> (the <see cref="FeatureFlagKeys.PM32009_NewItemTypes"/> flag) is on
+    /// <b>and</b> the client version can parse it, so turning the flag off reverts every client to the legacy shape. Policies that need no change are returned as the
     /// same instances; changed ones are copies, so stored entities are never modified.
     /// </summary>
     public static IEnumerable<Policy> ShapeForClient(
-        IEnumerable<Policy> policies, DeviceType? deviceType, Version? clientVersion) =>
-        CanParseRestrictedItemTypesData(deviceType, clientVersion)
+        IEnumerable<Policy> policies, DeviceType? deviceType, Version? clientVersion, bool newPayloadEnabled) =>
+        newPayloadEnabled && CanParseRestrictedItemTypesData(deviceType, clientVersion)
             ? policies
             : policies.Select(WithoutRestrictedItemTypesData);
 

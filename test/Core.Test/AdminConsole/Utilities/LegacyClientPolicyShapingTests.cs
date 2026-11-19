@@ -67,7 +67,7 @@ public class LegacyClientPolicyShapingTests
         var stored = NewPolicy(PolicyType.RestrictedItemTypesPolicy, ObjectData);
 
         var result = Assert.Single(
-            LegacyClientPolicyShaping.ShapeForClient([stored], DeviceType.ChromeBrowser, null));
+            LegacyClientPolicyShaping.ShapeForClient([stored], DeviceType.ChromeBrowser, null, true));
 
         Assert.Null(result.Data);
         Assert.Equal(stored.Id, result.Id);
@@ -83,7 +83,7 @@ public class LegacyClientPolicyShapingTests
     {
         var stored = NewPolicy(PolicyType.RestrictedItemTypesPolicy, ObjectData);
 
-        var result = LegacyClientPolicyShaping.ShapeForClient([stored], DeviceType.ChromeBrowser, null).Single();
+        var result = LegacyClientPolicyShaping.ShapeForClient([stored], DeviceType.ChromeBrowser, null, true).Single();
 
         Assert.NotSame(stored, result);
         Assert.Equal(ObjectData, stored.Data);
@@ -97,7 +97,7 @@ public class LegacyClientPolicyShapingTests
         var stored = NewPolicy(PolicyType.RestrictedItemTypesPolicy, ObjectData);
         stored.Enabled = enabled;
 
-        var result = LegacyClientPolicyShaping.ShapeForClient([stored], null, null).Single();
+        var result = LegacyClientPolicyShaping.ShapeForClient([stored], null, null, true).Single();
 
         Assert.Null(result.Data);
         Assert.Equal(enabled, result.Enabled);
@@ -108,7 +108,7 @@ public class LegacyClientPolicyShapingTests
     {
         var stored = NewPolicy(PolicyType.RestrictedItemTypesPolicy, null);
 
-        Assert.Same(stored, LegacyClientPolicyShaping.ShapeForClient([stored], null, null).Single());
+        Assert.Same(stored, LegacyClientPolicyShaping.ShapeForClient([stored], null, null, true).Single());
     }
 
     [Fact]
@@ -116,7 +116,7 @@ public class LegacyClientPolicyShapingTests
     {
         var other = NewPolicy(PolicyType.MasterPassword, """{"minLength":12}""");
 
-        Assert.Same(other, LegacyClientPolicyShaping.ShapeForClient([other], null, null).Single());
+        Assert.Same(other, LegacyClientPolicyShaping.ShapeForClient([other], null, null, true).Single());
     }
 
     [Fact]
@@ -125,10 +125,20 @@ public class LegacyClientPolicyShapingTests
         var stored = NewPolicy(PolicyType.RestrictedItemTypesPolicy, ObjectData);
 
         var result = Assert.Single(
-            LegacyClientPolicyShaping.ShapeForClient([stored], DeviceType.ChromeBrowser, _minimum));
+            LegacyClientPolicyShaping.ShapeForClient([stored], DeviceType.ChromeBrowser, _minimum, true));
 
         Assert.Same(stored, result);
         Assert.Equal(ObjectData, result.Data);
+    }
+
+    [Fact]
+    public void ShapeForClient_FlagOff_SupportedClient_NullsRestrictedItemTypesData()
+    {
+        var stored = new Policy { Type = PolicyType.RestrictedItemTypesPolicy, Enabled = true, Data = """{"restrictedTypes":[3]}""" };
+
+        var result = LegacyClientPolicyShaping.ShapeForClient([stored], DeviceType.ChromeBrowser, _minimum, false).Single();
+
+        Assert.Null(result.Data);
     }
 
     [Fact]
@@ -136,7 +146,7 @@ public class LegacyClientPolicyShapingTests
     {
         var stored = NewPolicy(PolicyType.RestrictedItemTypesPolicy, ObjectData);
 
-        Assert.Same(stored, LegacyClientPolicyShaping.ShapeForClient([stored], DeviceType.Android, null).Single());
+        Assert.Same(stored, LegacyClientPolicyShaping.ShapeForClient([stored], DeviceType.Android, null, true).Single());
     }
 
     [Fact]
@@ -145,7 +155,7 @@ public class LegacyClientPolicyShapingTests
         var restricted = NewPolicy(PolicyType.RestrictedItemTypesPolicy, ObjectData);
         var other = NewPolicy(PolicyType.MasterPassword, """{"minLength":12}""");
 
-        var result = LegacyClientPolicyShaping.ShapeForClient([restricted, other], null, null).ToList();
+        var result = LegacyClientPolicyShaping.ShapeForClient([restricted, other], null, null, true).ToList();
 
         Assert.Equal(2, result.Count);
         Assert.Null(result[0].Data);
