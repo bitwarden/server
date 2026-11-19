@@ -7,10 +7,25 @@ using Bit.Core.Utilities;
 
 namespace Bit.Api.SecretsManager.Models.Request;
 
-public class SMImportRequestModel
+public class SMImportRequestModel : IValidatableObject
 {
     public IEnumerable<InnerProjectImportRequestModel> Projects { get; set; }
+
+    [Required]
     public IEnumerable<InnerSecretImportRequestModel> Secrets { get; set; }
+
+    public IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
+    {
+        if (Projects != null && Projects.Any(p => p == null))
+        {
+            yield return new ValidationResult("Projects cannot contain null entries.", new[] { nameof(Projects) });
+        }
+
+        if (Secrets != null && Secrets.Any(s => s == null))
+        {
+            yield return new ValidationResult("Secrets cannot contain null entries.", new[] { nameof(Secrets) });
+        }
+    }
 
     public class InnerProjectImportRequestModel
     {

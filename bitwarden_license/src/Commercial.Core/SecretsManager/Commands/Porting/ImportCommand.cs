@@ -1,6 +1,7 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Porting;
 using Bit.Core.SecretsManager.Commands.Porting.Interfaces;
 using Bit.Core.SecretsManager.Entities;
@@ -21,6 +22,9 @@ public class ImportCommand : IImportCommand
 
     public async Task ImportAsync(Guid organizationId, SMImport import)
     {
+        // Validate before anything is written so malformed input fails as a client error, not a generic import failure.
+        ValidateImport(import);
+
         var importedProjects = new List<Guid>();
         var importedSecrets = new List<Guid>();
 
@@ -64,6 +68,36 @@ public class ImportCommand : IImportCommand
             }
 
             throw new Exception("Error attempting import");
+        }
+    }
+
+    private static void ValidateImport(SMImport import)
+    {
+        var projectIds = new HashSet<Guid>();
+        foreach (var project in import.Projects ?? Enumerable.Empty<SMImport.InnerProject>())
+        {
+            if (project == null)
+            {
+                throw new BadRequestException("Projects cannot contain null entries.");
+            }
+
+            if (!projectIds.Add(project.Id))
+            {
+                throw new BadRequestException("Project ids must be unique.");
+            }
+        }
+
+        foreach (var secret in import.Secrets ?? Enumerable.Empty<SMImport.InnerSecret>())
+        {
+            if (secret == null)
+            {
+                throw new BadRequestException("Secrets cannot contain null entries.");
+            }
+
+            if (secret.ProjectIds != null && secret.ProjectIds.Any(id => !projectIds.Contains(id)))
+            {
+                throw new BadRequestException("A secret references a project that is not part of the import.");
+            }
         }
     }
 

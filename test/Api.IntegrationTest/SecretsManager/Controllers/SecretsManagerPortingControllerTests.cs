@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using System.Net.Http.Json;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.SecretsManager.Helpers;
 using Bit.Api.SecretsManager.Models.Request;
@@ -71,5 +72,81 @@ public class SecretsManagerPortingControllerTests : IClassFixture<ApiApplication
 
         var response = await _client.GetAsync($"sm/{org.Id}/export");
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    private const string EncString = "2.AOs41Hd8OQiCPXjyJKCiDA==|O6OHgt2U2hJGBSNGnimJmg==|iD33s8B69C8JhYYhSa4V1tArjvLr8eEaGqOV7BRo5Jk=";
+
+    private static SMImportRequestModel.InnerSecretImportRequestModel NewSecret(params Guid[] projectIds) => new()
+    {
+        Id = Guid.NewGuid(),
+        Key = EncString,
+        Value = EncString,
+        Note = EncString,
+        ProjectIds = projectIds,
+    };
+
+    private async Task<System.Text.Json.JsonElement> ExportAsync(Guid orgId)
+    {
+        var response = await _client.GetAsync($"sm/{orgId}/export");
+        response.EnsureSuccessStatusCode();
+        return System.Text.Json.JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.Clone();
+    }
+
+    private async Task<Guid> LoginAsSmOwnerAsync()
+    {
+        var (org, _) = await _organizationHelper.Initialize(true, true, true);
+        await _loginHelper.LoginAsync(_email);
+        return org.Id;
+    }
+
+    [Theory]
+    [InlineData("{}")]
+    [InlineData("{\"secrets\":null}")]
+    [InlineData("{\"projects\":[null],\"secrets\":[]}")]
+    [InlineData("{\"projects\":[],\"secrets\":[null]}")]
+    public async Task Import_MalformedBody_BadRequest(string json)
+    {
+        var orgId = await LoginAsSmOwnerAsync();
+
+        var response = await _client.PostAsync($"sm/{orgId}/import", new StringContent(json, System.Text.Encoding.UTF8, "application/json"));
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task Import_SecretReferencesNonexistentProject_BadRequest_NothingWritten()
+    {
+        var orgId = await LoginAsSmOwnerAsync();
+        var request = new SMImportRequestModel
+        {
+            Projects = new[] { new SMImportRequestModel.InnerProjectImportRequestModel { Id = Guid.NewGuid(), Name = EncString } },
+            Secrets = new[] { NewSecret(Guid.NewGuid()) },
+        };
+
+        var response = await _client.PostAsJsonAsync($"sm/{orgId}/import", request);
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+
+        var export = await ExportAsync(orgId);
+        Assert.Equal(0, export.GetProperty("projects").GetArrayLength());
+        Assert.Equal(0, export.GetProperty("secrets").GetArrayLength());
+    }
+
+    [Fact]
+    public async Task Import_Valid_Ok()
+    {
+        var orgId = await LoginAsSmOwnerAsync();
+        var projectId = Guid.NewGuid();
+        var request = new SMImportRequestModel
+        {
+            Projects = new[] { new SMImportRequestModel.InnerProjectImportRequestModel { Id = projectId, Name = EncString } },
+            Secrets = new[] { NewSecret(projectId), NewSecret() },
+        };
+
+        var response = await _client.PostAsJsonAsync($"sm/{orgId}/import", request);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        var export = await ExportAsync(orgId);
+        Assert.Equal(1, export.GetProperty("projects").GetArrayLength());
+        Assert.Equal(2, export.GetProperty("secrets").GetArrayLength());
     }
 }
