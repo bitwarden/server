@@ -38,8 +38,7 @@ internal sealed class SmtpOAuthOptionsSetup :
         }
 
         // Validation above has already enforced the invariants each SmtpAuthConfig's required
-        // members encode, so construction here cannot fail. The result isn't wired into a
-        // consumer yet; that lands in the next TODO (SmtpCredentialProvider).
+        // members encode, so construction here cannot fail.
         _ = BuildAuthConfig(options.Smtp);
         return ValidateOptionsResult.Success;
     }
