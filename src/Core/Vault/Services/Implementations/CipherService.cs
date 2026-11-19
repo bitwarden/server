@@ -45,6 +45,7 @@ public class CipherService : ICipherService
     private readonly IPricingClient _pricingClient;
     private readonly ICipherLeaseGate _cipherLeaseGate;
     private readonly IPartialCipherWriteGuard _partialCipherWriteGuard;
+    private readonly ILeasingBypassAudit _leasingBypassAudit;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -65,7 +66,8 @@ public class CipherService : ICipherService
         IOrganizationAbilityCacheService organizationAbilityCacheService,
         IPricingClient pricingClient,
         ICipherLeaseGate cipherLeaseGate,
-        IPartialCipherWriteGuard partialCipherWriteGuard)
+        IPartialCipherWriteGuard partialCipherWriteGuard,
+        ILeasingBypassAudit leasingBypassAudit)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -86,6 +88,7 @@ public class CipherService : ICipherService
         _pricingClient = pricingClient;
         _cipherLeaseGate = cipherLeaseGate;
         _partialCipherWriteGuard = partialCipherWriteGuard;
+        _leasingBypassAudit = leasingBypassAudit;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -772,6 +775,7 @@ public class CipherService : ICipherService
         await ValidateChangeInCollectionsAsync(cipher, collectionIds, savingUserId);
 
         cipher.RevisionDate = DateTime.UtcNow;
+        var gatedCipherIds = await _leasingBypassAudit.GetGatedCipherIdsAsync(cipher.OrganizationId.Value, [cipher.Id]);
 
         // The sprocs will validate that all collections belong to this org/user and that they have
         // proper write permissions.
@@ -791,6 +795,7 @@ public class CipherService : ICipherService
             await _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds);
         }
 
+        await _leasingBypassAudit.AuditUngatedAsync(cipher.OrganizationId.Value, savingUserId, gatedCipherIds);
         await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_UpdatedCollections);
 
         // push

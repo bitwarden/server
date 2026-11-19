@@ -26,6 +26,8 @@ public class AccessAuditEventKindNamesTests
         "leaseExpired",
         "credentialAccessed",
         "credentialAccessDenied",
+        "credentialUngated",
+        "vaultExported",
         "ruleCreated",
         "ruleUpdated",
         "ruleDeleted",

@@ -37,8 +37,10 @@ public static class ServiceCollectionExtensions
         services.AddScoped<RotationJobEndpointsHandler>();
         services.AddScoped<RotationAttemptEndpointsHandler>();
 
-        // Must stay AddScoped, not TryAdd, to override AddBaseServices' UnrestrictedCipherLeaseGate.
+        // Must stay AddScoped, not TryAdd, to override AddBaseServices' UnrestrictedCipherLeaseGate and
+        // NoopLeasingBypassAudit.
         services.AddScoped<ICipherLeaseGate, CipherLeaseGate>();
+        services.AddScoped<ILeasingBypassAudit, LeasingBypassAudit>();
 
         // Pure and stateless, so a singleton is safe.
         services.AddSingleton<IAccessRuleEngine, AccessRuleEngine>();
