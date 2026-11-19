@@ -23,7 +23,6 @@ public class GroupsController : Controller
     private readonly IGroupRepository _groupRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
-    private readonly IUserRepository _userRepository;
     private readonly IGetGroupsListQuery _getGroupsListQuery;
     private readonly IDeleteGroupCommand _deleteGroupCommand;
     private readonly IPatchGroupCommand _patchGroupCommand;
@@ -34,7 +33,6 @@ public class GroupsController : Controller
         IGroupRepository groupRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
-        IUserRepository userRepository,
         IGetGroupsListQuery getGroupsListQuery,
         IDeleteGroupCommand deleteGroupCommand,
         IPatchGroupCommand patchGroupCommand,
@@ -44,7 +42,6 @@ public class GroupsController : Controller
     {
         _groupRepository = groupRepository;
         _organizationRepository = organizationRepository;
-        _userRepository = userRepository;
         _organizationUserRepository = organizationUserRepository;
         _getGroupsListQuery = getGroupsListQuery;
         _deleteGroupCommand = deleteGroupCommand;
@@ -190,17 +187,13 @@ public class GroupsController : Controller
                 Type = "User"
             }).ToList();
         }
-        var orgUsers = (await _organizationUserRepository.GetManyAsync(orgUserIds)).ToList();
-        var userIds = orgUsers.Where(ou => ou.UserId.HasValue).Select(ou => ou.UserId!.Value).Distinct().ToList();
-        var emails = userIds.Count == 0
-            ? new Dictionary<Guid, string>()
-            : (await _userRepository.GetManyAsync(userIds)).ToDictionary(u => u.Id, u => u.Email);
-        return orgUsers
+        var members = await _organizationUserRepository.GetManyEmailsByOrganizationIdAsync(organizationId, orgUserIds);
+        return members
             .OrderBy(ou => ou.Id)
             .Select(ou => new ScimGroupResponseModel.GroupMemberReference
             {
                 Value = ou.Id.ToString(),
-                Display = ou.Email ?? (ou.UserId.HasValue && emails.TryGetValue(ou.UserId.Value, out var e) ? e : string.Empty),
+                Display = ou.Email ?? string.Empty,
                 Ref = $"{usersUrl}/{ou.Id}",
                 Type = "User"
             })

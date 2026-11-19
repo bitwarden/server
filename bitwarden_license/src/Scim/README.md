@@ -25,14 +25,16 @@ fields, such as `totalResults`, `startIndex`, `itemsPerPage` and `schemas`, are 
 projected. Excluded attributes are absent from JSON, not replaced with empty arrays.
 
 Excluding memberships skips their repository lookups. Selecting Group members without
-`display` also skips organization-user details and account-email lookups.
+`display` also skips the member-email lookup.
 Projection does not push collection filtering or pagination into the database.
 
 List membership lookups are batched for the returned resource page. Member and group
 details are fetched once for the distinct references selected by membership pagination,
-rather than separately for every resource. Both SQL Server and Entity Framework use
-page-scoped membership queries. SQL Server deployments must apply the accompanying
-membership batch-read database migration.
+rather than separately for every resource. Member displays use one organization-scoped
+read selecting only the organization-user ID and email, falling back to the linked
+account email only when the organization-user email is null. Both SQL Server and
+Entity Framework use page-scoped membership queries. SQL Server deployments must apply
+the accompanying membership batch-read and organization-user email-read migrations.
 
 Without either parameter, existing responses are unchanged: complete memberships
 are returned by default, while collections default to 50 resources per page.

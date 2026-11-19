@@ -391,12 +391,23 @@ public class OrganizationUserRepository : Repository<OrganizationUser, Guid>, IO
         using (var connection = new SqlConnection(connectionString))
         {
             var results = await connection.QueryAsync<Guid>(
-                "[dbo].[GroupUser_ReadGroupIdsByOrganizationUserId]",
+                $"[{Schema}].[GroupUser_ReadGroupIdsByOrganizationUserId]",
                 new { OrganizationUserId = organizationUserId },
                 commandType: CommandType.StoredProcedure);
 
             return results.ToList();
         }
+    }
+
+    public async Task<ICollection<OrganizationUserEmail>> GetManyEmailsByOrganizationIdAsync(
+        Guid organizationId, IEnumerable<Guid> ids)
+    {
+        using var connection = new SqlConnection(ConnectionString);
+        var results = await connection.QueryAsync<OrganizationUserEmail>(
+            $"[{Schema}].[OrganizationUser_ReadEmailsByOrganizationIdIds]",
+            new { OrganizationId = organizationId, Ids = ids.ToGuidIdArrayTVP() },
+            commandType: CommandType.StoredProcedure);
+        return results.ToList();
     }
 
     public async Task UpdateGroupsAsync(Guid orgUserId, IEnumerable<Guid> groupIds, DateTime revisionDate)

@@ -15,6 +15,41 @@ namespace Bit.Scim.IntegrationTest.Controllers.v2;
 public class MembershipBatchingTests
 {
     [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task GroupMembers_ReadOnlyIdAndResolvedEmail(bool list)
+    {
+        var reads = new ReadCounter();
+        using var factory = CreateFactory(reads);
+        var db = factory.GetDatabaseContext();
+        db.OrganizationUsers.Single(user => user.Id == ScimApplicationFactory.TestOrganizationUserId1).Email = null;
+        db.OrganizationUsers.Single(user => user.Id == ScimApplicationFactory.TestOrganizationUserId4).UserId = null;
+        db.SaveChanges();
+        reads.Commands.Clear();
+
+        var path = list ? "Groups" : $"Groups/{ScimApplicationFactory.TestGroupId1}";
+        var response = await factory.Server.GetAsync($"/v2/{ScimApplicationFactory.TestOrganizationId1}/{path}");
+
+        Assert.Equal(200, response.Response.StatusCode);
+        using var document = await JsonDocument.ParseAsync(response.Response.Body);
+        var group = list ? document.RootElement.GetProperty("resources")[0] : document.RootElement;
+        var members = group.GetProperty("members").EnumerateArray().ToArray();
+        Assert.Equal(2, members.Length);
+        Assert.Contains(members, member => member.GetProperty("display").GetString() == "user1@example.com");
+        Assert.Contains(members, member => member.GetProperty("display").GetString() == "user4@example.com");
+        var emailRead = Assert.Single(reads.Commands.Where(command =>
+            command.Contains("FROM \"OrganizationUser\"", StringComparison.Ordinal) ||
+            command.Contains("FROM \"User\"", StringComparison.Ordinal)));
+        var selectedColumns = emailRead[..emailRead.IndexOf("FROM", StringComparison.Ordinal)];
+        Assert.Contains("Id", selectedColumns);
+        Assert.Contains("Email", selectedColumns);
+        Assert.DoesNotContain("UserId", selectedColumns);
+        Assert.DoesNotContain("Key", selectedColumns);
+        Assert.DoesNotContain("Permissions", selectedColumns);
+        Assert.DoesNotContain("SecurityStamp", selectedColumns);
+    }
+
+    [Theory]
     [InlineData(1)]
     [InlineData(3)]
     public async Task GroupList_BatchesMembershipReads(int count)

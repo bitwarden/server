@@ -229,7 +229,6 @@ public class AttributeProjectionTests : IClassFixture<ScimApplicationFactory>
         using var scope = _factory.Services.CreateScope();
         var groups = Substitute.For<IGroupRepository>();
         var organizationUsers = Substitute.For<IOrganizationUserRepository>();
-        var users = Substitute.For<IUserRepository>();
         var group = new Bit.Core.AdminConsole.Entities.Group
         {
             Id = ScimApplicationFactory.TestGroupId1,
@@ -237,7 +236,7 @@ public class AttributeProjectionTests : IClassFixture<ScimApplicationFactory>
         };
         groups.GetByIdAsync(group.Id).Returns(group);
         groups.GetManyUserIdsByIdAsync(group.Id).Returns(new[] { ScimApplicationFactory.TestOrganizationUserId1 });
-        var controller = ActivatorUtilities.CreateInstance<GroupsController>(scope.ServiceProvider, groups, organizationUsers, users);
+        var controller = ActivatorUtilities.CreateInstance<GroupsController>(scope.ServiceProvider, groups, organizationUsers);
         controller.ControllerContext = new ControllerContext
         {
             HttpContext = new DefaultHttpContext { RequestServices = scope.ServiceProvider }
@@ -245,7 +244,8 @@ public class AttributeProjectionTests : IClassFixture<ScimApplicationFactory>
         controller.Request.QueryString = new QueryString(query);
         await controller.Get(group.OrganizationId, group.Id, new GetGroupsQueryParamModel());
         await organizationUsers.DidNotReceive().GetManyAsync(Arg.Any<IEnumerable<Guid>>());
-        await users.DidNotReceive().GetManyAsync(Arg.Any<IEnumerable<Guid>>());
+        await organizationUsers.DidNotReceive().GetManyEmailsByOrganizationIdAsync(
+            Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>());
     }
 
     [Theory]

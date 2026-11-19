@@ -352,6 +352,22 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
+    public async Task<ICollection<OrganizationUserEmail>> GetManyEmailsByOrganizationIdAsync(
+        Guid organizationId, IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        return await (from ou in dbContext.OrganizationUsers
+                      join user in dbContext.Users on ou.UserId equals user.Id into users
+                      from user in users.DefaultIfEmpty()
+                      where ou.OrganizationId == organizationId && ids.Contains(ou.Id)
+                      select new OrganizationUserEmail
+                      {
+                          Id = ou.Id,
+                          Email = ou.Email ?? user.Email
+                      }).ToListAsync();
+    }
+
     public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
     {
         using (var scope = ServiceScopeFactory.CreateScope())

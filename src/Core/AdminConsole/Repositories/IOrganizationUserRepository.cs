@@ -71,6 +71,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers);
     Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds);
     Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids);
+    Task<ICollection<OrganizationUserEmail>> GetManyEmailsByOrganizationIdAsync(Guid organizationId, IEnumerable<Guid> ids);
     Task DeleteManyAsync(IEnumerable<Guid> userIds);
     Task<OrganizationUser?> GetByOrganizationEmailAsync(Guid organizationId, string email);
     /// <summary>
