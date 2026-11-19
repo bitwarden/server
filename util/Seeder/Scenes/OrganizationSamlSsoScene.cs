@@ -1,4 +1,4 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 using System.Reflection;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
@@ -17,10 +17,6 @@ using Bit.Seeder.Steps;
 
 namespace Bit.Seeder.Scenes;
 
-/// <summary>
-/// Makes an existing organization SAML 2.0 SSO-enabled against the local dev IdP. Writes the same organization
-/// and policy state as <see cref="OrganizationSsoScene"/>, with a SAML config instead of an OpenID Connect one.
-/// </summary>
 public class OrganizationSamlSsoScene(
     IOrganizationRepository organizationRepository,
     ISsoConfigRepository ssoConfigRepository,
@@ -30,8 +26,6 @@ public class OrganizationSamlSsoScene(
     private static readonly PolicyType[] _trustedDeviceEncryptionPolicyTypes =
         [PolicyType.SingleOrg, PolicyType.ResetPassword, PolicyType.RequireSso];
 
-    // CreateSsoConfigStep keeps its cert fetch private. Resolving it once here reuses that code without editing the step.
-    // A rename fails at type initialization, so every scene test reports it.
     private static readonly Func<string, Task<string>> _fetchIdpSigningCertificate = ResolveFetchIdpSigningCertificate();
 
     public class Request
@@ -41,9 +35,7 @@ public class OrganizationSamlSsoScene(
         [Required]
         public required string Identifier { get; set; }
         public MemberDecryptionType MemberDecryptionType { get; set; } = MemberDecryptionType.MasterPassword;
-        // Master-password orgs only; TDE always writes its policies.
         public bool RequireSsoLoginPolicy { get; set; }
-        // Overrides the IdP signing cert; when omitted it is read from the live IdP metadata.
         public string? IdpX509PublicCert { get; set; }
     }
 
@@ -52,7 +44,6 @@ public class OrganizationSamlSsoScene(
         var organization = await organizationRepository.GetOrganizationForSsoSeedOrThrowAsync(
             ssoConfigRepository, request.OrganizationId);
 
-        // Built before any write so an unreachable IdP leaves the organization untouched.
         var ssoConfig = await BuildSamlConfigAsync(organization.Id, request);
 
         var policyTypes = PolicyTypesFor(request);
@@ -115,7 +106,6 @@ public class OrganizationSamlSsoScene(
             return _trustedDeviceEncryptionPolicyTypes;
         }
 
-        // SingleOrg must be enabled before RequireSso
         return request.RequireSsoLoginPolicy ? [PolicyType.SingleOrg, PolicyType.RequireSso] : [];
     }
 
