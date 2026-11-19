@@ -1,5 +1,4 @@
 ﻿using System.Net;
-using System.Text.Json;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Factories;
@@ -88,14 +87,14 @@ public class OrganizationUsersControllerConfirmInviteLinkTests : IClassFixture<A
     }
 
     [Fact]
-    public async Task ConfirmInviteLink_WithUnknownCode_ReturnsNotFound()
+    public async Task ConfirmInviteLink_WithUnknownCode_ReturnsNotFoundProblem()
     {
         var (joinerClient, _) = await CreateJoinerClientAsync();
 
         var response = await joinerClient.PostAsJsonAsync(
             "/organizations/users/invite-link/confirm", BuildConfirmRequest(_organization.Id, Guid.NewGuid()));
 
-        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        await ValidationProblemAssertions.AssertNotFoundProblemAsync(response, "code", "invite_link_not_found");
     }
 
     [Fact]
@@ -111,15 +110,8 @@ public class OrganizationUsersControllerConfirmInviteLinkTests : IClassFixture<A
         var secondResponse = await joinerClient.PostAsJsonAsync(
             "/organizations/users/invite-link/confirm", BuildConfirmRequest(_organization.Id, code));
 
-        Assert.Equal(HttpStatusCode.BadRequest, secondResponse.StatusCode);
-
-        using var problem = JsonDocument.Parse(await secondResponse.Content.ReadAsStringAsync());
-        var errorCode = problem.RootElement
-            .GetProperty("errors")
-            .GetProperty("code")[0]
-            .GetProperty("type")
-            .GetString();
-        Assert.Equal("already_organization_member", errorCode);
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            secondResponse, HttpStatusCode.BadRequest, "code", "already_organization_member");
     }
 
     private async Task<Guid> CreateInviteLinkAsync()

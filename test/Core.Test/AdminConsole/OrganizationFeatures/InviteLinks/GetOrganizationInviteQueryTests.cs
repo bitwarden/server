@@ -2,6 +2,7 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
@@ -9,7 +10,6 @@ using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
 using Xunit;
-using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 
@@ -41,14 +41,14 @@ public class GetOrganizationInviteQueryTests
         SetupHappyPath(organization, inviteLink, user, existingOrganizationUser: null, sutProvider);
         sutProvider.GetDependency<IGetOrganizationInviteValidator>()
             .ValidateAsync(Arg.Any<OrganizationInviteLinkValidationRequest>())
-            .Returns(ci => Invalid(ci.Arg<OrganizationInviteLinkValidationRequest>(), new EmailNotVerified()));
+            .Returns(new EmailNotVerifiedError());
 
         // Act
         var result = await sutProvider.Sut.GetInviteAsync(BuildRequest(organization, inviteLink, user));
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<EmailNotVerified>(result.AsError);
+        Assert.IsType<EmailNotVerifiedError>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -128,6 +128,7 @@ public class GetOrganizationInviteQueryTests
 
         sutProvider.GetDependency<IGetOrganizationInviteValidator>()
             .ValidateAsync(Arg.Any<OrganizationInviteLinkValidationRequest>())
-            .Returns(ci => Valid(ci.Arg<OrganizationInviteLinkValidationRequest>()));
+            .Returns(ci => new Result<OrganizationInviteLinkValidationRequest, InviteLinkValidationError>(
+                ci.Arg<OrganizationInviteLinkValidationRequest>()));
     }
 }

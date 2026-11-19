@@ -20,6 +20,6 @@ namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 /// </remarks>
 public interface IConfirmOrganizationInviteLinkValidator
 {
-    Task<CommandResult<ConfirmOrganizationInviteLinkValidationResult>> ValidateAsync(
+    Task<Result<ConfirmOrganizationInviteLinkValidationResult, InviteLinkValidationError>> ValidateAsync(
         ConfirmOrganizationInviteLinkValidationRequest request);
 }
