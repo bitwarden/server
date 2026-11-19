@@ -4,6 +4,7 @@
 using Bit.Api.Models.Response;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Api.SecretsManager.Models.Response;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -89,6 +90,12 @@ public class ServiceAccountsController : Controller
         [FromRoute] Guid organizationId, [FromQuery] bool includeAccessToSecrets = false)
     {
         if (!_currentContext.AccessSecretsManager(organizationId))
+        {
+            throw new NotFoundException();
+        }
+
+        // Machine accounts cannot list service accounts
+        if (_currentContext.IdentityClientType == IdentityClientType.ServiceAccount)
         {
             throw new NotFoundException();
         }

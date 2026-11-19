@@ -2,6 +2,7 @@
 using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.Auth.Identity;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Context;
 using Bit.Core.Enums;
@@ -432,5 +433,34 @@ public class ServiceAccountsControllerTests
         var resultServiceAccount = data.ToServiceAccount(organization.Id);
         sutProvider.GetDependency<ICreateServiceAccountCommand>().CreateAsync(default, default)
             .ReturnsForAnyArgs(resultServiceAccount);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetServiceAccountsByOrganization_MachineAccount_ThrowsNotFound(
+        SutProvider<ServiceAccountsController> sutProvider, Guid id)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.ServiceAccount);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.ListByOrganizationAsync(id));
+
+        await sutProvider.GetDependency<IServiceAccountSecretsDetailsQuery>().DidNotReceiveWithAnyArgs()
+            .GetManyByOrganizationIdAsync(default, default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetServiceAccountsByOrganization_User_PassesUserAccessClient(
+        SutProvider<ServiceAccountsController> sutProvider, Guid id, Guid userId)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<ICurrentContext>().IdentityClientType.Returns(IdentityClientType.User);
+        sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
+
+        await sutProvider.Sut.ListByOrganizationAsync(id);
+
+        await sutProvider.GetDependency<IServiceAccountSecretsDetailsQuery>().Received(1)
+            .GetManyByOrganizationIdAsync(id, userId, AccessClientType.User, false);
     }
 }

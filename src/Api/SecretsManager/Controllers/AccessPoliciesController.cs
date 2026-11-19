@@ -93,6 +93,10 @@ public class AccessPoliciesController : Controller
         }
 
         var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(User, id);
+        if (accessClient == AccessClientType.ServiceAccount)
+        {
+            throw new NotFoundException();
+        }
 
         var serviceAccounts =
             await _serviceAccountRepository.GetManyByOrganizationIdWriteAccessAsync(id,
@@ -114,6 +118,10 @@ public class AccessPoliciesController : Controller
         }
 
         var (accessClient, userId) = await _accessClientQuery.GetAccessClientAsync(User, id);
+        if (accessClient == AccessClientType.ServiceAccount)
+        {
+            throw new NotFoundException();
+        }
 
         var projects =
             await _projectRepository.GetManyByOrganizationIdWriteAccessAsync(id,

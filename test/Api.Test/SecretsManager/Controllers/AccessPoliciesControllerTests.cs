@@ -1076,4 +1076,69 @@ public class AccessPoliciesControllerTests
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
         sutProvider.GetDependency<IUserService>().GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(Guid.NewGuid());
     }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetServiceAccountsPotentialGrantees_MachineAccount_ThrowsNotFound(
+        SutProvider<AccessPoliciesController> sutProvider, Guid id, Guid callerId)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), id)
+            .Returns((AccessClientType.ServiceAccount, callerId));
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.GetServiceAccountsPotentialGranteesAsync(id));
+
+        await sutProvider.GetDependency<IServiceAccountRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyByOrganizationIdWriteAccessAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetServiceAccountsPotentialGrantees_User_ReturnsGrantees(
+        SutProvider<AccessPoliciesController> sutProvider, Guid id, Guid userId, ServiceAccount serviceAccount)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), id)
+            .Returns((AccessClientType.User, userId));
+        sutProvider.GetDependency<IServiceAccountRepository>()
+            .GetManyByOrganizationIdWriteAccessAsync(id, userId, AccessClientType.User)
+            .Returns(new List<ServiceAccount> { serviceAccount });
+
+        var result = await sutProvider.Sut.GetServiceAccountsPotentialGranteesAsync(id);
+
+        Assert.Single(result.Data);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetProjectPotentialGrantees_MachineAccount_ThrowsNotFound(
+        SutProvider<AccessPoliciesController> sutProvider, Guid id, Guid callerId)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), id)
+            .Returns((AccessClientType.ServiceAccount, callerId));
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.GetProjectPotentialGranteesAsync(id));
+
+        await sutProvider.GetDependency<IProjectRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyByOrganizationIdWriteAccessAsync(default, default, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetProjectPotentialGrantees_User_ReturnsGrantees(
+        SutProvider<AccessPoliciesController> sutProvider, Guid id, Guid userId, Project project)
+    {
+        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<IAccessClientQuery>().GetAccessClientAsync(Arg.Any<ClaimsPrincipal>(), id)
+            .Returns((AccessClientType.User, userId));
+        sutProvider.GetDependency<IProjectRepository>()
+            .GetManyByOrganizationIdWriteAccessAsync(id, userId, AccessClientType.User)
+            .Returns(new List<Project> { project });
+
+        var result = await sutProvider.Sut.GetProjectPotentialGranteesAsync(id);
+
+        Assert.Single(result.Data);
+    }
 }
