@@ -136,6 +136,7 @@ public static partial class FeatureFlagKeys
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
     public const string InviteLinkAutoConfirm = "pm-34429-invite-link-auto-confirm";
     public const string AutoReinviteUsers = "pm-39473-auto-reinvite-users";
+    public const string AutoConfirmDelayAcceptedEmail = "pm-46755-auto-confirm-delay-accepted-email";
     public const string PM43375CollectionsDecryptListFailures = "pm-43375-collections-decrypt-list-failures";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
     public const string MembersTableV2 = "pm-37463-members-table-v2";
