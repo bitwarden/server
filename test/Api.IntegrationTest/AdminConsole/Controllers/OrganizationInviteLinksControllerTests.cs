@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using AwesomeAssertions;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Factories;
@@ -71,7 +72,7 @@ public class OrganizationInviteLinksControllerTests : IClassFixture<ApiApplicati
         };
         var createResponse = await _client.PostAsJsonAsync(
             $"/organizations/{_organization.Id}/invite-link", createRequest);
-        Assert.Equal(HttpStatusCode.Created, createResponse.StatusCode);
+        createResponse.Should().Be201Created();
 
         var created = await createResponse.Content.ReadFromJsonAsync<OrganizationInviteLinkResponseModel>();
         Assert.NotNull(created);

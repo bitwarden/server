@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using AwesomeAssertions;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
@@ -76,9 +77,8 @@ public class OrganizationConnectionsControllerTests : IClassFixture<ApiApplicati
             "organizations/connections",
             BuildScimRequest(_organization.Id, enabled: true));
 
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var body = await response.Content.ReadAsStringAsync();
-        Assert.Contains("You do not have permission to create a connection of type", body);
+        response.Should().Be400BadRequest()
+            .And.MatchInContent("*You do not have permission to create a connection of type*");
     }
 
     [Fact]

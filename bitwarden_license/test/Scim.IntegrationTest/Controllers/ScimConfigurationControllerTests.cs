@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json;
+using AwesomeAssertions;
 using Bit.Scim.IntegrationTest.Factories;
 using Bit.Scim.Utilities;
 using Xunit;
@@ -22,8 +23,8 @@ public class ScimConfigurationControllerTests : IClassFixture<ScimApplicationFac
     {
         var response = await _client.GetAsync("/v2/serviceproviderconfig");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        Assert.Equal("application/scim+json", response.Content.Headers.ContentType?.MediaType);
+        response.Should().Be200Ok()
+            .And.HaveHeader("Content-Type").And.Match("application/scim+json*");
 
         var json = await response.Content.ReadFromJsonAsync<JsonElement>();
 

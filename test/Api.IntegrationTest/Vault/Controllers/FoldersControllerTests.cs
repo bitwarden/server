@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using System.Text.Json;
+using AwesomeAssertions;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Vault.Models.Request;
@@ -46,9 +47,9 @@ public class FoldersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
         var response = await _client.GetAsync($"/folders/{folderId}");
 
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        using var fetched = await ReadJsonAsync(response);
-        Assert.Equal(folderId, fetched.RootElement.GetProperty("id").GetGuid());
+        response.Should().Be200Ok()
+            .And.Satisfy<JsonDocument>(fetched =>
+                fetched.RootElement.GetProperty("id").GetGuid().Should().Be(folderId));
     }
 
     [Fact]

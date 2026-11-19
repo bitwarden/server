@@ -12,6 +12,16 @@
           "xunit.extensibility.core": "[2.2.0, 3.0.0)"
         }
       },
+      "AwesomeAssertions.Web": {
+        "type": "Direct",
+        "requested": "[3.0.4, )",
+        "resolved": "3.0.4",
+        "contentHash": "gcdbtQzNNaWmxgvFvRn1IujUrvM8M5WFBS5gMEeC5JpPI71xbejGonoYVXV3sd3pEX3hKmIgDgB5pka2bVK74A==",
+        "dependencies": {
+          "AwesomeAssertions": "9.6.0",
+          "HttpMessageFormatter": "2.0.9"
+        }
+      },
       "coverlet.collector": {
         "type": "Direct",
         "requested": "[6.0.0, )",
@@ -110,6 +120,11 @@
         "type": "Transitive",
         "resolved": "14.0.0",
         "contentHash": "OC+1neAPM4oCCqQj3g2GJ2shziNNhOkxmNB9cVS8jtx4JbgmRzLcUOxB9Tsz6cVPHugdkHgCaCrTjjSI0Z5sCQ=="
+      },
+      "AwesomeAssertions": {
+        "type": "Transitive",
+        "resolved": "9.6.0",
+        "contentHash": "8kdtgI+tZIgP46ncnk650/dU4JSrn+n2Dkic8FvjIFn72P6Nv1Afyr5F8F3PsokHg1GBSBVo1/Z+eZOrU5esSA=="
       },
       "AWSSDK.Core": {
         "type": "Transitive",
@@ -379,6 +394,11 @@
         "type": "Transitive",
         "resolved": "2.1.6",
         "contentHash": "WsYWCEXsIM6hEOSOSRHtIYLjC8BnbT5MVmqhNKRqUI7qiv0t8x3nJiBTEv0ZZfvUAMAFnadGIzSsS/U2anVG1Q=="
+      },
+      "HttpMessageFormatter": {
+        "type": "Transitive",
+        "resolved": "2.0.9",
+        "contentHash": "9ZTQqVIu6gPTcuOzcIPCNU2Ze9owpSqaVDWjEXaKgQGc8Ao7gAoCMZXw2irfbJFzmqVJFcYRwayQK6DaBa4ucg=="
       },
       "Kralizek.AutoFixture.Extensions.MockHttp": {
         "type": "Transitive",

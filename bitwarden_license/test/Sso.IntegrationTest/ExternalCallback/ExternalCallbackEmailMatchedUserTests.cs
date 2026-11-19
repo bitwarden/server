@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using AwesomeAssertions;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Auth.Repositories;
@@ -153,12 +154,10 @@ public class ExternalCallbackEmailMatchedUserTests
         var response = await client.GetAsync("/Account/ExternalCallback");
 
         // Assert — 302 to the web vault /login with the expected query-string context.
-        Assert.Equal(HttpStatusCode.Redirect, response.StatusCode);
-        Assert.NotNull(response.Headers.Location);
+        response.Should().Be302Found()
+            .And.HaveLocation().And.Match("*login*error=ssoOrgMembershipRequired*");
 
         var location = response.Headers.Location!.ToString();
-        Assert.Contains("/login?", location);
-        Assert.Contains("error=ssoOrgMembershipRequired", location);
 
         // The redirect carries the seeded user's email, the org id (stable match key), and
         // the org display name (URL-encoded, for the toast) so the web client can pre-fill
