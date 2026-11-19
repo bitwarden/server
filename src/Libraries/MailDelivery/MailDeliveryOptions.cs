@@ -118,7 +118,7 @@ public sealed class MailDeliveryOptions
 
         /// <summary>
         /// SMTP username. For <see cref="SmtpAuthType.Password"/>, the client authenticates only when both this
-        /// and <see cref="Password"/> are set. For OAuth auth types, this is the sending mailbox and is required.
+        /// and <see cref="Password"/> are set. OAuth clients do not use this value.
         /// </summary>
         public string? Username { get; set; }
 
