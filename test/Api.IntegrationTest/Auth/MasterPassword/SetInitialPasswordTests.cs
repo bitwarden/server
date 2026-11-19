@@ -2,7 +2,6 @@
 using System.Text.Json;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Core;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -15,7 +14,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
-using NSubstitute;
 using Xunit;
 using static Bit.Api.IntegrationTest.Auth.Helpers.MasterPasswordPayloads;
 using static Bit.Core.KeyManagement.Enums.SignatureAlgorithm;
@@ -31,7 +29,6 @@ public class SetInitialPasswordTests : IClassFixture<ApiApplicationFactory>, IAs
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
     private readonly IUserRepository _userRepository;
-    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
@@ -46,7 +43,6 @@ public class SetInitialPasswordTests : IClassFixture<ApiApplicationFactory>, IAs
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _userRepository = _factory.GetService<IUserRepository>();
-        _featureService = _factory.GetService<Bitwarden.Server.Sdk.Features.IFeatureService>();
         _passwordHasher = _factory.GetService<IPasswordHasher<User>>();
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
         _ssoConfigRepository = _factory.GetService<ISsoConfigRepository>();
@@ -443,8 +439,6 @@ public class SetInitialPasswordTests : IClassFixture<ApiApplicationFactory>, IAs
     [BitAutoData]
     public async Task PostSetPasswordAsync_V2_MasterPasswordDecryption_Success(string organizationSsoIdentifier)
     {
-        _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration).Returns(true);
-
         // Arrange - Create organization and user
         var ownerEmail = $"owner-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(ownerEmail);

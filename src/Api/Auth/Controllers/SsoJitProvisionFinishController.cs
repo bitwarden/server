@@ -1,5 +1,4 @@
 ﻿using Bit.Api.Auth.Models.Request.SsoJitProvisionFinish;
-using Bit.Core;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.UserFeatures.DeviceTrust;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
@@ -21,7 +20,6 @@ namespace Bit.Api.Auth.Controllers;
 [Authorize(Policies.Application)]
 public class SsoJitProvisionFinishController(
     IUserService userService,
-    Bitwarden.Server.Sdk.Features.IFeatureService featureService,
     IFinishSsoJitProvisionMasterPasswordCommand finishSsoJitProvisionMasterPasswordCommand,
     ISetInitialMasterPasswordCommandV1 setInitialMasterPasswordCommandV1,
     ISetKeyConnectorKeyCommand setKeyConnectorKeyCommand,
@@ -29,7 +27,6 @@ public class SsoJitProvisionFinishController(
     ICurrentContext currentContext) : Controller
 {
     private readonly IUserService _userService = userService;
-    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService = featureService;
     private readonly IFinishSsoJitProvisionMasterPasswordCommand _finishSsoJitProvisionMasterPasswordCommand =
         finishSsoJitProvisionMasterPasswordCommand;
     private readonly ISetInitialMasterPasswordCommandV1 _setInitialMasterPasswordCommandV1 = setInitialMasterPasswordCommandV1;
@@ -44,8 +41,8 @@ public class SsoJitProvisionFinishController(
     /// <see cref="SsoJitProvisionFinishPasswordRequestModel.AcceptOrganizationInvite"/> is <c>true</c>.
     /// </summary>
     /// <remarks>
-    /// Accepts MPAD + MPUD with exactly one keypair: V2 encryption (AccountKeys, V2 MP JIT flag on)
-    /// or V1 encryption (legacy Keys).
+    /// Accepts MPAD + MPUD with exactly one keypair: V2 encryption (AccountKeys) or V1 encryption
+    /// (legacy Keys).
     /// </remarks>
     [HttpPost("password")]
     public async Task FinishJitProvisionForPasswordAsync([FromBody] SsoJitProvisionFinishPasswordRequestModel model)
@@ -55,9 +52,8 @@ public class SsoJitProvisionFinishController(
         // TODO: eventually move this into the FinishSsoJitProvisionMasterPasswordCommand
         ThrowIfAccountKeysInitialized(user);
 
-        // Require AccountKeys so V1 requests (legacy Keys) still route to V1 when the flag is on.
-        if (model.AccountKeys != null &&
-            _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration))
+        // AccountKeys selects V2; legacy Keys route to V1.
+        if (model.AccountKeys != null)
         {
             await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(
                 user, model.ToData(), model.AcceptOrganizationInvite);
@@ -75,22 +71,14 @@ public class SsoJitProvisionFinishController(
     /// organization invite. Unlike that method, this endpoint accepts no legacy-shape requests.
     /// </summary>
     /// <remarks>
-    /// TODO: In order to remove this method, the scenario above needs to become unused. This means removal can
-    /// only happen when the EnableAccountEncryptionV2JitPasswordRegistration feature flag has been unwound in
-    /// https://bitwarden.atlassian.net/browse/PM-27327 and the client-side portion of the flag removal has aged
-    /// out according to the Bitwarden release support policy.
+    /// TODO: Remove this method once clients without V2 MP JIT registration
+    /// (https://bitwarden.atlassian.net/browse/PM-27327) have aged out according to the Bitwarden release
+    /// support policy.
     /// </remarks>
     private async Task FinishJitProvisionForPasswordV1Async(
         User user,
         SsoJitProvisionFinishPasswordRequestModel model)
     {
-        // V1 cannot consume AccountKeys (the new key shape). Fail instead of silently dropping the keypair.
-        if (model.AccountKeys != null)
-        {
-            throw new BadRequestException(
-                "Request includes V2 AccountKeys but V2 encryption is not enabled.");
-        }
-
         try
         {
             // Stage 1 (PM-27044) compatibility: see AccountsController.SetInitialPasswordV1Async.
