@@ -15,6 +15,7 @@ using Bit.Core.KeyManagement.Models.Api.Request;
 using Bit.Core.KeyManagement.Repositories;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
+using Bit.Test.Common.Helpers;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.Auth.SsoJitProvisionFinish;
@@ -91,7 +92,7 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
         };
 
         var response = await _client.PostAsJsonAsync(_endpoint, request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
         Assert.NotNull(user);
@@ -139,7 +140,7 @@ public class SsoJitProvisionFinishControllerKeyConnectorTests : IClassFixture<Ap
         };
 
         var response = await _client.PostAsJsonAsync(_endpoint, request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
         Assert.NotNull(user);

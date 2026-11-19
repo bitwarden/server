@@ -12,6 +12,7 @@ using Bit.Core.Models.Data;
 using Bit.Core.Platform.Installations;
 using Bit.Core.Platform.Push.Internal;
 using Bit.Core.Repositories;
+using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 using static Bit.Core.Settings.GlobalSettings;
@@ -109,7 +110,7 @@ public class PushControllerFixture : IAsyncLifetime
             { "client_secret", installation.Key },
         }));
 
-        connectTokenResponse.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(connectTokenResponse);
 
         var connectTokenResponseModel = await connectTokenResponse.Content.ReadFromJsonAsync<JsonNode>();
 
@@ -388,7 +389,7 @@ public class PushControllerTests : IClassFixture<PushControllerFixture>
         var pushSendResponse = await httpClient.PostAsJsonAsync("push/send", pushSendRequestModel);
 
         // Assert
-        pushSendResponse.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(pushSendResponse);
 
         // Relayed notifications, the ones coming to this endpoint should
         // not make their way into our Azure Queue and instead should only be sent to Azure Notifications
@@ -455,7 +456,7 @@ public class PushControllerTests : IClassFixture<PushControllerFixture>
             ClientType = ClientType.Web,
         });
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         await notificationHubProxy
             .Received(1)

@@ -7,6 +7,7 @@ using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
+using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
@@ -81,7 +82,7 @@ public class EmailChangeLegacyTests : IClassFixture<ApiApplicationFactory>, IAsy
         var response = await PostEmailAsync(newEmail, token);
 
         // Assert
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var updatedUser = await _userRepository.GetByEmailAsync(newEmail);
         Assert.NotNull(updatedUser);

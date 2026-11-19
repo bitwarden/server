@@ -11,6 +11,7 @@ using Bit.Identity.IntegrationTest.Helpers;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Fakes;
+using Bit.Test.Common.Helpers;
 using Duende.IdentityModel;
 using Xunit;
 
@@ -70,7 +71,7 @@ public class WebAuthnGrantTests(IdentityApplicationFactory _factory) : IClassFix
         var content = await response.Content.ReadAsStringAsync();
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode, $"Expected 200, got {response.StatusCode}. Body: {content}");
+        await Assert.SuccessResponseAsync(response);
         Assert.Contains("access_token", content);
     }
 
@@ -84,7 +85,7 @@ public class WebAuthnGrantTests(IdentityApplicationFactory _factory) : IClassFix
         // Arrange
         using var context = await SetupWebAuthnLoginAsync(requestModel);
         var loginResponse = await context.PostTokenAsync();
-        Assert.True(loginResponse.IsSuccessStatusCode, await loginResponse.Content.ReadAsStringAsync());
+        await Assert.SuccessResponseAsync(loginResponse);
         using var loginBody = await JsonDocument.ParseAsync(await loginResponse.Content.ReadAsStreamAsync());
         var loginAccessToken = loginBody.RootElement.GetProperty("access_token").GetString()!;
         var refreshToken = loginBody.RootElement.GetProperty("refresh_token").GetString()!;
@@ -95,7 +96,7 @@ public class WebAuthnGrantTests(IdentityApplicationFactory _factory) : IClassFix
         var refreshResponse = await context.PostRefreshTokenAsync(refreshToken);
 
         // Assert
-        Assert.True(refreshResponse.IsSuccessStatusCode, await refreshResponse.Content.ReadAsStringAsync());
+        await Assert.SuccessResponseAsync(refreshResponse);
         using var refreshBody = await JsonDocument.ParseAsync(await refreshResponse.Content.ReadAsStreamAsync());
         var refreshedAccessToken = refreshBody.RootElement.GetProperty("access_token").GetString()!;
         AccessTokenAssertions.AssertDeviceClaims(
@@ -134,7 +135,7 @@ public class WebAuthnGrantTests(IdentityApplicationFactory _factory) : IClassFix
 
         // Assert
         var firstContent = await successResponse.Content.ReadAsStringAsync();
-        Assert.True(successResponse.IsSuccessStatusCode, $"First call expected 200, got {successResponse.StatusCode}. Body: {firstContent}");
+        await Assert.SuccessResponseAsync(successResponse);
         Assert.Contains("access_token", firstContent);
 
         Assert.False(rejectedResponse.IsSuccessStatusCode);
@@ -156,7 +157,7 @@ public class WebAuthnGrantTests(IdentityApplicationFactory _factory) : IClassFix
         var client = factory.CreateClient();
 
         var optionsResponse = await client.GetAsync("/accounts/webauthn/assertion-options");
-        Assert.True(optionsResponse.IsSuccessStatusCode);
+        await Assert.SuccessResponseAsync(optionsResponse);
         var options = await optionsResponse.Content.ReadFromJsonAsync<WebAuthnLoginAssertionOptionsResponseModel>();
         Assert.NotNull(options);
 

@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Vault.Models.Request;
+using Bit.Test.Common.Helpers;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.Vault.Controllers;
@@ -160,7 +161,7 @@ public class FoldersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
     private async Task<Guid> CreateFolderAsync()
     {
         var response = await _client.PostAsJsonAsync("/folders", new FolderRequestModel { Name = _encryptedName });
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         using var created = await ReadJsonAsync(response);
         return created.RootElement.GetProperty("id").GetGuid();
     }

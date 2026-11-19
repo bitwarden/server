@@ -8,6 +8,7 @@ using Bit.Identity.IdentityServer.Enums;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.Identity.IntegrationTest.Helpers;
 using Bit.IntegrationTestCommon.Factories;
+using Bit.Test.Common.Helpers;
 using Duende.IdentityModel;
 using Duende.IdentityServer.Validation;
 using NSubstitute;
@@ -43,7 +44,7 @@ public class SendAccessGrantTests(IdentityApplicationFactory _factory) : IClassF
         var response = await client.PostAsync("/connect/token", requestBody);
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode);
+        await Assert.SuccessResponseAsync(response);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("access_token", content);
         Assert.Contains("bearer", content.ToLower());
@@ -83,7 +84,7 @@ public class SendAccessGrantTests(IdentityApplicationFactory _factory) : IClassF
         var response = await client.PostAsync("/connect/token", requestBody);
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode);
+        await Assert.SuccessResponseAsync(response);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains(OidcConstants.TokenResponse.AccessToken, content);
     }
@@ -214,7 +215,7 @@ public class SendAccessGrantTests(IdentityApplicationFactory _factory) : IClassF
         var response = await client.PostAsync("/connect/token", requestBody);
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode);
+        await Assert.SuccessResponseAsync(response);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains("access_token", content);
         Assert.Contains("Bearer", content);

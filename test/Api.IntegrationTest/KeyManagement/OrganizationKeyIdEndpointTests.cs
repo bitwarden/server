@@ -7,6 +7,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Test.Common.Helpers;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.KeyManagement;
@@ -111,7 +112,7 @@ public class OrganizationKeyIdEndpointTests : IClassFixture<ApiApplicationFactor
 
         var response = await _client.PostAsJsonAsync(OrganizationKeyIdUri(), RequestFor(_organizationKeyId));
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         await AssertOrganizationKeyIdAsync(_organizationKeyId);
     }
 
@@ -123,14 +124,14 @@ public class OrganizationKeyIdEndpointTests : IClassFixture<ApiApplicationFactor
         await LoginAsMemberWithOrganizationKeyAsync(type);
 
         var syncBefore = await _client.GetAsync("/sync");
-        syncBefore.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(syncBefore);
         Assert.Contains("\"organizationKeyId\":null", await syncBefore.Content.ReadAsStringAsync());
 
         var response = await _client.PostAsJsonAsync(OrganizationKeyIdUri(), RequestFor(_organizationKeyId));
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var syncAfter = await _client.GetAsync("/sync");
-        syncAfter.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(syncAfter);
         Assert.Contains($"\"organizationKeyId\":\"{_organizationKeyId}\"",
             await syncAfter.Content.ReadAsStringAsync());
     }
@@ -158,8 +159,8 @@ public class OrganizationKeyIdEndpointTests : IClassFixture<ApiApplicationFactor
         var first = await _client.PostAsJsonAsync(OrganizationKeyIdUri(), RequestFor(_organizationKeyId));
         var second = await _client.PostAsJsonAsync(OrganizationKeyIdUri(), RequestFor(_organizationKeyId));
 
-        first.EnsureSuccessStatusCode();
-        second.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(first);
+        await Assert.SuccessResponseAsync(second);
         await AssertOrganizationKeyIdAsync(_organizationKeyId);
     }
 
@@ -168,7 +169,7 @@ public class OrganizationKeyIdEndpointTests : IClassFixture<ApiApplicationFactor
     {
         await _loginHelper.LoginAsync(_ownerEmail);
         var first = await _client.PostAsJsonAsync(OrganizationKeyIdUri(), RequestFor(_organizationKeyId));
-        first.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(first);
 
         var second = await _client.PostAsJsonAsync(OrganizationKeyIdUri(), RequestFor(_otherOrganizationKeyId));
 

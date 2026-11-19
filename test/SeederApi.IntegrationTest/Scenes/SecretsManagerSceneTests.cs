@@ -8,6 +8,7 @@ using Bit.Seeder.Options;
 using Bit.Seeder.Scenes;
 using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Models.Response;
+using Bit.Test.Common.Helpers;
 using Duende.IdentityModel.Client;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -568,7 +569,7 @@ public class SecretsManagerSceneTests : IClassFixture<InPlaySeederApiApplication
             Arguments = JsonSerializer.SerializeToElement(arguments)
         }, playId);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var model = await response.Content.ReadFromJsonAsync<SceneResponseModel>();
         Assert.NotNull(model);

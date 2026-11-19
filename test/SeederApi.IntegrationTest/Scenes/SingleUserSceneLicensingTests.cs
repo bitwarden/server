@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Core.Billing.Services;
 using Bit.Seeder.Scenes;
 using Bit.SeederApi.Models.Request;
+using Bit.Test.Common.Helpers;
 using Duende.IdentityModel.Client;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
@@ -59,7 +60,7 @@ public class SingleUserSceneLicensingTests : IAsyncLifetime
             })
         }, Guid.NewGuid().ToString());
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]

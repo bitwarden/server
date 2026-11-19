@@ -1,4 +1,5 @@
 ﻿using Bit.Seeder.Scenes;
+using Bit.Test.Common.Helpers;
 using Duende.IdentityModel.Client;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -23,7 +24,7 @@ public class SingleUserNoMasterPasswordSceneTests : IClassFixture<InPlaySeederAp
     public async Task DisposeAsync()
     {
         var deleteResponse = await _client.DeleteAsync($"/seed/{_playId}");
-        deleteResponse.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(deleteResponse);
         _client.Dispose();
     }
 
