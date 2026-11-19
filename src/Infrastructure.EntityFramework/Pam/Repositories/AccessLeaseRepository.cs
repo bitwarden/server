@@ -8,7 +8,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using CoreEntity = Bit.Pam.Entities.AccessLease;
 using EfDecision = Bit.Infrastructure.EntityFramework.Pam.Models.AccessDecision;
-using EfLeaseExpirySweep = Bit.Infrastructure.EntityFramework.Pam.Models.PamLeaseExpirySweep;
 using EfModel = Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease;
 
 #nullable enable
@@ -277,11 +276,11 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Expiry is derived, not stored; PamLeaseExpirySweep's journal decides which run owns a lease.
-        // No stronger isolation needed; a losing sweep's SaveChanges fails on the journal's primary key.
-        var due = await dbContext.AccessLeases
-            .Where(l => l.Action == AccessLeaseAction.None && l.NotAfter <= now && l.NotAfter > since &&
-                !dbContext.PamLeaseExpirySweeps.Any(s => s.AccessLeaseId == l.Id))
+        // Expiry is derived, not stored; stamping SweptDate decides which run owns a lease.
+        // The per-lease conditional update is the claim: a racing sweep that stamped it first leaves us zero rows.
+        var candidates = await dbContext.AccessLeases
+            .Where(l => l.Action == AccessLeaseAction.None && l.SweptDate == null && l.NotAfter <= now &&
+                l.NotAfter > since)
             .Select(l => new PamExpiredLease
             {
                 Id = l.Id,
@@ -294,28 +293,20 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
             })
             .ToListAsync();
 
-        if (due.Count > 0)
+        var swept = new List<PamExpiredLease>(candidates.Count);
+        foreach (var candidate in candidates)
         {
-            dbContext.PamLeaseExpirySweeps.AddRange(due.Select(l =>
-                new EfLeaseExpirySweep { AccessLeaseId = l.Id, SweptDate = now }));
-            try
+            var id = candidate.Id;
+            var claimed = await dbContext.AccessLeases
+                .Where(l => l.Id == id && l.Action == AccessLeaseAction.None && l.SweptDate == null)
+                .ExecuteUpdateAsync(s => s.SetProperty(l => l.SweptDate, now));
+            if (claimed == 1)
             {
-                await dbContext.SaveChangesAsync();
-            }
-            catch (DbUpdateException)
-            {
-                // A concurrent sweep journaled some of these first. Report nothing; the next run picks up the rest.
-                var dueIds = due.Select(l => l.Id).ToList();
-                if (await dbContext.PamLeaseExpirySweeps.AnyAsync(s => dueIds.Contains(s.AccessLeaseId)))
-                {
-                    return [];
-                }
-
-                throw;
+                swept.Add(candidate);
             }
         }
 
-        return due;
+        return swept;
     }
 
     /// <summary>

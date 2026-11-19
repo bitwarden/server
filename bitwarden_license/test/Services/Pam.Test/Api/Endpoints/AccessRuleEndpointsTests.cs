@@ -49,13 +49,13 @@ public class AccessRuleEndpointsTests
     }
 
     [Fact]
-    public void MapPamEndpoints_RegistersTheSixAccessRuleRoutes_InTheInternalDoc()
+    public void MapPamEndpoints_RegistersTheFiveAccessRuleRoutes_InTheInternalDoc()
     {
         var endpoints = MaterializeEndpoints()
             .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRules"))
             .ToList();
 
-        Assert.Equal(6, endpoints.Count);
+        Assert.Equal(5, endpoints.Count);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
     }
@@ -66,7 +66,6 @@ public class AccessRuleEndpointsTests
     [InlineData("Pam_AccessRules_Post", "POST", "organizations/{orgId:guid}/access-rules")]
     [InlineData("Pam_AccessRules_Put", "PUT", "organizations/{orgId:guid}/access-rules/{id:guid}")]
     [InlineData("Pam_AccessRules_Delete", "DELETE", "organizations/{orgId:guid}/access-rules/{id:guid}")]
-    [InlineData("Pam_AccessRules_GetBypassableCiphers", "GET", "organizations/{orgId:guid}/access-rules/{id:guid}/bypassable-ciphers")]
     public void MapPamEndpoints_RegistersExpectedRoute(string name, string method, string route)
     {
         var endpoints = MaterializeEndpoints();
@@ -103,8 +102,6 @@ public class AccessRuleEndpointsTests
     [InlineData("Pam_AccessRules_Post", typeof(ManageAccessRulesRequirement))]
     [InlineData("Pam_AccessRules_Put", typeof(ManageAccessRulesRequirement))]
     [InlineData("Pam_AccessRules_Delete", typeof(ManageAccessRulesRequirement))]
-    // Restricted to rule managers, since it names credentials a rule fails to protect.
-    [InlineData("Pam_AccessRules_GetBypassableCiphers", typeof(ManageAccessRulesRequirement))]
     public void MapPamEndpoints_AuthorizesRouteWithRequirement(string name, Type requirementType)
     {
         var endpoint = Assert.Single(
@@ -145,7 +142,7 @@ public class AccessRuleEndpointsTests
             .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRules"))
             .ToList();
 
-        Assert.Equal(6, endpoints.Count);
+        Assert.Equal(5, endpoints.Count);
         Assert.All(endpoints, endpoint =>
         {
             var requirements = RequirementsFor(endpoint);
@@ -160,7 +157,6 @@ public class AccessRuleEndpointsTests
     [InlineData(nameof(AccessRuleEndpointsHandler.Post), typeof(Task<AccessRuleResponseModel>))]
     [InlineData(nameof(AccessRuleEndpointsHandler.Put), typeof(Task<AccessRuleResponseModel>))]
     [InlineData(nameof(AccessRuleEndpointsHandler.Delete), typeof(Task))]
-    [InlineData(nameof(AccessRuleEndpointsHandler.GetBypassableCiphers), typeof(Task<RuleBypassableCiphersResponseModel>))]
     public void Handler_HasExpectedReturnType(string methodName, Type expectedReturnType)
     {
         var method = typeof(AccessRuleEndpointsHandler).GetMethod(methodName);

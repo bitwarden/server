@@ -388,7 +388,6 @@ public class PriceIncreaseScheduler(
         return new SubscriptionSchedulePhaseOptions
         {
             StartDate = startDate,
-            EndDate = startDate.Value.AddYears(1),
             Items = items,
             Discounts = discounts,
             ProrationBehavior = ProrationBehavior.None
@@ -448,7 +447,6 @@ public class PriceIncreaseScheduler(
         return new SubscriptionSchedulePhaseOptions
         {
             StartDate = startDate,
-            EndDate = startDate.Value.AddYears(1),
             Items = items,
             Discounts = discounts,
             ProrationBehavior = ProrationBehavior.None
@@ -547,7 +545,7 @@ public class PriceIncreaseScheduler(
             subscription,
             cohort.ProactiveDiscountCouponCode is { } proactiveCode ? [proactiveCode] : []);
 
-        if (subscription.GetCurrentPeriod() is not { Start: { } currentStart, End: { } currentEnd })
+        if (subscription.GetCurrentPeriodEnd() is not { } currentEnd)
         {
             logger.LogError(
                 "Could not determine current period for subscription ({SubscriptionId}); skipping business schedule creation",
@@ -555,12 +553,9 @@ public class PriceIncreaseScheduler(
             return null;
         }
 
-        var periodLength = currentEnd - currentStart;
-
         return new SubscriptionSchedulePhaseOptions
         {
             StartDate = currentEnd,
-            EndDate = currentEnd + periodLength,
             Items = items,
             Discounts = discounts,
             ProrationBehavior = ProrationBehavior.None

@@ -14,4 +14,19 @@ public static class OrganizationUserStatusTypeNewExtensions
             _ => throw new ArgumentOutOfRangeException(nameof(status), status,
                 "Unknown OrganizationUserStatusTypeNew value."),
         };
+
+    /// <summary>
+    /// Converts an active status to its <see cref="OrganizationUserStatusTypeNew"/> equivalent.
+    /// Throws for <see cref="OrganizationUserStatusType.Revoked"/>, which has no equivalent.
+    /// </summary>
+    public static OrganizationUserStatusTypeNew ToOrganizationUserStatusTypeNew(this OrganizationUserStatusType status)
+        => status switch
+        {
+            OrganizationUserStatusType.Invited => OrganizationUserStatusTypeNew.Invited,
+            OrganizationUserStatusType.Accepted => OrganizationUserStatusTypeNew.Accepted,
+            OrganizationUserStatusType.Confirmed => OrganizationUserStatusTypeNew.Confirmed,
+            OrganizationUserStatusType.Staged => OrganizationUserStatusTypeNew.Staged,
+            _ => throw new ArgumentOutOfRangeException(nameof(status), status,
+                "OrganizationUserStatusType value has no OrganizationUserStatusTypeNew equivalent."),
+        };
 }

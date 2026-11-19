@@ -56,7 +56,6 @@ public class DatabaseContext : DbContext
     public DbSet<PamRotationConfig> PamRotationConfigs { get; set; }
     public DbSet<PamRotationJob> PamRotationJobs { get; set; }
     public DbSet<PamRotationAttempt> PamRotationAttempts { get; set; }
-    public DbSet<PamLeaseExpirySweep> PamLeaseExpirySweeps { get; set; }
     public DbSet<PamRotationJobTimeoutSweep> PamRotationJobTimeoutSweeps { get; set; }
     public DbSet<Device> Devices { get; set; }
     public DbSet<EmergencyAccess> EmergencyAccesses { get; set; }
@@ -135,7 +134,6 @@ public class DatabaseContext : DbContext
         var ePamRotationConfig = builder.Entity<PamRotationConfig>();
         var ePamRotationJob = builder.Entity<PamRotationJob>();
         var ePamRotationAttempt = builder.Entity<PamRotationAttempt>();
-        var ePamLeaseExpirySweep = builder.Entity<PamLeaseExpirySweep>();
         var ePamRotationJobTimeoutSweep = builder.Entity<PamRotationJobTimeoutSweep>();
         var eEmergencyAccess = builder.Entity<EmergencyAccess>();
         var eFolder = builder.Entity<Folder>();
@@ -201,7 +199,7 @@ public class DatabaseContext : DbContext
         // already cascades directly to both tables, and a second cascading path through the other table would create
         // multiple cascade paths, which SQL Server rejects.
         eAccessRequest.Property(p => p.Id).ValueGeneratedNever();
-        eAccessRequest.HasIndex(p => new { p.RequesterId, p.CipherId, p.Action });
+        eAccessRequest.HasIndex(p => new { p.RequesterId, p.CipherId, p.Action, p.NotAfter });
         eAccessRequest.HasIndex(p => new { p.OrganizationId, p.Action });
         // (CollectionId, Action, NotAfter) mirrors the pending-inbox filter, since lapsed unanswered rows pile up at
         // Action = 0 and NotAfter must be a key column to seek them out. The CreationDate indexes carry the history
@@ -223,9 +221,9 @@ public class DatabaseContext : DbContext
             .OnDelete(DeleteBehavior.Restrict);
 
         eAccessLease.Property(p => p.Id).ValueGeneratedNever();
-        eAccessLease.HasIndex(p => new { p.RequesterId, p.CipherId, p.Action });
-        eAccessLease.HasIndex(p => new { p.NotAfter, p.Action });
-        eAccessLease.HasIndex(p => new { p.CollectionId, p.Action });
+        eAccessLease.HasIndex(p => new { p.RequesterId, p.Action, p.NotAfter });
+        eAccessLease.HasIndex(p => new { p.SweptDate, p.Action, p.NotAfter });
+        eAccessLease.HasIndex(p => new { p.CollectionId, p.Action, p.NotAfter });
         eAccessLease.HasIndex(p => new { p.CipherId, p.Action, p.NotAfter }).IsDescending(false, false, true);
         eAccessLease.HasIndex(p => p.AccessRequestId).IsUnique();
         eAccessLease
@@ -233,14 +231,6 @@ public class DatabaseContext : DbContext
             .WithMany()
             .HasForeignKey(l => l.AccessRequestId)
             .OnDelete(DeleteBehavior.Restrict);
-
-        ePamLeaseExpirySweep.HasKey(p => p.AccessLeaseId);
-        ePamLeaseExpirySweep.Property(p => p.AccessLeaseId).ValueGeneratedNever();
-        ePamLeaseExpirySweep
-            .HasOne<AccessLease>()
-            .WithMany()
-            .HasForeignKey(p => p.AccessLeaseId)
-            .OnDelete(DeleteBehavior.Cascade);
 
         eAccessDecision.Property(p => p.Id).ValueGeneratedNever();
         eAccessDecision.HasIndex(p => p.AccessRequestId);
@@ -251,12 +241,16 @@ public class DatabaseContext : DbContext
             .OnDelete(DeleteBehavior.Cascade);
 
         // Mirrors the MSSQL schema, which carries the rationale: the subject ids are deliberately not foreign keys,
-        // and the first index is keyed (OrganizationId, OccurredDate, Id). MSSQL also covers both reads with INCLUDE
-        // columns, which has no EF equivalent to mirror here.
+        // and the first index is keyed (OrganizationId, OccurredDate, Id). MSSQL also covers the reads with INCLUDE
+        // columns and filters the two subject indexes to non-null subjects, which are not mirrored here.
         eAccessAuditEvent.Property(p => p.Id).ValueGeneratedNever();
         eAccessAuditEvent.HasIndex(p => new { p.OrganizationId, p.OccurredDate, p.Id })
             .IsDescending(false, true, true);
         eAccessAuditEvent.HasIndex(p => p.CorrelationId);
+        eAccessAuditEvent.HasIndex(p => new { p.OrganizationId, p.CipherId, p.OccurredDate, p.Id })
+            .IsDescending(false, false, true, true);
+        eAccessAuditEvent.HasIndex(p => new { p.OrganizationId, p.AccessRuleId, p.OccurredDate, p.Id })
+            .IsDescending(false, false, true, true);
 
         // PAM rotation mirrors the MSSQL keys, indexes and delete behavior. Organization cascades to configs, and a
         // config's jobs, attempts and timeout journal cascade with it. Everything else is NO ACTION, so a target system
@@ -381,7 +375,6 @@ public class DatabaseContext : DbContext
         ePamRotationConfig.ToTable(nameof(PamRotationConfig));
         ePamRotationJob.ToTable(nameof(PamRotationJob));
         ePamRotationAttempt.ToTable(nameof(PamRotationAttempt));
-        ePamLeaseExpirySweep.ToTable(nameof(PamLeaseExpirySweep));
         ePamRotationJobTimeoutSweep.ToTable(nameof(PamRotationJobTimeoutSweep));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
         eFolder.ToTable(nameof(Folder));

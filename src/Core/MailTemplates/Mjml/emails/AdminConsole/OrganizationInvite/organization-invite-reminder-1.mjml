@@ -20,7 +20,7 @@
       <mj-section background-color="#fff" padding="10px 10px 16px 10px">
         <mj-column>
           <mj-text
-            css-class="ac-text"
+            mj-class="ac-text"
             padding="15px 15px 0px 15px"
           >
             <b>{{OrganizationName}}</b> invited you to join their organization vault on
@@ -28,7 +28,7 @@
             and other sensitive items your team relies on.
           </mj-text>
           <mj-text
-            css-class="ac-text"
+            mj-class="ac-text"
             padding="15px 15px 0px 15px"
           >
             Your invite is still waiting! Accept it to get started.
