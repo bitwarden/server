@@ -1,7 +1,6 @@
 ﻿using System.Security.Claims;
 using Bit.Api.Auth.Controllers;
 using Bit.Api.Auth.Models.Request.SsoJitProvisionFinish;
-using Bit.Core;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
@@ -15,7 +14,6 @@ using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
-using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
 namespace Bit.Api.Test.Auth.Controllers;
 
@@ -38,30 +36,6 @@ public class SsoJitProvisionFinishControllerPasswordTests
 
         // Act & Assert
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => sutProvider.Sut.FinishJitProvisionForPasswordAsync(model));
-        await AssertNoCommandCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData(true, false)]
-    [BitAutoData(false, true)]
-    [BitAutoData(true, true)]
-    public async Task FinishJitProvisionForPasswordAsync_AccountKeysAlreadyInitialized_ThrowsBadRequestException(
-        bool hasPublicKey, bool hasPrivateKey,
-        SutProvider<SsoJitProvisionFinishController> sutProvider, User user)
-    {
-        // Arrange
-        var model = CreateV2Model(user, acceptOrganizationInvite: false);
-        ArrangeUser(sutProvider, user);
-        user.PublicKey = hasPublicKey ? "existingPublicKey" : null;
-        user.PrivateKey = hasPrivateKey ? "existingPrivateKey" : null;
-        ArrangeV2Flag(sutProvider, enabled: true);
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.FinishJitProvisionForPasswordAsync(model));
-
-        // Assert
-        Assert.Equal("User account keys are already initialized.", exception.Message);
         await AssertNoCommandCalledAsync(sutProvider);
     }
 
@@ -98,7 +72,6 @@ public class SsoJitProvisionFinishControllerPasswordTests
         // Arrange
         var model = CreateV2Model(user, acceptOrganizationInvite);
         ArrangeUser(sutProvider, user);
-        ArrangeV2Flag(sutProvider, enabled: true);
 
         // Act
         await sutProvider.Sut.FinishJitProvisionForPasswordAsync(model);
@@ -118,37 +91,15 @@ public class SsoJitProvisionFinishControllerPasswordTests
     }
 
     [Theory]
-    [BitAutoData]
-    public async Task FinishJitProvisionForPasswordAsync_V2FlagOff_WithAccountKeys_ThrowsBadRequestException(
-        SutProvider<SsoJitProvisionFinishController> sutProvider, User user)
-    {
-        // Arrange
-        var model = CreateV2Model(user, acceptOrganizationInvite: false);
-        ArrangeUser(sutProvider, user);
-        ArrangeV2Flag(sutProvider, enabled: false);
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.FinishJitProvisionForPasswordAsync(model));
-
-        // Assert
-        Assert.Equal("Request includes V2 AccountKeys but V2 encryption is not enabled.", exception.Message);
-        await AssertNoCommandCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData(false, false)]
-    [BitAutoData(false, true)]
-    [BitAutoData(true, false)]
-    [BitAutoData(true, true)]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
     public async Task FinishJitProvisionForPasswordAsync_V1_PassesAcceptOrganizationInviteToV1Command(
-        bool acceptOrganizationInvite, bool v2FlagEnabled,
+        bool acceptOrganizationInvite,
         SutProvider<SsoJitProvisionFinishController> sutProvider, User user)
     {
-        // Arrange - V1 request (MPAD + MPUD + legacy Keys) routes to V1 regardless of the V2 flag.
+        // Arrange - V1 request (MPAD + MPUD + legacy Keys) routes to V1.
         var model = CreateV1Model(user, acceptOrganizationInvite);
         ArrangeUser(sutProvider, user);
-        ArrangeV2Flag(sutProvider, v2FlagEnabled);
         ArrangeV1CommandResult(sutProvider, IdentityResult.Success);
 
         // Act
@@ -207,13 +158,6 @@ public class SsoJitProvisionFinishControllerPasswordTests
         sutProvider.GetDependency<IUserService>()
             .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
             .Returns(user);
-    }
-
-    private static void ArrangeV2Flag(SutProvider<SsoJitProvisionFinishController> sutProvider, bool enabled)
-    {
-        sutProvider.GetDependency<IFeatureService>()
-            .IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration)
-            .Returns(enabled);
     }
 
     private static void ArrangeV1CommandResult(SutProvider<SsoJitProvisionFinishController> sutProvider,
