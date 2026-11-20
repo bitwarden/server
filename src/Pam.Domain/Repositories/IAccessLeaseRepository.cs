@@ -68,8 +68,9 @@ public interface IAccessLeaseRepository
 
     /// <summary>
     /// Returns each lease whose window closed on its own after <paramref name="since"/> and that no earlier sweep
-    /// returned. A lease that closed before <paramref name="since"/> is never returned, so pass a window far longer
-    /// than any sweep outage.
+    /// returned, stamping each as swept in the same call so concurrent sweeps never return the same lease. A lease
+    /// that closed before <paramref name="since"/> is never returned, so pass a window far longer than any sweep
+    /// outage.
     /// </summary>
     Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now, DateTime since);
 }

@@ -23,6 +23,18 @@ internal static class SeederRepositoryGuardExtensions
         return organization;
     }
 
+    public static async Task<User> GetUserOrThrowAsync(
+        this IUserRepository userRepository, Guid userId)
+    {
+        var user = await userRepository.GetByIdAsync(userId);
+        if (user == null)
+        {
+            throw new InvalidOperationException($"User {userId} not found.");
+        }
+
+        return user;
+    }
+
     public static async Task<Organization> GetSecretsManagerOrganizationOrThrowAsync(
         this IOrganizationRepository organizationRepository, Guid organizationId)
     {

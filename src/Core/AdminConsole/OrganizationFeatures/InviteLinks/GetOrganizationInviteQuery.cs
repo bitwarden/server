@@ -22,12 +22,17 @@ public class GetOrganizationInviteQuery(
     IOrganizationUserRepository organizationUserRepository)
     : IGetOrganizationInviteQuery
 {
-    public async Task<CommandResult<string>> GetInviteAsync(GetOrganizationInviteRequest request) =>
-        (await getOrganizationInviteValidator.ValidateAsync(await BuildValidationRequestAsync(request)))
-            .MatchResult<CommandResult<string>>(
-                error => error,
-                // Validation guarantees the invite link exists.
-                valid => valid.ExistingInviteLink!.Invite);
+    public async Task<Result<string, InviteLinkValidationError>> GetInviteAsync(GetOrganizationInviteRequest request)
+    {
+        var validationResult = await getOrganizationInviteValidator.ValidateAsync(await BuildValidationRequestAsync(request));
+        if (validationResult.IsError)
+        {
+            return validationResult.AsError;
+        }
+
+        // Validation guarantees the invite link exists.
+        return validationResult.AsSuccess.ExistingInviteLink!.Invite;
+    }
 
     /// <summary>
     /// Looks up the invite link, its organization, and the user's existing membership for the validator.

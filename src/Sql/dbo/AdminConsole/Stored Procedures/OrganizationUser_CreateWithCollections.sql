@@ -18,12 +18,13 @@ CREATE PROCEDURE [dbo].[OrganizationUser_CreateWithCollections]
     @AccessPam BIT = 0,
     @V2UpgradeToken VARCHAR(MAX) = NULL,
     @InviteReminderDueDate DATETIME2(7) = NULL,
-    @InviteRemindersSentCount TINYINT = NULL
+    @InviteRemindersSentCount TINYINT = NULL,
+    @ExternalName NVARCHAR(300) = NULL
 AS
 BEGIN
     SET NOCOUNT ON
 
-    EXEC [dbo].[OrganizationUser_Create] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey, @AccessSecretsManager, @RevocationReason, @StatusNew, @AccessPam, @V2UpgradeToken, @InviteReminderDueDate, @InviteRemindersSentCount
+    EXEC [dbo].[OrganizationUser_Create] @Id, @OrganizationId, @UserId, @Email, @Key, @Status, @Type, @ExternalId, @CreationDate, @RevisionDate, @Permissions, @ResetPasswordKey, @AccessSecretsManager, @RevocationReason, @StatusNew, @AccessPam, @V2UpgradeToken, @InviteReminderDueDate, @InviteRemindersSentCount, @ExternalName
 
     ;WITH [AvailableCollectionsCTE] AS(
         SELECT

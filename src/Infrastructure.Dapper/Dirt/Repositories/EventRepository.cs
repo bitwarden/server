@@ -267,6 +267,8 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         eventsTable.Columns.Add(accessRequestIdColumn);
         var accessLeaseIdColumn = new DataColumn(nameof(e.AccessLeaseId), typeof(Guid));
         eventsTable.Columns.Add(accessLeaseIdColumn);
+        var systemUserColumn = new DataColumn(nameof(e.SystemUser), typeof(byte));
+        eventsTable.Columns.Add(systemUserColumn);
 
         foreach (DataColumn col in eventsTable.Columns)
         {
@@ -305,6 +307,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             row[sendIdColumn] = ev.SendId.HasValue ? ev.SendId.Value : DBNull.Value;
             row[accessRequestIdColumn] = ev.AccessRequestId.HasValue ? ev.AccessRequestId.Value : DBNull.Value;
             row[accessLeaseIdColumn] = ev.AccessLeaseId.HasValue ? ev.AccessLeaseId.Value : DBNull.Value;
+            row[systemUserColumn] = ev.SystemUser.HasValue ? (byte)ev.SystemUser.Value : DBNull.Value;
             eventsTable.Rows.Add(row);
         }
 
