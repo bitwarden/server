@@ -178,7 +178,7 @@ public class SetInitialPasswordTests : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     // Modern client + V1 encryption: request carries MPAD + MPUD + legacy Keys (no AccountKeys),
-    // V2 MP JIT flag OFF → request routes to the V1 command. KDF/Key/Salt come from MPUD, keypair
+    // so it routes to the V1 command. KDF/Key/Salt come from MPUD, keypair
     // from legacy Keys.
     [Theory]
     [BitAutoData]
@@ -226,7 +226,7 @@ public class SetInitialPasswordTests : IClassFixture<ApiApplicationFactory>, IAs
         await _userRepository.ReplaceAsync(user);
 
         // Modern V1 MP JIT request shape: MPAD + MPUD + legacy Keys, no AccountKeys.
-        // V2 MP JIT flag is left OFF (default mock behavior), so this routes to the V1 command.
+        // No AccountKeys, so this routes to the V1 command.
         // Salt must equal the email during Stage 1 (PM-27044) — ValidateSaltUnchangedForUser rejects
         // divergent salts until clients consume the explicit salt from prelogin (Stage 3 / PM-28143).
         var request = new
