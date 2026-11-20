@@ -13,6 +13,7 @@ using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bitwarden.Server.Sdk.Features;
 using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
@@ -29,6 +30,10 @@ public class AdminRecoverAccountCommand(
     IResetUserTwoFactorCommand resetUserTwoFactorCommand,
     IPolicyRequirementQuery policyRequirementQuery,
     IRevokeNonCompliantOrganizationUserCommand revokeNonCompliantOrganizationUserCommand,
+    IOrganizationUserRepository organizationUserRepository,
+    IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery,
+    IRemoveOrganizationUserCommand removeOrganizationUserCommand,
+    IFeatureService featureService,
     TimeProvider timeProvider) : IAdminRecoverAccountCommand
 {
     public async Task<CommandResult> RecoverAccountAsync(RecoverAccountRequest request)
@@ -72,7 +77,6 @@ public class AdminRecoverAccountCommand(
                 }
 
                 user.ForcePasswordReset = true;
-                await userRepository.ReplaceAsync(user);
             }
             else
             {
@@ -88,9 +92,17 @@ public class AdminRecoverAccountCommand(
                 user.LastPasswordChangeDate = now;
                 user.ForcePasswordReset = true;
                 user.Key = request.Key;
-
-                await userRepository.ReplaceAsync(user);
             }
+
+            // Remove the user from other organizations before saving the new password,
+            // so a failed removal never leaves the new password saved. Organizations where
+            // they are the last confirmed owner are kept (see RemoveFromOtherOrganizationsAsync).
+            if (featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryMultiOrgCheck))
+            {
+                await RemoveFromOtherOrganizationsAsync(user.Id, request.OrgId);
+            }
+
+            await userRepository.ReplaceAsync(user);
         }
 
         // 2FA reset
@@ -127,6 +139,27 @@ public class AdminRecoverAccountCommand(
         }
 
         return new None();
+    }
+
+    /// <summary>
+    /// Removes the user from every organization other than the recovering one. A membership is kept when removing
+    /// it would leave its organization without a confirmed owner, the same rule the remove command enforces.
+    /// </summary>
+    private async Task RemoveFromOtherOrganizationsAsync(Guid userId, Guid recoveringOrganizationId)
+    {
+        var otherMemberships = (await organizationUserRepository.GetManyByUserAsync(userId))
+            .Where(ou => ou.OrganizationId != recoveringOrganizationId);
+
+        foreach (var membership in otherMemberships)
+        {
+            if (!await hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(membership.OrganizationId, [membership.Id]))
+            {
+                continue;
+            }
+
+            await removeOrganizationUserCommand.RemoveUsersAsync(
+                membership.OrganizationId, [membership.Id], deletingUserId: null);
+        }
     }
 
     private async Task CheckPoliciesOnTwoFactorRemovalAsync(User user)
