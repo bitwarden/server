@@ -57,6 +57,7 @@ public class CiphersController : Controller
     private readonly IArchiveCiphersCommand _archiveCiphersCommand;
     private readonly IUnarchiveCiphersCommand _unarchiveCiphersCommand;
     private readonly ICipherLeaseGate _cipherLeaseGate;
+    private readonly ILeasingBypassAudit _leasingBypassAudit;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IAuthorizationService _authorizationService;
 
@@ -75,6 +76,7 @@ public class CiphersController : Controller
         IArchiveCiphersCommand archiveCiphersCommand,
         IUnarchiveCiphersCommand unarchiveCiphersCommand,
         ICipherLeaseGate cipherLeaseGate,
+        ILeasingBypassAudit leasingBypassAudit,
         IAuthorizationService authorizationService,
         Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
@@ -92,6 +94,7 @@ public class CiphersController : Controller
         _archiveCiphersCommand = archiveCiphersCommand;
         _unarchiveCiphersCommand = unarchiveCiphersCommand;
         _cipherLeaseGate = cipherLeaseGate;
+        _leasingBypassAudit = leasingBypassAudit;
         _authorizationService = authorizationService;
         _featureService = featureService;
     }
@@ -1082,6 +1085,7 @@ public class CiphersController : Controller
             await _cipherLeaseGate.EnsureCanMutateManyAsync(userId, ciphers);
         }
 
+        var gatedCipherIds = await _leasingBypassAudit.GetGatedCipherIdsAsync(model.OrganizationId, model.CipherIds);
         if (model.RemoveCollections)
         {
             await _collectionCipherRepository.RemoveCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.CollectionIds);
@@ -1090,6 +1094,8 @@ public class CiphersController : Controller
         {
             await _collectionCipherRepository.AddCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.CollectionIds);
         }
+
+        await _leasingBypassAudit.AuditUngatedAsync(model.OrganizationId, userId, gatedCipherIds);
     }
 
     [HttpPut("{id}/archive")]

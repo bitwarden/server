@@ -164,6 +164,7 @@ public static class ServiceCollectionExtensions
         // registration wins — the shape AddOosServices uses for IProviderService. That override must
         // be a plain Add*; a TryAdd* would no-op against this default and leave leasing ungated.
         services.AddScoped<ICipherLeaseGate, UnrestrictedCipherLeaseGate>();
+        services.AddScoped<ILeasingBypassAudit, NoopLeasingBypassAudit>();
         services.AddUserServices(globalSettings);
         services.AddTrialInitiationServices();
         services.AddOrganizationServices(globalSettings);

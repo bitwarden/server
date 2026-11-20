@@ -311,7 +311,7 @@ public class CipherLeaseGate : ICipherLeaseGate
     /// Whether an access rule can gate anything in the organization: whether it uses Privileged Controls. Rules left
     /// in an organization without it gate nothing. An unknown organization can gate, so the full check runs.
     /// </summary>
-    private static bool CanGate(OrganizationAbility? ability) => ability is not { UsePam: false };
+    internal static bool CanGate(OrganizationAbility? ability) => ability is not { UsePam: false };
 
     /// <summary>
     /// The subset of <paramref name="organizationIds" /> in which an access rule can gate anything.
@@ -386,7 +386,7 @@ public class CipherLeaseGate : ICipherLeaseGate
     /// A cipher reachable through <paramref name="collectionIds" /> is gated only if every one of those
     /// collections gates. A cipher also in a plain collection, or in none, is not gated.
     /// </summary>
-    private static bool IsGated(ICollection<Guid> collectionIds, ISet<Guid> leasingCollectionIds) =>
+    internal static bool IsGated(ICollection<Guid> collectionIds, ISet<Guid> leasingCollectionIds) =>
         collectionIds.Count > 0 && collectionIds.All(leasingCollectionIds.Contains);
 
     /// <summary>

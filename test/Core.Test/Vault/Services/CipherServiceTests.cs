@@ -3222,6 +3222,53 @@ public class CipherServiceTests
             .DidNotReceiveWithAnyArgs().UpdateCollectionsForAdminAsync(default, default, default!);
     }
 
+    [Theory]
+    [BitAutoData(false)]
+    [BitAutoData(true)]
+    public async Task SaveCollectionsAsync_AuditsUngatingAroundTheReassignment(
+        bool orgAdmin, SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, List<Guid> collectionIds)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        var organizationId = cipher.OrganizationId.Value;
+        sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(savingUserId, cipher.Id).Returns(true);
+        var audit = sutProvider.GetDependency<ILeasingBypassAudit>();
+        IReadOnlySet<Guid> gatedCipherIds = new HashSet<Guid> { cipher.Id };
+        audit.GetGatedCipherIdsAsync(organizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == cipher.Id))
+            .Returns(gatedCipherIds);
+
+        await sutProvider.Sut.SaveCollectionsAsync(cipher, collectionIds, savingUserId, orgAdmin);
+
+        var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
+        Received.InOrder(() =>
+        {
+            audit.GetGatedCipherIdsAsync(organizationId, Arg.Any<IEnumerable<Guid>>());
+            if (orgAdmin)
+            {
+                collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id, organizationId, collectionIds);
+            }
+            else
+            {
+                collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds);
+            }
+            audit.AuditUngatedAsync(organizationId, savingUserId, gatedCipherIds);
+        });
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveCollectionsAsync_GatedCipher_AuditsNoUngating(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, List<Guid> collectionIds)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(savingUserId, cipher.Id).Returns(true);
+        RefusesMutation(sutProvider);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.SaveCollectionsAsync(cipher, collectionIds, savingUserId, orgAdmin: false));
+
+        await sutProvider.GetDependency<ILeasingBypassAudit>()
+            .DidNotReceiveWithAnyArgs().AuditUngatedAsync(default, default, default!);
+    }
+
     [Theory, BitAutoData]
     public async Task DeleteAttachmentAsync_GatedCipher_ThrowsAndDoesNotDelete(
         SutProvider<CipherService> sutProvider, CipherDetails cipher, string attachmentId, Guid deletingUserId)
