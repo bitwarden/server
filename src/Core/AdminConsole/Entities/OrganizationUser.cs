@@ -180,9 +180,13 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
     /// Creates an Invited member with <see cref="Email"/> set and <see cref="UserId"/>/<see cref="Key"/> null.
     /// Performs no validation (e.g. policies, seats); callers are responsible for that.
     /// </summary>
+    /// <param name="creationDate">
+    /// Stamped onto <see cref="CreationDate"/> and <see cref="RevisionDate"/>; defaults to the current UTC time.
+    /// </param>
     public static OrganizationUser CreateInvited(Guid organizationId, string email, OrganizationUserType type,
-        string? externalId = null)
-        => Create(organizationId, OrganizationUserStatusType.Invited, type, externalId, email: email);
+        string? externalId = null, DateTimeOffset? creationDate = null)
+        => Create(organizationId, OrganizationUserStatusType.Invited, type, externalId, email: email,
+            creationDate: creationDate);
 
     /// <summary>
     /// Creates an Accepted member with <see cref="UserId"/> set and <see cref="Email"/>/<see cref="Key"/> null.
@@ -210,8 +214,12 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
         => Create(organizationId, OrganizationUserStatusType.Staged, type, externalId, email: email);
 
     private static OrganizationUser Create(Guid organizationId, OrganizationUserStatusType status,
-        OrganizationUserType type, string? externalId, string? email = null, Guid? userId = null, string? key = null)
-        => new()
+        OrganizationUserType type, string? externalId, string? email = null, Guid? userId = null, string? key = null,
+        DateTimeOffset? creationDate = null)
+    {
+        var date = creationDate?.UtcDateTime ?? DateTime.UtcNow;
+
+        return new()
         {
             Id = CombGuid.Generate(),
             OrganizationId = organizationId,
@@ -221,18 +229,23 @@ public class OrganizationUser : ITableObject<Guid>, IExternal, IOrganizationUser
             Email = email?.ToLowerInvariant(),
             UserId = userId,
             Key = key,
+            CreationDate = date,
+            RevisionDate = date,
         };
+    }
 
     /// <summary>
     /// Moves a Staged member to Invited.
     /// Performs no validation (e.g. policies, seats); callers are responsible for that.
     /// </summary>
+    /// <param name="revisionDate">Stamped onto <see cref="RevisionDate"/>; defaults to the current UTC time.</param>
     /// <exception cref="InvalidOperationException">The member is not Staged.</exception>
-    public void Invite()
+    public void Invite(DateTimeOffset? revisionDate = null)
     {
         EnsureStatus(OrganizationUserStatusType.Staged);
 
         Status = OrganizationUserStatusType.Invited;
+        RevisionDate = revisionDate?.UtcDateTime ?? DateTime.UtcNow;
     }
 
     /// <summary>

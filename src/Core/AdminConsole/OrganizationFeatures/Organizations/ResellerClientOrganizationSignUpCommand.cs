@@ -110,15 +110,7 @@ public class ResellerClientOrganizationSignUpCommand : IResellerClientOrganizati
 
     private async Task<OrganizationUser> CreateAndInviteOwnerAsync(Organization organization, string ownerEmail)
     {
-        var ownerOrganizationUser = new OrganizationUser
-        {
-            OrganizationId = organization.Id,
-            UserId = null,
-            Email = ownerEmail,
-            Key = null,
-            Type = OrganizationUserType.Owner,
-            Status = OrganizationUserStatusType.Invited,
-        };
+        var ownerOrganizationUser = OrganizationUser.CreateInvited(organization.Id, ownerEmail, OrganizationUserType.Owner);
 
         await _organizationUserRepository.CreateAsync(ownerOrganizationUser);
 
