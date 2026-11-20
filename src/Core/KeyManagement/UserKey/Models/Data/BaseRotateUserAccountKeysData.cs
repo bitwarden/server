@@ -27,6 +27,12 @@ public class BaseRotateUserAccountKeysData
     public required IReadOnlyList<Send> Sends { get; set; }
 
     /// <summary>
+    /// Agent-access connections whose user-key-encrypted PSK the client has re-wrapped. Optional for
+    /// backward compatibility; empty when the client submits none.
+    /// </summary>
+    public IReadOnlyList<AgentConnection> AgentConnections { get; set; } = [];
+
+    /// <summary>
     /// Rejects a rotation from a client that holds an out-of-date user key. The ids are compared only when
     /// both are present: the user may have no key id recorded yet, and the client may predate the field.
     /// </summary>

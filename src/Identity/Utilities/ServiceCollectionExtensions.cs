@@ -40,7 +40,9 @@ public static class ServiceCollectionExtensions
                 options.LicenseKey = globalSettings.IdentityServer.LicenseKey;
                 options.Endpoints.EnableIntrospectionEndpoint = false;
                 options.Endpoints.EnableEndSessionEndpoint = false;
-                options.Endpoints.EnableUserInfoEndpoint = false;
+                // Enabled for the OIDC "Login with Bitwarden" partner flow so standard OIDC clients can read
+                // the authorized user's identity (sub/email/name). Partner tokens carry identity scopes only.
+                options.Endpoints.EnableUserInfoEndpoint = true;
                 options.Endpoints.EnableCheckSessionEndpoint = false;
                 options.Endpoints.EnableTokenRevocationEndpoint = false;
                 options.Endpoints.EnablePushedAuthorizationEndpoint = false;
@@ -51,11 +53,20 @@ public static class ServiceCollectionExtensions
                 }
                 options.InputLengthRestrictions.UserName = 256;
                 options.KeyManagement.Enabled = false;
-                options.UserInteraction.LoginUrl = "/sso/Login";
+                // Dispatcher that routes org-SSO authorize requests to the existing /sso flow and partner OIDC
+                // authorize requests to the web vault consent page.
+                options.UserInteraction.LoginUrl = "/oidc/Login";
+                options.UserInteraction.ConsentUrl = "/oidc/Consent";
             })
             .AddInMemoryCaching()
             .AddInMemoryApiResources(ApiResources.GetApiResources())
             .AddInMemoryApiScopes(ApiScopes.GetApiScopes())
+            .AddInMemoryIdentityResources(new Duende.IdentityServer.Models.IdentityResource[]
+            {
+                new Duende.IdentityServer.Models.IdentityResources.OpenId(),
+                new Duende.IdentityServer.Models.IdentityResources.Profile(),
+                new Duende.IdentityServer.Models.IdentityResources.Email(),
+            })
             .AddCustomTokenRequestValidator<CustomTokenRequestValidator>()
             .AddProfileService<ProfileService>()
             .AddResourceOwnerValidator<ResourceOwnerPasswordValidator>()
@@ -77,6 +88,7 @@ public static class ServiceCollectionExtensions
 
         services.AddClientProvider<UserClientProvider>("user");
         services.AddClientProvider<OrganizationClientProvider>("organization");
+        services.AddClientProvider<PartnerClientProvider>(PartnerClientProvider.PartnerPrefix);
         services.AddClientProvider<SecretsManagerApiKeyProvider>(SecretsManagerApiKeyProvider.ApiKeyPrefix);
         services.AddClientProvider<PamAccessConnectorClientProvider>(
             PamAccessConnectorClientProvider.AccessConnectorPrefix);

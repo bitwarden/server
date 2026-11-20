@@ -1,12 +1,15 @@
 ﻿using System.Security.Claims;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Identity;
+using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Duende.IdentityModel;
+using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
 
@@ -47,6 +50,31 @@ public class ProfileService : IProfileService
             // preserve all claims that were already on context.Subject
             // which includes the ones added by the SendAccessGrantValidator
             context.IssuedClaims.AddRange(existingClaims);
+            return;
+        }
+
+        // "Login with Bitwarden" partner clients receive identity claims only (sub/email/email_verified/name)
+        // and never org/provider/premium/device claims, so a partner token exposes who the user is but nothing
+        // about their vault, organizations, or entitlements. AddRequestedClaims filters to the scopes the
+        // client was actually granted (openid/profile/email).
+        if (context.Client.ClientId.StartsWith(OpenIdConnectPartner.ClientIdPrefix, StringComparison.Ordinal))
+        {
+            var partnerUser = await _userService.GetUserByPrincipalAsync(context.Subject);
+            if (partnerUser != null)
+            {
+                var identityClaims = new List<Claim>
+                {
+                    new(JwtClaimTypes.Subject, partnerUser.Id.ToString()),
+                    new(JwtClaimTypes.Email, partnerUser.Email ?? string.Empty),
+                    new(JwtClaimTypes.EmailVerified, partnerUser.EmailVerified ? "true" : "false",
+                        ClaimValueTypes.Boolean),
+                };
+                if (!string.IsNullOrWhiteSpace(partnerUser.Name))
+                {
+                    identityClaims.Add(new Claim(JwtClaimTypes.Name, partnerUser.Name));
+                }
+                context.AddRequestedClaims(identityClaims);
+            }
             return;
         }
 

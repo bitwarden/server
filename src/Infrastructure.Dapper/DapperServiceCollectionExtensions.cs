@@ -35,6 +35,7 @@ public static class DapperServiceCollectionExtensions
 {
     public static void AddDapperRepositories(this IServiceCollection services, bool selfHosted)
     {
+        services.AddSingleton<IAgentConnectionRepository, AgentConnectionRepository>();
         services.AddSingleton<IApiKeyRepository, ApiKeyRepository>();
         services.AddSingleton<IAuthRequestRepository, AuthRequestRepository>();
         services.AddSingleton<ICipherRepository, CipherRepository>();

@@ -248,6 +248,13 @@ public static class ServiceCollectionExtensions
                 IntegrationOAuthStateTokenable.DataProtectorPurpose,
                 serviceProvider.GetDataProtectionProvider(),
                 serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<IntegrationOAuthStateTokenable>>>()));
+        services.AddSingleton<IOAuthConsentTokenableFactory, OAuthConsentTokenableFactory>();
+        services.AddSingleton<IDataProtectorTokenFactory<OAuthConsentTokenable>>(serviceProvider =>
+            new DataProtectorTokenFactory<OAuthConsentTokenable>(
+                OAuthConsentTokenable.ClearTextPrefix,
+                OAuthConsentTokenable.DataProtectorPurpose,
+                serviceProvider.GetDataProtectionProvider(),
+                serviceProvider.GetRequiredService<ILogger<DataProtectorTokenFactory<OAuthConsentTokenable>>>()));
         services.AddSingleton<IDataProtectorTokenFactory<TwoFactorRememberTokenable>>(serviceProvider =>
             new DataProtectorTokenFactory<TwoFactorRememberTokenable>(
                 TwoFactorRememberTokenable.ClearTextPrefix,
@@ -332,6 +339,15 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<IDnsResolverService, DnsResolverService>();
         services.ApplyServerCompatibilityLayer();
         services.AddTokenizers();
+
+        // "Login with Bitwarden" OIDC provider (agent-access) shared services. The partner registry and
+        // single-use consent nonce store are used by both Identity (authorize/consent callback) and the API
+        // (consent mint + agent-connection writes).
+        services.TryAddSingleton<Bit.Core.Auth.IdentityServer.IOpenIdConnectPartnerStore,
+            Bit.Core.Auth.IdentityServer.OpenIdConnectPartnerStore>();
+        services.TryAddSingleton<Bit.Core.Auth.Services.IOAuthConsentNonceStore,
+            Bit.Core.Auth.Services.Implementations.OAuthConsentNonceStore>();
+
         services.AddOrganizationAbilityCache(globalSettings);
         services.AddProviderAbilityCache(globalSettings);
 
