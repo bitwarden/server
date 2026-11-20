@@ -10,6 +10,7 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
+using Bit.Test.Common.Helpers;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
@@ -99,7 +100,7 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         await CreateServiceAccountsAsync(org.Id);
 
         var response = await _client.GetAsync($"/organizations/{org.Id}/sm-counts");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<OrganizationCountsResponseModel>();
         Assert.NotNull(result);
@@ -124,7 +125,7 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         await CreateUserServiceAccountAccessPolicyAsync(user.Id, serviceAccounts[0].Id);
 
         var response = await _client.GetAsync($"/organizations/{org.Id}/sm-counts");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<OrganizationCountsResponseModel>();
         Assert.NotNull(result);
@@ -199,7 +200,7 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         await CreateServiceAccountProjectAccessPolicyAsync(projects[0].Id, serviceAccounts[0].Id);
 
         var response = await _client.GetAsync($"/projects/{projects[0].Id}/sm-counts");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ProjectCountsResponseModel>();
         Assert.NotNull(result);
@@ -230,7 +231,7 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         await CreateServiceAccountProjectAccessPolicyAsync(projects[0].Id, serviceAccounts[0].Id);
 
         var response = await _client.GetAsync($"/projects/{projects[0].Id}/sm-counts");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ProjectCountsResponseModel>();
         Assert.NotNull(result);
@@ -305,7 +306,7 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         await CreateApiKeysAsync(serviceAccounts[0]);
 
         var response = await _client.GetAsync($"/service-accounts/{serviceAccounts[0].Id}/sm-counts");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountCountsResponseModel>();
         Assert.NotNull(result);
@@ -337,7 +338,7 @@ public class CountsControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         await CreateApiKeysAsync(serviceAccounts[1]);
 
         var response = await _client.GetAsync($"/service-accounts/{serviceAccounts[0].Id}/sm-counts");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountCountsResponseModel>();
         Assert.NotNull(result);

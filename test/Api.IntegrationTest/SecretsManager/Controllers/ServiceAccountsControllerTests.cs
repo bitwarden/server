@@ -86,7 +86,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         var (orgId, serviceAccountIds) = await SetupListByOrganizationRequestAsync(permissionType);
 
         var response = await _client.GetAsync($"/organizations/{orgId}/service-accounts");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content
             .ReadFromJsonAsync<ListResponseModel<ServiceAccountSecretsDetailsResponseModel>>();
 
@@ -105,7 +105,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         var expectedAccess = await SetupServiceAccountSecretAccessAsync(serviceAccountIds, orgId);
 
         var response = await _client.GetAsync($"/organizations/{orgId}/service-accounts?includeAccessToSecrets=true");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content
             .ReadFromJsonAsync<ListResponseModel<ServiceAccountSecretsDetailsResponseModel>>();
 
@@ -140,7 +140,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         var response =
             await _client.GetAsync(
                 $"/organizations/{orgId}/service-accounts?includeAccessToSecrets={includeAccessToSecrets}");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content
             .ReadFromJsonAsync<ListResponseModel<ServiceAccountSecretsDetailsResponseModel>>();
 
@@ -222,7 +222,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         var serviceAccount = await SetupServiceAccountWithAccessAsync(permissionType);
 
         var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountResponseModel>();
         Assert.NotNull(result);
         Assert.Equal(serviceAccount.Id, result.Id);
@@ -273,7 +273,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         var request = new ServiceAccountCreateRequestModel { Name = _mockEncryptedString };
 
         var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/service-accounts", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountResponseModel>();
 
         Assert.NotNull(result);
@@ -365,7 +365,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         var request = new ServiceAccountUpdateRequestModel { Name = _mockNewName };
 
         var response = await _client.PutAsJsonAsync($"/service-accounts/{initialServiceAccount.Id}", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountResponseModel>();
         Assert.NotNull(result);
         Assert.Equal(request.Name, result.Name);
@@ -466,7 +466,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         var ids = new List<Guid> { serviceAccount.Id };
 
         var response = await _client.PostAsJsonAsync("/service-accounts/delete", ids);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var sa = await _serviceAccountRepository.GetManyByIds(ids);
         Assert.Empty(sa);
@@ -552,7 +552,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
 
 
         var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}/access-tokens");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var results = await response.Content.ReadFromJsonAsync<ListResponseModel<AccessTokenResponseModel>>();
         Assert.NotEmpty(results!.Data);
         Assert.Equal(accessToken.Id, results.Data.First().Id);
@@ -620,7 +620,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         // a fixed skew, which a slow CI runner can exceed between the request and the assertion.
         var requestStart = DateTime.UtcNow;
         var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<AccessTokenCreationResponseModel>();
         var requestEnd = DateTime.UtcNow;
 
@@ -660,7 +660,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         // a fixed skew, which a slow CI runner can exceed between the request and the assertion.
         var requestStart = DateTime.UtcNow;
         var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<AccessTokenCreationResponseModel>();
         var requestEnd = DateTime.UtcNow;
 
@@ -722,7 +722,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         // a fixed skew, which a slow CI runner can exceed between the request and the assertion.
         var requestStart = DateTime.UtcNow;
         var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<AccessTokenCreationResponseModel>();
         var requestEnd = DateTime.UtcNow;
 
@@ -850,7 +850,7 @@ public class ServiceAccountsControllerTests : IClassFixture<ApiApplicationFactor
         };
 
         var response = await _client.PostAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-tokens/revoke", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     private async Task CreateUserPolicyAsync(Guid userId, Guid serviceAccountId, bool read, bool write)

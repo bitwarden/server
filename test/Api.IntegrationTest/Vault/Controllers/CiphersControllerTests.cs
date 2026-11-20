@@ -14,6 +14,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
+using Bit.Test.Common.Helpers;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.Vault.Controllers;
@@ -94,7 +95,7 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var cipher = await CreateCorruptLoginCipherAsync();
 
         var response = await _client.GetAsync($"/ciphers/{cipher.Id}");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var root = document.RootElement;

@@ -7,6 +7,7 @@ using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Repositories;
 using Bit.Test.Common.Fakes;
+using Bit.Test.Common.Helpers;
 using Fido2NetLib;
 using Xunit;
 
@@ -65,7 +66,7 @@ public class WebAuthnControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var response = await PostCredentialAsync(optionsResponse.Token, attestation);
         var content = await response.Content.ReadAsStringAsync();
 
-        Assert.True(response.IsSuccessStatusCode, $"Expected 200, got {response.StatusCode}. Body: {content}");
+        await Assert.SuccessResponseAsync(response);
 
         // WebAuthnCredentialResponseModel only has a WebAuthnCredential-accepting constructor, so
         // System.Text.Json can't deserialize it directly (no property-matching ctor) — read the raw JSON instead.
@@ -115,7 +116,7 @@ public class WebAuthnControllerTests : IClassFixture<ApiApplicationFactory>, IAs
             }),
         };
         var response = await _client.SendAsync(message);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var options = await response.Content.ReadFromJsonAsync<WebAuthnCredentialCreateOptionsResponseModel>();
         Assert.NotNull(options);

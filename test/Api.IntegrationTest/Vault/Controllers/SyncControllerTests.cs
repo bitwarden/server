@@ -4,6 +4,7 @@ using Bit.Api.Vault.Models.Response;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Helpers;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.Vault.Controllers;
@@ -53,7 +54,7 @@ public class SyncControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncL
         await _userRepository.UpsertAsync(user);
 
         var response = await _client.GetAsync("/sync");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var syncResponseModel = await response.Content.ReadFromJsonAsync<SyncResponseModel>();
 
@@ -82,7 +83,7 @@ public class SyncControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncL
         await _userRepository.UpsertAsync(user);
 
         var response = await _client.GetAsync("/sync");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var syncResponseModel = await response.Content.ReadFromJsonAsync<SyncResponseModel>();
 
@@ -111,7 +112,7 @@ public class SyncControllerTests : IClassFixture<ApiApplicationFactory>, IAsyncL
         await _userRepository.UpsertAsync(user);
 
         var response = await _client.GetAsync("/sync");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var syncResponseModel = await response.Content.ReadFromJsonAsync<SyncResponseModel>();
 

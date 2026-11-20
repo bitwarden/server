@@ -10,6 +10,7 @@ using Bit.Core.Repositories;
 using Bit.Pam.Entities;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Api.Models.Request;
+using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
@@ -209,21 +210,21 @@ public class AccessRuleCrudTests(ApiApplicationFactory factory)
     private async Task<JsonObject> PostRuleAsync(object rule)
     {
         var response = await Client.PostAsJsonAsync(AccessRulesUrl, rule);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         return await ReadJsonAsync(response);
     }
 
     private async Task<JsonObject> PutRuleAsync(Guid id, object rule)
     {
         var response = await Client.PutAsJsonAsync(AccessRuleUrl(id), rule);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         return await ReadJsonAsync(response);
     }
 
     private async Task<JsonObject> GetJsonAsync(string url)
     {
         var response = await Client.GetAsync(url);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         return await ReadJsonAsync(response);
     }
 

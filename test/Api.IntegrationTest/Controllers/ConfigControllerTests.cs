@@ -3,6 +3,7 @@ using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
+using Bit.Test.Common.Helpers;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.Controllers;
@@ -48,7 +49,7 @@ public class ConfigControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         _client.DefaultRequestHeaders.Authorization = null;
 
         var response = await _client.GetAsync("/config");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<ConfigResponse>();
 
         Assert.NotNull(result);
@@ -61,7 +62,7 @@ public class ConfigControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         await LoginAsync();
 
         var response = await _client.GetAsync("/config");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<ConfigResponse>();
 
         Assert.NotNull(result);
@@ -87,7 +88,7 @@ public class ConfigControllerTests : IClassFixture<ApiApplicationFactory>, IAsyn
         await LoginAsync();
 
         var response = await _client.GetAsync("/config");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<ConfigResponse>();
 
         Assert.NotNull(result);

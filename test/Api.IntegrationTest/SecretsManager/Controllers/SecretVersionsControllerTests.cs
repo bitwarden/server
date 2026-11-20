@@ -9,6 +9,7 @@ using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.HttpExtensions;
+using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
@@ -145,7 +146,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         }
 
         var response = await _client.GetAsync($"/secrets/{secret.Id}/versions");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<SecretVersionResponseModel>>();
 
@@ -171,7 +172,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         var version = await AddVersionAsync(secret, _mockEncryptedString, DateTime.UtcNow);
 
         var response = await _client.GetAsync($"/secret-versions/{version.Id}");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<SecretVersionResponseModel>();
 
@@ -202,7 +203,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         };
 
         var response = await _client.PutAsJsonAsync($"/secrets/{secret.Id}/versions/restore", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<SecretResponseModel>();
 
@@ -230,7 +231,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         var ids = new List<Guid> { version1.Id, version2.Id };
 
         var response = await _client.PostAsJsonAsync("/secret-versions/delete", ids);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         // The first update backfilled the pre-update value, so that snapshot is all that remains.
         var versions = (await _secretVersionRepository.GetManyBySecretIdAsync(secret.Id)).ToList();
@@ -260,7 +261,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         await AddVersionAsync(secret, "Version1", DateTime.UtcNow.AddDays(-2));
 
         var response = await _client.GetAsync($"/secrets/{secret.Id}/versions");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<SecretVersionResponseModel>>();
 
@@ -302,7 +303,7 @@ public class SecretVersionsControllerTests : IClassFixture<ApiApplicationFactory
         }
 
         var response = await _client.GetAsync($"/secrets/{secret.Id}/versions");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<SecretVersionResponseModel>>();
 

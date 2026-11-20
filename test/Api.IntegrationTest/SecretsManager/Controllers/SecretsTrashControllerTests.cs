@@ -4,6 +4,7 @@ using Bit.Api.IntegrationTest.SecretsManager.Helpers;
 using Bit.Api.SecretsManager.Models.Response;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Repositories;
+using Bit.Test.Common.Helpers;
 using Xunit;
 using Secret = Bit.Core.SecretsManager.Entities.Secret;
 
@@ -94,7 +95,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
 
         var response = await _client.GetAsync($"/secrets/{org.Id}/trash");
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<SecretWithProjectsListResponseModel>();
         Assert.Single(result!.Secrets);
     }
@@ -163,7 +164,7 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
 
         var ids = new List<Guid> { secret.Id };
         var response = await _client.PostAsJsonAsync($"/secrets/{org.Id}/trash/empty", ids);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Theory]
@@ -230,6 +231,6 @@ public class SecretsTrashControllerTests : IClassFixture<ApiApplicationFactory>,
 
         var ids = new List<Guid> { secret.Id };
         var response = await _client.PostAsJsonAsync($"/secrets/{org.Id}/trash/restore", ids);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 }

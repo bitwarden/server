@@ -25,6 +25,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Enums;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
@@ -114,7 +115,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/user-key-id",
             new SetUserKeyIdRequestModel { UserKeyId = _mockKeyId });
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var updatedUser = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(updatedUser);
@@ -152,7 +153,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         request.UserKeyEncryptedUserPrivateKey = _mockEncryptedString;
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/regenerate-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var updatedOrgUser = await _organizationUserRepository.GetByIdAsync(orgUser.Id);
         Assert.NotNull(updatedOrgUser);
@@ -170,7 +171,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         request.UserKeyEncryptedUserPrivateKey = _mockEncryptedString;
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/regenerate-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var deletedOrgUser = await _organizationUserRepository.GetByIdAsync(orgUser.Id);
         Assert.Null(deletedOrgUser);
@@ -188,7 +189,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         request.UserKeyEncryptedUserPrivateKey = _mockEncryptedString;
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/regenerate-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var updatedOrgUser = await _organizationUserRepository.GetByIdAsync(orgUser.Id);
         Assert.NotNull(updatedOrgUser);
@@ -208,7 +209,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         request.UserKeyEncryptedUserPrivateKey = _mockEncryptedString;
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/regenerate-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var updatedEa = await _emergencyAccessRepository.GetByIdAsync(ea.Id);
         Assert.NotNull(updatedEa);
@@ -228,7 +229,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         request.UserKeyEncryptedUserPrivateKey = _mockEncryptedString;
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/regenerate-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var updatedEa = await _emergencyAccessRepository.GetByIdAsync(ea.Id);
         Assert.NotNull(updatedEa);
@@ -243,7 +244,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         request.UserKeyEncryptedUserPrivateKey = _mockEncryptedString;
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/regenerate-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var user = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(user);
@@ -305,7 +306,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
         var responseMessage = await response.Content.ReadAsStringAsync();
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
@@ -361,7 +362,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         };
 
         var response = await _client.PostAsJsonAsync("/accounts/set-key-connector-key", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
         Assert.NotNull(user);
@@ -430,7 +431,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         };
 
         var response = await _client.PostAsJsonAsync("/accounts/set-key-connector-key", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
         Assert.NotNull(user);
@@ -475,7 +476,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         await SeedMasterPasswordSaltAndHintAsync(ssoUserEmail);
 
         var response = await _client.PostAsJsonAsync("/accounts/convert-to-key-connector", new { });
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
         Assert.NotNull(user);
@@ -531,7 +532,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         };
 
         var response = await _client.PostAsJsonAsync("/accounts/key-connector/enroll", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var user = await _userRepository.GetByEmailAsync(ssoUserEmail);
         Assert.NotNull(user);
@@ -555,7 +556,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
         var responseMessage = await response.Content.ReadAsStringAsync();
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
@@ -588,7 +589,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
         var responseMessage = await response.Content.ReadAsStringAsync();
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
@@ -626,7 +627,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         };
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
@@ -658,7 +659,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         };
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
@@ -685,7 +686,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SetupRotateUserAccountKeys(request, isV2Crypto: false);
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
@@ -719,7 +720,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         // Act
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         // Assert
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
@@ -761,7 +762,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         // Act
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         // Assert
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
@@ -803,7 +804,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         // Act
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         // Assert
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
@@ -826,7 +827,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
             OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Accepted);
 
         var response = await _client.GetAsync($"/accounts/key-connector/confirmation-details/{organization.Identifier}");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<KeyConnectorConfirmationDetailsResponseModel>();
 
         Assert.NotNull(result);
@@ -851,7 +852,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SetupMasterPasswordRotateUserAccount(request, user);
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
@@ -879,7 +880,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SetupMasterPasswordRotateUserAccount(request, user, true);
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
@@ -929,7 +930,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         // Act
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         // Assert - The admin reaches the same token through the membership
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
@@ -994,7 +995,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
 
         // Act
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         // Assert - The user keeps the token, but the membership does not get a copy
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
@@ -1097,7 +1098,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         request.OldUserKeyId = null;
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
@@ -1116,7 +1117,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SetupMasterPasswordRotateUserAccount(request, user);
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
@@ -1136,7 +1137,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         request.OldUserKeyId = null;
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
@@ -1157,7 +1158,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SetupRotateUserAccountKeys(request, isV2Crypto: false);
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-account-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var userNewState = await _userRepository.GetByEmailAsync(_ownerEmail);
         Assert.NotNull(userNewState);
@@ -1173,7 +1174,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SetupTdeRotateUserAccount(request);
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var userNewState = await _userRepository.GetByEmailAsync(user.Email);
         Assert.NotNull(userNewState);
@@ -1205,7 +1206,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SetupKeyConnectorRotateUserAccount(request);
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var userNewState = await _userRepository.GetByEmailAsync(user.Email);
         Assert.NotNull(userNewState);
@@ -1238,7 +1239,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         SetupKeyConnectorRotateUserAccount(request, upgradeToken: true);
 
         var response = await _client.PostAsJsonAsync("/accounts/key-management/rotate-user-keys", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var userNewState = await _userRepository.GetByEmailAsync(user.Email);
         Assert.NotNull(userNewState);
@@ -1615,7 +1616,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         await _loginHelper.LoginAsync(_ownerEmail);
 
         var response = await _client.GetAsync("/accounts/key-management/key-rotation-data");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<KeyRotationDataResponseModel>();
 
@@ -1635,7 +1636,7 @@ public class AccountsKeyManagementControllerTests : IClassFixture<ApiApplication
         await _loginHelper.LoginAsync(_ownerEmail);
 
         var response = await _client.GetAsync("/accounts/key-management/key-rotation-data");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<KeyRotationDataResponseModel>();
 

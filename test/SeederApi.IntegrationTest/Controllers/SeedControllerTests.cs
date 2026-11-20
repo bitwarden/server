@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Seeder.Scenes;
 using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Models.Response;
+using Bit.Test.Common.Helpers;
 using Duende.IdentityModel.Client;
 using Xunit;
 
@@ -48,7 +49,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
             Arguments = JsonSerializer.SerializeToElement(new SingleUserScene.Request() { Email = testEmail, Password = "asdfasdfasdf" })
         }, playId);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<SceneResponseModel>();
 
         Assert.NotNull(result);
@@ -93,12 +94,12 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
             Arguments = JsonSerializer.SerializeToElement(new SingleUserScene.Request() { Email = testEmail, Password = "asdfasdfasdf" })
         }, playId);
 
-        seedResponse.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(seedResponse);
         var seedResult = await seedResponse.Content.ReadFromJsonAsync<SceneResponseModel>();
         Assert.NotNull(seedResult);
 
         var deleteResponse = await _client.DeleteAsync($"/seed/{playId}");
-        deleteResponse.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(deleteResponse);
     }
 
     [Fact]
@@ -108,7 +109,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         var nonExistentPlayId = Guid.NewGuid().ToString();
         var response = await _client.DeleteAsync($"/seed/{nonExistentPlayId}");
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Equal($$"""{"playId":"{{nonExistentPlayId}}"}""", content);
     }
@@ -130,7 +131,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
                 Arguments = JsonSerializer.SerializeToElement(new SingleUserScene.Request() { Email = testEmail, Password = "asdfasdfasdf" })
             }, playId);
 
-            seedResponse.EnsureSuccessStatusCode();
+            await Assert.SuccessResponseAsync(seedResponse);
             var seedResult = await seedResponse.Content.ReadFromJsonAsync<SceneResponseModel>();
             Assert.NotNull(seedResult);
         }
@@ -141,7 +142,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
             Content = JsonContent.Create(playIds)
         };
         var deleteResponse = await _client.SendAsync(request);
-        deleteResponse.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(deleteResponse);
 
         var result = await deleteResponse.Content.ReadFromJsonAsync<BatchDeleteResponse>();
         Assert.NotNull(result);
@@ -162,7 +163,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
             Arguments = JsonSerializer.SerializeToElement(new SingleUserScene.Request() { Email = testEmail, Password = "asdfasdfasdf" })
         }, validPlayId);
 
-        seedResponse.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(seedResponse);
         var seedResult = await seedResponse.Content.ReadFromJsonAsync<SceneResponseModel>();
         Assert.NotNull(seedResult);
 
@@ -174,7 +175,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
         };
         var deleteResponse = await _client.SendAsync(request);
 
-        deleteResponse.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(deleteResponse);
         var result = await deleteResponse.Content.ReadFromJsonAsync<BatchDeleteResponse>();
         Assert.NotNull(result);
         Assert.Equal("Batch delete completed successfully", result.Message);
@@ -195,7 +196,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
                 Arguments = JsonSerializer.SerializeToElement(new SingleUserScene.Request() { Email = testEmail, Password = "asdfasdfasdf" })
             }, playId);
 
-            seedResponse.EnsureSuccessStatusCode();
+            await Assert.SuccessResponseAsync(seedResponse);
         }
 
         // Delete all
@@ -215,7 +216,7 @@ public class SeedControllerTests : IClassFixture<SeederApiApplicationFactory>, I
             Arguments = JsonSerializer.SerializeToElement(new SingleUserScene.Request() { Email = testEmail, Password = "asdfasdfasdf" })
         }, playId);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var jsonString = await response.Content.ReadAsStringAsync();
 
         // Verify the response contains MangleMap and Result fields

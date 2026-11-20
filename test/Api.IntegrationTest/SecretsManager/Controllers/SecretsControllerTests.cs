@@ -117,7 +117,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         }
 
         var response = await _client.GetAsync($"/organizations/{org.Id}/secrets");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<SecretWithProjectsListResponseModel>();
         Assert.NotNull(result);
@@ -157,7 +157,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (organizationUser, request) = await SetupSecretCreateRequestAsync(withAccessPolicies);
 
         var response = await _client.PostAsJsonAsync($"/organizations/{organizationUser.OrganizationId}/secrets", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<SecretResponseModel>();
 
         Assert.NotNull(result);
@@ -272,7 +272,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (organizationUser, secretRequest) = await SetupSecretWithProjectCreateRequestAsync(permissionType, withAccessPolicies);
 
         var secretResponse = await _client.PostAsJsonAsync($"/organizations/{organizationUser.OrganizationId}/secrets", secretRequest);
-        secretResponse.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(secretResponse);
         var result = await secretResponse.Content.ReadFromJsonAsync<SecretResponseModel>();
 
         Assert.NotNull(result);
@@ -367,7 +367,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         });
 
         var response = await _client.GetAsync($"/secrets/{secret.Id}");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<SecretResponseModel>();
         Assert.Equal(secret.Key, result!.Key);
         Assert.Equal(secret.Value, result.Value);
@@ -424,7 +424,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         });
 
         var response = await _client.GetAsync($"/projects/{project.Id}/secrets");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<SecretWithProjectsListResponseModel>();
         Assert.NotNull(result);
         Assert.Empty(result.Secrets);
@@ -471,7 +471,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         });
 
         var response = await _client.GetAsync($"/projects/{project.Id}/secrets");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<SecretWithProjectsListResponseModel>();
         Assert.NotEmpty(result!.Secrets);
         Assert.Equal(secret.Id, result.Secrets.First().Id);
@@ -536,7 +536,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var (secret, request) = await SetupSecretUpdateRequestAsync(permissionType, withAccessPolices);
 
         var response = await _client.PutAsJsonAsync($"/secrets/{secret.Id}", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<SecretResponseModel>();
         Assert.Equal(request.Key, result!.Key);
         Assert.Equal(request.Value, result.Value);
@@ -699,7 +699,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         }
 
         var response = await _client.PostAsJsonAsync("/secrets/delete", secretIds);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var results = await response.Content.ReadFromJsonAsync<ListResponseModel<BulkDeleteResponseModel>>();
         Assert.NotNull(results?.Data);
@@ -808,7 +808,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var request = await SetupGetSecretsByIdsRequestAsync(org.Id, permissionType);
 
         var response = await _client.PostAsJsonAsync("/secrets/get-by-ids", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<BaseSecretResponseModel>>();
 
         Assert.NotNull(result);
@@ -905,7 +905,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         }
 
         var response = await _client.GetAsync(requestUrl);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<SecretsSyncResponseModel>();
 
         Assert.NotNull(result);
@@ -931,7 +931,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         }
 
         var response = await _client.GetAsync(requestUrl);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<SecretsSyncResponseModel>();
 
         Assert.NotNull(result);
@@ -953,7 +953,7 @@ public class SecretsControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         await UpdateServiceAccountRevisionAsync(serviceAccountId, DateTime.UtcNow.AddDays(-1));
 
         var response = await _client.GetAsync($"/organizations/{org.Id}/secrets/sync?lastSyncedDate={DateTime.UtcNow}");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<SecretsSyncResponseModel>();
 
         Assert.NotNull(result);

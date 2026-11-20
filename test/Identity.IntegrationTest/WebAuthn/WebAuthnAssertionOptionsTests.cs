@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Auth.Models.Api.Response.Accounts;
 using Bit.IntegrationTestCommon.Factories;
+using Bit.Test.Common.Helpers;
 using Xunit;
 
 namespace Bit.Identity.IntegrationTest.WebAuthn;
@@ -16,7 +17,7 @@ public class WebAuthnAssertionOptionsTests(IdentityApplicationFactory _factory) 
         var response = await client.GetAsync("/accounts/webauthn/assertion-options");
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode);
+        await Assert.SuccessResponseAsync(response);
         var options = await response.Content.ReadFromJsonAsync<WebAuthnLoginAssertionOptionsResponseModel>();
         Assert.NotNull(options);
         Assert.NotEmpty(options.Token);

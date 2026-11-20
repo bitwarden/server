@@ -1,6 +1,7 @@
 ﻿using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Models.Response;
+using Bit.Test.Common.Helpers;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.Auth.Profile;
@@ -40,7 +41,7 @@ public class ProfileTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
         using var message = new HttpRequestMessage(HttpMethod.Get, "/accounts/profile");
         var response = await _client.SendAsync(message);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var content = await response.Content.ReadFromJsonAsync<ProfileResponseModel>();
         Assert.NotNull(content);

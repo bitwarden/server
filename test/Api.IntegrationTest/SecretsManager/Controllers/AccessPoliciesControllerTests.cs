@@ -11,6 +11,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Repositories;
+using Bit.Test.Common.Helpers;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.SecretsManager.Controllers;
@@ -94,7 +95,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var response =
             await _client.GetAsync(
                 $"/organizations/{org.Id}/access-policies/people/potential-grantees");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<PotentialGranteeResponseModel>>();
 
@@ -140,7 +141,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var response =
             await _client.GetAsync(
                 $"/organizations/{org.Id}/access-policies/service-accounts/potential-grantees");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<PotentialGranteeResponseModel>>();
 
@@ -182,7 +183,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var response =
             await _client.GetAsync(
                 $"/organizations/{org.Id}/access-policies/service-accounts/potential-grantees");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<PotentialGranteeResponseModel>>();
 
@@ -225,7 +226,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var response =
             await _client.GetAsync(
                 $"/organizations/{org.Id}/access-policies/projects/potential-grantees");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<PotentialGranteeResponseModel>>();
 
@@ -267,7 +268,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var response =
             await _client.GetAsync(
                 $"/organizations/{org.Id}/access-policies/projects/potential-grantees");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<PotentialGranteeResponseModel>>();
 
@@ -313,7 +314,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         });
 
         var response = await _client.GetAsync($"/projects/{project.Id}/access-policies/people");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
 
@@ -351,7 +352,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var (project, _) = await SetupProjectPeoplePermissionAsync(permissionType, organizationUser);
 
         var response = await _client.GetAsync($"/projects/{project.Id}/access-policies/people");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
 
@@ -442,7 +443,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var (project, request) = await SetupProjectPeopleRequestAsync(permissionType, organizationUser);
 
         var response = await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/people", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ProjectPeopleAccessPoliciesResponseModel>();
 
@@ -489,7 +490,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         });
 
         var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}/access-policies/people");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountPeopleAccessPoliciesResponseModel>();
 
@@ -527,7 +528,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var (serviceAccount, _) = await SetupServiceAccountPeoplePermissionAsync(permissionType, organizationUser);
 
         var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}/access-policies/people");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountPeopleAccessPoliciesResponseModel>();
 
@@ -624,7 +625,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         var response =
             await _client.PutAsJsonAsync($"/service-accounts/{serviceAccount.Id}/access-policies/people", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ServiceAccountPeopleAccessPoliciesResponseModel>();
 
@@ -667,7 +668,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         });
 
         var response = await _client.GetAsync($"/service-accounts/{serviceAccount.Id}/granted-policies");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content
             .ReadFromJsonAsync<ServiceAccountGrantedPoliciesPermissionDetailsResponseModel>();
@@ -718,7 +719,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         }
 
         var response = await _client.GetAsync($"/service-accounts/{initData.ServiceAccountId}/granted-policies");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content
             .ReadFromJsonAsync<ServiceAccountGrantedPoliciesPermissionDetailsResponseModel>();
@@ -818,7 +819,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
                 createPreviousAccessPolicy);
 
         var response = await _client.PutAsJsonAsync($"/service-accounts/{serviceAccount.Id}/granted-policies", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content
             .ReadFromJsonAsync<ServiceAccountGrantedPoliciesPermissionDetailsResponseModel>();
@@ -864,7 +865,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         });
 
         var response = await _client.GetAsync($"/projects/{project.Id}/access-policies/service-accounts");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ProjectServiceAccountsAccessPoliciesResponseModel>();
 
@@ -914,7 +915,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         }
 
         var response = await _client.GetAsync($"/projects/{initData.ProjectId}/access-policies/service-accounts");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content
             .ReadFromJsonAsync<ProjectServiceAccountsAccessPoliciesResponseModel>();
@@ -1025,7 +1026,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
 
         var response =
             await _client.PutAsJsonAsync($"/projects/{project.Id}/access-policies/service-accounts", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content
             .ReadFromJsonAsync<ProjectServiceAccountsAccessPoliciesResponseModel>();
@@ -1069,7 +1070,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         var (secretId, _) = await SetupSecretAccessPoliciesTest(PermissionType.RunAsAdmin);
 
         var response = await _client.GetAsync($"/secrets/{secretId}/access-policies");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content
             .ReadFromJsonAsync<SecretAccessPoliciesResponseModel>();
@@ -1106,7 +1107,7 @@ public class AccessPoliciesControllerTests : IClassFixture<ApiApplicationFactory
         await _accessPolicyRepository.CreateManyAsync(accessPolicies);
 
         var response = await _client.GetAsync($"/secrets/{secretId}/access-policies");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content
             .ReadFromJsonAsync<SecretAccessPoliciesResponseModel>();

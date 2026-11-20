@@ -8,6 +8,7 @@ using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Identity.IdentityServer.RequestValidators.SendAccess;
 using Bit.Identity.IntegrationTest.Helpers;
 using Bit.IntegrationTestCommon.Factories;
+using Bit.Test.Common.Helpers;
 using Duende.IdentityModel;
 using Microsoft.Extensions.Caching.Distributed;
 using NSubstitute;
@@ -119,7 +120,7 @@ public class SendAccessGrantEmailOtpTests(IdentityApplicationFactory _factory) :
         var response = await client.PostAsync("/connect/token", requestBody);
 
         // Assert
-        Assert.True(response.IsSuccessStatusCode);
+        await Assert.SuccessResponseAsync(response);
         var content = await response.Content.ReadAsStringAsync();
         Assert.Contains(OidcConstants.TokenResponse.AccessToken, content);
         Assert.Contains(OidcConstants.TokenResponse.BearerTokenType, content);
