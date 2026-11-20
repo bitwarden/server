@@ -7,6 +7,8 @@ using Bit.Core.AdminConsole.OrganizationFeatures.Policies.Models;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyUpdateEvents.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Exceptions;
+using Bit.Core.Models;
+using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AdminConsole.AutoFixture;
@@ -495,6 +497,47 @@ public class SavePolicyCommandTests
         // Assert
         Assert.Contains("Validation error!", badRequestException.Message, StringComparison.OrdinalIgnoreCase);
         await AssertPolicyNotSavedAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_RestrictedItemTypes_PushPayloadOmitsData(
+        [PolicyUpdate(PolicyType.RestrictedItemTypesPolicy)] PolicyUpdate policyUpdate)
+    {
+        policyUpdate.Enabled = true;
+        policyUpdate.Data = """{"restrictedTypes":[3,6]}""";
+        var sutProvider = SutProviderFactory();
+        ArrangeOrganization(sutProvider, policyUpdate);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(policyUpdate.OrganizationId).Returns([]);
+
+        await sutProvider.Sut.SaveAsync(new SavePolicyModel(policyUpdate));
+
+        // the stored policy keeps its data, the broadcast does not carry it
+        await sutProvider.GetDependency<IPolicyRepository>().Received(1)
+            .UpsertAsync(Arg.Is<Policy>(p => p.Data == policyUpdate.Data));
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushAsync(Arg.Is<PushNotification<SyncPolicyPushNotification>>(n =>
+                n.Type == Bit.Core.Enums.PushType.PolicyChanged
+                && n.Payload.Policy.Type == PolicyType.RestrictedItemTypesPolicy
+                && n.Payload.Policy.Enabled
+                && n.Payload.Policy.Data == null));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_OtherPolicy_PushPayloadKeepsData(
+        [PolicyUpdate(PolicyType.MasterPassword)] PolicyUpdate policyUpdate)
+    {
+        policyUpdate.Data = """{"minLength":12}""";
+        var sutProvider = SutProviderFactory();
+        ArrangeOrganization(sutProvider, policyUpdate);
+        sutProvider.GetDependency<IPolicyRepository>()
+            .GetManyByOrganizationIdAsync(policyUpdate.OrganizationId).Returns([]);
+
+        await sutProvider.Sut.SaveAsync(new SavePolicyModel(policyUpdate));
+
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushAsync(Arg.Is<PushNotification<SyncPolicyPushNotification>>(n =>
+                n.Payload.Policy.Data == policyUpdate.Data));
     }
 
     /// <summary>

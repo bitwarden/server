@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.AdminConsole.Utilities;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.TwoFactorAuth.Interfaces;
 using Bit.Core.Context;
@@ -153,10 +154,15 @@ public class SyncController : Controller
         var policiesNew = await _policyRepository.GetManyConfirmedAcceptedByUserIdAsync(user.Id);
         var organizationUserDetailsNew = await _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
 
+        // Response shaping as part of PM-35389, remove after outdated client support no is longer required.
+        var newPolicyPayloadEnabled = _featureService.IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes);
+        var shapedPolicies = LegacyClientPolicyShaping.ShapeForClient(policies, _currentContext.DeviceType, _currentContext.ClientVersion, newPolicyPayloadEnabled);
+        var shapedPoliciesNew = LegacyClientPolicyShaping.ShapeForClient(policiesNew, _currentContext.DeviceType, _currentContext.ClientVersion, newPolicyPayloadEnabled);
+
         var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
-            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials,
-            policiesNew, organizationUserDetailsNew, fullCipherAccess);
+            folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, shapedPolicies, sends, webAuthnCredentials,
+            shapedPoliciesNew, organizationUserDetailsNew, fullCipherAccess);
         return response;
     }
 
