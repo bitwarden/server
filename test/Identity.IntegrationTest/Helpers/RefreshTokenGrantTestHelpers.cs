@@ -12,6 +12,9 @@ namespace Bit.Identity.IntegrationTest.Helpers;
 /// </summary>
 public static class RefreshTokenGrantTestHelpers
 {
+    /// <summary>
+    /// Sends a <c>refresh_token</c> grant request to the token endpoint for the given client.
+    /// </summary>
     public static async Task<HttpContext> PostRefreshTokenAsync(
         IdentityApplicationFactory factory, string refreshToken, string clientId = BitwardenClient.Web)
     {
