@@ -148,6 +148,27 @@ public class PasswordGrantResponseTests
     }
 
     /// <summary>
+    /// A login of a user that no master password policy applies to returns a master password policy with no
+    /// requirements, so the client does not require a master password change at login. The response leaves out
+    /// requirements that have no value.
+    /// </summary>
+    [Fact]
+    public async Task PasswordGrant_NoMasterPasswordPolicy_ReturnsPolicyWithoutRequirements()
+    {
+        using var factory = new IdentityApplicationFactory();
+        await RegisterUserAsync(factory);
+
+        var context = await factory.ContextFromPasswordAsync(DefaultUsername, DefaultPassword);
+
+        using var body = await AssertDefaultTokenBodyAsync(context);
+        var masterPasswordPolicy =
+            AssertHelper.AssertJsonProperty(body.RootElement, "MasterPasswordPolicy", JsonValueKind.Object);
+        Assert.Equal("masterPasswordPolicy",
+            AssertHelper.AssertJsonProperty(masterPasswordPolicy, "Object", JsonValueKind.String).GetString());
+        Assert.Equal(["Object"], masterPasswordPolicy.EnumerateObject().Select(p => p.Name));
+    }
+
+    /// <summary>
     /// A login access token has the built-in access token lifetime of the client that sent the request.
     /// </summary>
     [Theory]
