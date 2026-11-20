@@ -9,8 +9,9 @@ using static Bit.Identity.IntegrationTest.Helpers.TokenResponseAssertions;
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.Grants.RefreshToken;
 
 /// <summary>
-/// Integration tests for how long a refresh token stays valid. By default the lifetime slides: each use moves the
-/// expiry to a fixed window after the use. A setting changes this to an absolute lifetime that use does not extend.
+/// Integration tests for how long a refresh token stays valid. By default the token is in sliding mode: each use
+/// moves the expiry to the end of a sliding window after the use. A setting turns on absolute mode, in which use does
+/// not move the expiry.
 /// </summary>
 public class RefreshTokenGrantLifetimeTests
 {
@@ -26,7 +27,7 @@ public class RefreshTokenGrantLifetimeTests
     [InlineData(BitwardenClient.Mobile, 60)]
     [InlineData(BitwardenClient.Cli, 30)]
     [InlineData(BitwardenClient.DirectoryConnector, 30)]
-    public async Task RefreshToken_Use_MovesExpiryToClientWindowAfterUse(string clientId, int windowDays)
+    public async Task RefreshToken_Use_MovesExpiryToClientSlidingWindow(string clientId, int windowDays)
     {
         using var factory = new IdentityApplicationFactory();
         var (user, _, refreshToken) = await RegisterAndLoginAsync(factory, clientId);
@@ -46,7 +47,7 @@ public class RefreshTokenGrantLifetimeTests
     /// window. The setting replaces the built-in window of each client.
     /// </summary>
     [Fact]
-    public async Task RefreshToken_SlidingLifetimeSetting_SetsTheWindow()
+    public async Task RefreshToken_SlidingLifetimeSetting_SetsSlidingWindow()
     {
         using var factory = new IdentityApplicationFactory();
         factory.UpdateConfiguration(
@@ -64,12 +65,12 @@ public class RefreshTokenGrantLifetimeTests
     }
 
     /// <summary>
-    /// The absolute lifetime setting lets a deployment, such as a self-hosted or FedRAMP instance, end each session at
-    /// a fixed time after the login, however often the client refreshes. The sliding window here is shorter than the
-    /// absolute lifetime, so the expiry shows which mode applies.
+    /// Absolute mode lets a deployment, such as a self-hosted or FedRAMP instance, end each session at a fixed time
+    /// after the login, however often the client refreshes. The sliding window here is shorter than the absolute
+    /// lifetime, so the expiry shows which mode applies.
     /// </summary>
     [Fact]
-    public async Task RefreshToken_AbsoluteLifetimeSetting_UseDoesNotMoveExpiry()
+    public async Task RefreshToken_AbsoluteMode_UseDoesNotMoveExpiry()
     {
         using var factory = new IdentityApplicationFactory();
         factory.UpdateConfiguration("globalSettings:identityServer:applyAbsoluteExpirationOnRefreshToken", "true");
@@ -91,11 +92,11 @@ public class RefreshTokenGrantLifetimeTests
     }
 
     /// <summary>
-    /// With the absolute lifetime setting, a refresh token is rejected after the absolute lifetime ends, even when the
-    /// client refreshed in time.
+    /// In absolute mode, a refresh token is rejected after the absolute lifetime ends, even when the client refreshed
+    /// in time.
     /// </summary>
     [Fact]
-    public async Task RefreshToken_AfterAbsoluteLifetime_IsRejected()
+    public async Task RefreshToken_AfterAbsoluteLifetimeInAbsoluteMode_IsRejected()
     {
         using var factory = new IdentityApplicationFactory();
         factory.UpdateConfiguration("globalSettings:identityServer:applyAbsoluteExpirationOnRefreshToken", "true");
@@ -119,7 +120,7 @@ public class RefreshTokenGrantLifetimeTests
     /// fixed time after the login.
     /// </summary>
     [Fact]
-    public async Task RefreshToken_AbsoluteLifetimeInSlidingMode_CapsTheWindow()
+    public async Task RefreshToken_SlidingMode_AbsoluteLifetimeCapsSlidingWindow()
     {
         using var factory = new IdentityApplicationFactory();
         factory.UpdateConfiguration("globalSettings:identityServer:applyAbsoluteExpirationOnRefreshToken", "false");
@@ -134,16 +135,16 @@ public class RefreshTokenGrantLifetimeTests
         using var body = await AssertDefaultTokenBodyAsync(context);
         var grant = await GetRefreshTokenGrantAsync(factory, user.Id);
         Assert.NotNull(grant.ExpirationDate);
-        // The 2 h window would end after the 1 h cap, so the cap sets the expiry.
+        // The 2 h sliding window would end after the 1 h absolute lifetime, so the absolute lifetime sets the expiry.
         Assert.Equal(grant.CreationDate.AddHours(1), grant.ExpirationDate.Value, _tolerance);
     }
 
     /// <summary>
-    /// In sliding mode, a refresh token is rejected after the absolute lifetime cap ends, even when the client
-    /// refreshed in time.
+    /// In sliding mode, a refresh token is rejected after the absolute lifetime ends, even when the client refreshed
+    /// in time.
     /// </summary>
     [Fact]
-    public async Task RefreshToken_AfterAbsoluteCapInSlidingMode_IsRejected()
+    public async Task RefreshToken_AfterAbsoluteLifetimeInSlidingMode_IsRejected()
     {
         using var factory = new IdentityApplicationFactory();
         factory.UpdateConfiguration("globalSettings:identityServer:applyAbsoluteExpirationOnRefreshToken", "false");
@@ -158,15 +159,15 @@ public class RefreshTokenGrantLifetimeTests
 
         var context = await PostRefreshTokenAsync(factory, refreshToken);
 
-        // The refresh moved the 1 h sliding window, so only the cap can reject the token.
+        // The refresh moved the 1 h sliding window, so only the absolute lifetime can reject the token.
         await AssertInvalidGrantAsync(context);
     }
 
     /// <summary>
-    /// A refresh token that is past its expiry is rejected.
+    /// A refresh token is rejected when its sliding window ends before the client uses it again.
     /// </summary>
     [Fact]
-    public async Task RefreshToken_Expired_IsRejected()
+    public async Task RefreshToken_AfterSlidingWindow_IsRejected()
     {
         using var factory = new IdentityApplicationFactory();
         factory.UpdateConfiguration("globalSettings:identityServer:slidingRefreshTokenLifetimeSeconds", "1");
