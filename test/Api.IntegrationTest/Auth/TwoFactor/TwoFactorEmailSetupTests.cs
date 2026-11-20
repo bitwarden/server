@@ -5,9 +5,14 @@ using Bit.Api.Auth.Models.Request;
 using Bit.Api.IntegrationTest.Auth.Helpers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Business.Tokenables;
+using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Tokens;
@@ -142,6 +147,74 @@ public class TwoFactorEmailSetupTests : IClassFixture<ApiApplicationFactory>, IA
 
         Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
         Assert.Contains("User verification failed.", await response.Content.ReadAsStringAsync());
+    }
+
+    [Fact]
+    public async Task DeleteEmail_TwoFactorAuthNoLongerEnabled_RevokesTwoFactorRememberTokens()
+    {
+        await EnrollUserInEmail();
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _userEmail, "stamp-before-teardown");
+
+        await DeleteEmailProviderAsync();
+
+        await AssertTwoFactorRememberTokenRotatedAsync(_factory, _userEmail, device, "stamp-before-teardown");
+    }
+
+    /// <summary>
+    /// Removing one provider while another still works leaves 2FA enabled, so the 2FA remember token is
+    /// not revoked. Uses the real <c>TwoFactorIsEnabledQuery</c>; the unit tests mock it.
+    /// </summary>
+    [Fact]
+    public async Task DeleteEmail_OtherProviderRemains_DoesNotRevokeTwoFactorRememberTokens()
+    {
+        await SetUserTwoFactorProvidersJsonAsync(_userRepository, _userEmail,
+            CombineProvidersJson(
+                BuildEmailProvidersJson(_userEmail),
+                BuildAuthenticatorProvidersJson("JBSWY3DPEHPK3PXP")));
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _userEmail, "stamp-untouched");
+
+        await DeleteEmailProviderAsync();
+
+        await AssertTwoFactorRememberTokenUnchangedAsync(_factory, _userEmail, device, "stamp-untouched");
+    }
+
+    /// <summary>
+    /// A provider that requires premium does not count for a user without premium. Removing Email leaves
+    /// only YubiKey, so 2FA is no longer effectively enabled and the 2FA remember token is revoked, even
+    /// though a provider remains. Uses the real <c>TwoFactorIsEnabledQuery</c>; the unit tests mock it.
+    /// </summary>
+    [Fact]
+    public async Task DeleteEmail_OnlyPremiumProviderRemainsAndUserHasNoPremium_RevokesTwoFactorRememberTokens()
+    {
+        await SetUserTwoFactorProvidersJsonAsync(_userRepository, _userEmail,
+            CombineProvidersJson(
+                BuildEmailProvidersJson(_userEmail),
+                BuildYubiKeyProvidersJson()));
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _userEmail, "stamp-before-teardown");
+
+        await DeleteEmailProviderAsync();
+
+        await AssertTwoFactorRememberTokenRotatedAsync(_factory, _userEmail, device, "stamp-before-teardown");
+    }
+
+    /// <summary>
+    /// Both effects of removing a provider so that 2FA is no longer enabled happen together: the 2FA
+    /// remember tokens are revoked (before the save), and the user is revoked from organizations that
+    /// require 2FA (after it).
+    /// </summary>
+    [Fact]
+    public async Task DeleteEmail_TwoFactorAuthNoLongerEnabledWithTwoFactorPolicy_RevokesTokensAndOrganizationUser()
+    {
+        await EnrollUserInEmail();
+        var device = await SeedTwoFactorRememberTokenAsync(_factory, _userEmail, "stamp-before-teardown");
+        var organizationUser = await JoinOrganizationRequiringTwoFactorAsync();
+
+        await DeleteEmailProviderAsync();
+
+        await AssertTwoFactorRememberTokenRotatedAsync(_factory, _userEmail, device, "stamp-before-teardown");
+        var revoked = await _factory.GetService<IOrganizationUserRepository>().GetByIdAsync(organizationUser.Id);
+        Assert.NotNull(revoked);
+        Assert.Equal(OrganizationUserStatusType.Revoked, revoked.Status);
     }
 
     // ---------------------------------------------------------------------
@@ -383,6 +456,48 @@ public class TwoFactorEmailSetupTests : IClassFixture<ApiApplicationFactory>, IA
     private Task EnrollUserInEmail() =>
         SetUserTwoFactorProvidersJsonAsync(
             _userRepository, _userEmail, BuildEmailProvidersJson(_userEmail));
+
+    /// <summary>Merges single-provider JSON objects into one object holding all of the providers.</summary>
+    private static string CombineProvidersJson(params string[] providersJson) =>
+        "{" + string.Join(",", providersJson.Select(json => json[1..^1])) + "}";
+
+    /// <summary>
+    /// Adds the test user as a confirmed member of an organization that enforces the two-factor policy.
+    /// The organization needs a separate confirmed owner: the command that revokes non-compliant members
+    /// refuses to leave an organization without one, and reports that as an error result rather than
+    /// throwing, so the member would silently stay confirmed.
+    /// </summary>
+    private async Task<OrganizationUser> JoinOrganizationRequiringTwoFactorAsync()
+    {
+        var ownerEmail = $"two-factor-owner-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(ownerEmail);
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(
+            _factory,
+            plan: PlanType.EnterpriseAnnually,
+            ownerEmail: ownerEmail,
+            passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card);
+
+        organization.UsePolicies = true;
+        await _factory.GetService<IOrganizationRepository>().ReplaceAsync(organization);
+        await _factory.GetService<IPolicyRepository>().CreateAsync(new Policy
+        {
+            OrganizationId = organization.Id,
+            Type = PolicyType.TwoFactorAuthentication,
+            Enabled = true,
+        });
+
+        return await OrganizationTestHelpers.CreateUserAsync(
+            _factory, organization.Id, _userEmail, OrganizationUserType.User);
+    }
+
+    private async Task DeleteEmailProviderAsync()
+    {
+        var uvToken = await GetEmailUserVerificationTokenAsync();
+        var response = await SendJsonAsync(_client, HttpMethod.Delete, "/two-factor/email",
+            new TwoFactorEmailDeleteRequestModel { UserVerificationToken = uvToken });
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+    }
 
     private async Task<User> GetUserAsync()
     {
