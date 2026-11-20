@@ -94,9 +94,6 @@ public class AdminRecoverAccountCommand(
                 user.Key = request.Key;
             }
 
-            // Remove the user from other organizations before saving the new password,
-            // so a failed removal never leaves the new password saved. Organizations where
-            // they are the last confirmed owner are kept (see RemoveFromOtherOrganizationsAsync).
             if (featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryMultiOrgCheck))
             {
                 await RemoveFromOtherOrganizationsAsync(user.Id, request.OrgId);
