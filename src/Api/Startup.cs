@@ -152,10 +152,7 @@ public class Startup
             config.AddPolicy(Policies.Secrets, policy =>
             {
                 policy.RequireAuthenticatedUser();
-                policy.RequireAssertion(ctx => ctx.User.HasClaim(c =>
-                    c.Type == JwtClaimTypes.Scope &&
-                    (c.Value.Contains(ApiScopes.Api) || c.Value.Contains(ApiScopes.ApiSecrets))
-                ));
+                policy.RequireClaim(JwtClaimTypes.Scope, ApiScopes.Api, ApiScopes.ApiSecrets);
             });
             config.AddPolicy(Policies.AccessConnector, policy =>
             {
@@ -309,6 +306,7 @@ public class Startup
         // Add authentication and authorization to the request pipeline.
         app.UseAuthentication();
         app.UseAuthorization();
+        app.UseMiddleware<OrganizationTokenEndpointGuardMiddleware>();
 
         // Add current context
         app.UseMiddleware<CurrentContextMiddleware>();
