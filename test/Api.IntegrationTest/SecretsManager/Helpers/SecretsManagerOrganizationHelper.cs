@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -17,6 +18,7 @@ public class SecretsManagerOrganizationHelper
     private readonly ApiApplicationFactory _factory;
     private readonly string _ownerEmail;
     private readonly IOrganizationRepository _organizationRepository;
+    private readonly IOrganizationAbilityCacheService _organizationAbilityCacheService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly ICreateAccessTokenCommand _createAccessTokenCommand;
@@ -28,6 +30,7 @@ public class SecretsManagerOrganizationHelper
     {
         _factory = factory;
         _organizationRepository = factory.GetService<IOrganizationRepository>();
+        _organizationAbilityCacheService = factory.GetService<IOrganizationAbilityCacheService>();
         _organizationUserRepository = factory.GetService<IOrganizationUserRepository>();
         _ownerEmail = ownerEmail;
         _serviceAccountRepository = factory.GetService<IServiceAccountRepository>();
@@ -52,6 +55,7 @@ public class SecretsManagerOrganizationHelper
             }
 
             await _organizationRepository.ReplaceAsync(_organization);
+            await _organizationAbilityCacheService.UpsertOrganizationAbilityAsync(_organization);
         }
 
         if (ownerAccessSecrets)
