@@ -2694,6 +2694,18 @@ public class CiphersControllerTests
             .Returns(authorized ? AuthorizationResult.Success() : AuthorizationResult.Failed());
     }
 
+    private static void AuthorizeTypeCounts(
+        SutProvider<CiphersController> sutProvider, Guid organizationId, bool authorized = true)
+    {
+        sutProvider.GetDependency<IAuthorizationService>()
+            .AuthorizeAsync(
+                Arg.Any<ClaimsPrincipal>(),
+                new OrganizationScope(organizationId),
+                Arg.Is<IEnumerable<IAuthorizationRequirement>>(reqs =>
+                    reqs.Single() == CipherOrganizationOperations.ReadTypeCountsAsAdmin))
+            .Returns(authorized ? AuthorizationResult.Success() : AuthorizationResult.Failed());
+    }
+
     private static CipherOrganizationDetailsWithCollections OrganizationCipher(Guid organizationId, string data) =>
         new(
             new CipherOrganizationDetails
@@ -2923,6 +2935,42 @@ public class CiphersControllerTests
         await sutProvider.GetDependency<ICipherLeaseGate>()
             .DidNotReceiveWithAnyArgs()
             .AuthorizeReadManyAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCipherTypeCounts_Authorized_ReturnsCountPerType(
+        Guid organizationId, SutProvider<CiphersController> sutProvider)
+    {
+        AuthorizeTypeCounts(sutProvider, organizationId);
+        sutProvider.GetDependency<IGetOrganizationCipherTypeCountsQuery>()
+            .GetCountsAsync(organizationId)
+            .Returns(new Dictionary<CipherType, int>
+            {
+                [CipherType.Card] = 8,
+                [CipherType.BankAccount] = 3,
+                [CipherType.Identity] = 0,
+            });
+
+        var result = await sutProvider.Sut.GetOrganizationCipherTypeCounts(organizationId);
+
+        Assert.Equal(3, result.Data.Count());
+        Assert.Equal(8, result.Data.Single(c => c.Type == CipherType.Card).Count);
+        Assert.Equal(3, result.Data.Single(c => c.Type == CipherType.BankAccount).Count);
+        Assert.Equal(0, result.Data.Single(c => c.Type == CipherType.Identity).Count);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetOrganizationCipherTypeCounts_Unauthorized_ThrowsNotFound(
+        Guid organizationId, SutProvider<CiphersController> sutProvider)
+    {
+        AuthorizeTypeCounts(sutProvider, organizationId, authorized: false);
+
+        await Assert.ThrowsAsync<NotFoundException>(
+            () => sutProvider.Sut.GetOrganizationCipherTypeCounts(organizationId));
+
+        await sutProvider.GetDependency<IGetOrganizationCipherTypeCountsQuery>()
+            .DidNotReceiveWithAnyArgs()
+            .GetCountsAsync(default);
     }
 
     /// <remarks>
