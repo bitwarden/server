@@ -21,4 +21,8 @@
       <ProjectReference Include="..\Core\Core.csproj" />
       <ProjectReference Include="..\Pam.Domain\Pam.Domain.csproj" />
     </ItemGroup>
+
+    <ItemGroup>
+      <InternalsVisibleTo Include="Infrastructure.EFIntegration.Test" />
+    </ItemGroup>
 </Project>
