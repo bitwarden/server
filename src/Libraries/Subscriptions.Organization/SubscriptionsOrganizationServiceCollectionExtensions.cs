@@ -1,6 +1,7 @@
 ﻿using Bit.Api.AdminConsole.Authorization;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Helpers;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Invoicing;
 using Bit.Subscriptions.Organization.Commands.InvoicePreviews;
 using Bit.Subscriptions.Organization.Commands.PrivilegedControls;
@@ -45,9 +46,10 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
 
     /// <summary>
     /// Registers the Privileged Controls seat reserve, autoscale, and revert commands, the seat-needed email command,
-    /// and the services they use. A host that resolves <see cref="IReservePrivilegedControlsSeatsCommand"/>,
-    /// <see cref="IAutoscalePrivilegedControlsSeatsCommand"/>, <see cref="IRevertPrivilegedControlsSeatsCommand"/>, or
-    /// <see cref="ISendPrivilegedControlsSeatNeededEmailCommand"/> without mapping the endpoints calls this.
+    /// the seat reservation validation query, and the services they use. A host that resolves
+    /// <see cref="IReservePrivilegedControlsSeatsCommand"/>, <see cref="IAutoscalePrivilegedControlsSeatsCommand"/>,
+    /// <see cref="IRevertPrivilegedControlsSeatsCommand"/>, <see cref="ISendPrivilegedControlsSeatNeededEmailCommand"/>,
+    /// or <see cref="IValidatePrivilegedControlsSeatReservationQuery"/> without mapping the endpoints calls this.
     /// </summary>
     public static IServiceCollection AddPrivilegedControlsSeatAutoscaling(this IServiceCollection services)
     {
@@ -57,6 +59,7 @@ public static class SubscriptionsOrganizationServiceCollectionExtensions
         services.TryAddScoped<IRevertPrivilegedControlsSeatsCommand, RevertPrivilegedControlsSeatsCommand>();
         services.TryAddScoped<IReservePrivilegedControlsSeatsCommand, ReservePrivilegedControlsSeatsCommand>();
         services.TryAddScoped<ISendPrivilegedControlsSeatNeededEmailCommand, SendPrivilegedControlsSeatNeededEmailCommand>();
+        services.TryAddScoped<IValidatePrivilegedControlsSeatReservationQuery, ValidatePrivilegedControlsSeatReservationQuery>();
         return services;
     }
 }
