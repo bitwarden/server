@@ -1,5 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
@@ -8,6 +9,7 @@ using Bit.Core.Auth.UserFeatures.UserMasterPassword.Data;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword.Interfaces;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
+using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.Models;
 using Bit.Core.Platform.Push;
@@ -15,8 +17,10 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
+using NSubstitute.ExceptionExtensions;
 using Xunit;
 
 namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.AccountRecovery;
@@ -669,6 +673,260 @@ public class AdminRecoverAccountCommandTests
             .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task RecoverAccountAsync_ResetMasterPassword_RemovesUserFromOtherOrganizations(
+        string newMasterPassword,
+        string key,
+        Organization organization,
+        OrganizationUser organizationUser,
+        OrganizationUser otherMembership,
+        OrganizationUser otherOwnerMembership,
+        User user,
+        SutProvider<AdminRecoverAccountCommand> sutProvider)
+    {
+        // Arrange
+        SetupOrganization(sutProvider, organization);
+        SetupUser(sutProvider, user, organizationUser);
+        SetupSuccessfulPasswordUpdate(sutProvider, user, newMasterPassword);
+        SetupPolicy(sutProvider, user);
+        EnableMultiOrgCheck(sutProvider);
+
+        organizationUser.OrganizationId = organization.Id;
+        otherOwnerMembership.Type = OrganizationUserType.Owner;
+        SetupMemberships(sutProvider, user, organizationUser, otherMembership, otherOwnerMembership);
+        SetupHasConfirmedOwnersExcept(sutProvider, hasOtherOwners: true);
+
+        var request = CreateRequest(organization.Id, organizationUser,
+            resetMasterPassword: true, resetTwoFactor: false,
+            newMasterPasswordHash: newMasterPassword, key: key);
+        SetupValidValidator(sutProvider);
+
+        // Act
+        var result = await sutProvider.Sut.RecoverAccountAsync(request);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+
+        var removeOrganizationUserCommand = sutProvider.GetDependency<IRemoveOrganizationUserCommand>();
+        await removeOrganizationUserCommand.Received(1).RemoveUsersAsync(
+            otherMembership.OrganizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == otherMembership.Id), null);
+        await removeOrganizationUserCommand.Received(1).RemoveUsersAsync(
+            otherOwnerMembership.OrganizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == otherOwnerMembership.Id), null);
+        await removeOrganizationUserCommand.DidNotReceive().RemoveUsersAsync(
+            organization.Id, Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid?>());
+
+        var userRepository = sutProvider.GetDependency<IUserRepository>();
+        Received.InOrder(() =>
+        {
+            removeOrganizationUserCommand.RemoveUsersAsync(otherMembership.OrganizationId, Arg.Any<IEnumerable<Guid>>(), null);
+            removeOrganizationUserCommand.RemoveUsersAsync(otherOwnerMembership.OrganizationId, Arg.Any<IEnumerable<Guid>>(), null);
+            userRepository.ReplaceAsync(user);
+        });
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RecoverAccountAsync_ResetMasterPassword_KeepsMembershipWhenOrganizationWouldHaveNoConfirmedOwner(
+        string newMasterPassword,
+        string key,
+        Organization organization,
+        OrganizationUser organizationUser,
+        OrganizationUser otherMembership,
+        OrganizationUser soleOwnerMembership,
+        User user,
+        SutProvider<AdminRecoverAccountCommand> sutProvider)
+    {
+        // Arrange
+        SetupOrganization(sutProvider, organization);
+        SetupUser(sutProvider, user, organizationUser);
+        SetupSuccessfulPasswordUpdate(sutProvider, user, newMasterPassword);
+        SetupPolicy(sutProvider, user);
+        EnableMultiOrgCheck(sutProvider);
+
+        organizationUser.OrganizationId = organization.Id;
+        soleOwnerMembership.Type = OrganizationUserType.Owner;
+        SetupMemberships(sutProvider, user, organizationUser, otherMembership, soleOwnerMembership);
+        SetupHasConfirmedOwnersExcept(sutProvider, hasOtherOwners: true);
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(soleOwnerMembership.OrganizationId, Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>())
+            .Returns(false);
+
+        var request = CreateRequest(organization.Id, organizationUser,
+            resetMasterPassword: true, resetTwoFactor: false,
+            newMasterPasswordHash: newMasterPassword, key: key);
+        SetupValidValidator(sutProvider);
+
+        // Act
+        var result = await sutProvider.Sut.RecoverAccountAsync(request);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+
+        // Same check as the remove command: a confirmed provider counts as an owner.
+        await sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().Received(1).HasConfirmedOwnersExceptAsync(
+            soleOwnerMembership.OrganizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == soleOwnerMembership.Id), true);
+
+        var removeOrganizationUserCommand = sutProvider.GetDependency<IRemoveOrganizationUserCommand>();
+        await removeOrganizationUserCommand.Received(1).RemoveUsersAsync(
+            otherMembership.OrganizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == otherMembership.Id), null);
+        await removeOrganizationUserCommand.DidNotReceive().RemoveUsersAsync(
+            soleOwnerMembership.OrganizationId, Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid?>());
+
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RecoverAccountAsync_ResetMasterPassword_FlagDisabled_DoesNotRemoveUserFromOtherOrganizations(
+        string newMasterPassword,
+        string key,
+        Organization organization,
+        OrganizationUser organizationUser,
+        OrganizationUser otherMembership,
+        User user,
+        SutProvider<AdminRecoverAccountCommand> sutProvider)
+    {
+        // Arrange
+        SetupOrganization(sutProvider, organization);
+        SetupUser(sutProvider, user, organizationUser);
+        SetupSuccessfulPasswordUpdate(sutProvider, user, newMasterPassword);
+        SetupPolicy(sutProvider, user);
+
+        organizationUser.OrganizationId = organization.Id;
+        SetupMemberships(sutProvider, user, organizationUser, otherMembership);
+        SetupHasConfirmedOwnersExcept(sutProvider, hasOtherOwners: true);
+
+        var request = CreateRequest(organization.Id, organizationUser,
+            resetMasterPassword: true, resetTwoFactor: false,
+            newMasterPasswordHash: newMasterPassword, key: key);
+        SetupValidValidator(sutProvider);
+
+        // Act
+        var result = await sutProvider.Sut.RecoverAccountAsync(request);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+
+        await sutProvider.GetDependency<IRemoveOrganizationUserCommand>().DidNotReceiveWithAnyArgs()
+            .RemoveUsersAsync(default, default!, default(Guid?));
+        await sutProvider.GetDependency<IUserRepository>().Received(1).ReplaceAsync(user);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RecoverAccountAsync_ResetTwoFactorOnly_DoesNotRemoveUserFromOtherOrganizations(
+        Organization organization,
+        OrganizationUser organizationUser,
+        OrganizationUser otherMembership,
+        User user,
+        SutProvider<AdminRecoverAccountCommand> sutProvider)
+    {
+        // Arrange
+        SetupOrganization(sutProvider, organization);
+        SetupUser(sutProvider, user, organizationUser);
+        SetupPolicy(sutProvider, user);
+        EnableMultiOrgCheck(sutProvider);
+
+        organizationUser.OrganizationId = organization.Id;
+        SetupMemberships(sutProvider, user, organizationUser, otherMembership);
+        SetupHasConfirmedOwnersExcept(sutProvider, hasOtherOwners: true);
+
+        var request = CreateRequest(organization.Id, organizationUser,
+            resetMasterPassword: false, resetTwoFactor: true);
+        SetupValidValidator(sutProvider);
+
+        // Act
+        var result = await sutProvider.Sut.RecoverAccountAsync(request);
+
+        // Assert
+        Assert.True(result.IsSuccess);
+
+        await sutProvider.GetDependency<IRemoveOrganizationUserCommand>().DidNotReceiveWithAnyArgs()
+            .RemoveUsersAsync(default, default!, default(Guid?));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RecoverAccountAsync_ResetMasterPassword_PasswordUpdateFails_DoesNotRemoveUserFromOtherOrganizations(
+        string newMasterPassword,
+        string key,
+        Organization organization,
+        OrganizationUser organizationUser,
+        OrganizationUser otherMembership,
+        User user,
+        SutProvider<AdminRecoverAccountCommand> sutProvider)
+    {
+        // Arrange
+        SetupOrganization(sutProvider, organization);
+        SetupUser(sutProvider, user, organizationUser);
+        SetupPolicy(sutProvider, user);
+        EnableMultiOrgCheck(sutProvider);
+
+        organizationUser.OrganizationId = organization.Id;
+        SetupMemberships(sutProvider, user, organizationUser, otherMembership);
+        SetupHasConfirmedOwnersExcept(sutProvider, hasOtherOwners: true);
+
+        sutProvider.GetDependency<IUserService>()
+            .UpdatePasswordHash(user, newMasterPassword)
+            .Returns(IdentityResult.Failed(new IdentityError { Description = "Password update failed" }));
+
+        var request = CreateRequest(organization.Id, organizationUser,
+            resetMasterPassword: true, resetTwoFactor: false,
+            newMasterPasswordHash: newMasterPassword, key: key);
+        SetupValidValidator(sutProvider);
+
+        // Act
+        var result = await sutProvider.Sut.RecoverAccountAsync(request);
+
+        // Assert
+        Assert.True(result.IsError);
+        Assert.IsType<PasswordUpdateFailedError>(result.AsError);
+
+        await sutProvider.GetDependency<IRemoveOrganizationUserCommand>().DidNotReceiveWithAnyArgs()
+            .RemoveUsersAsync(default, default!, default(Guid?));
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceive().ReplaceAsync(Arg.Any<User>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task RecoverAccountAsync_ResetMasterPassword_RemovalFails_DoesNotSavePassword(
+        string newMasterPassword,
+        string key,
+        Organization organization,
+        OrganizationUser organizationUser,
+        OrganizationUser otherMembership,
+        User user,
+        SutProvider<AdminRecoverAccountCommand> sutProvider)
+    {
+        // Arrange
+        SetupOrganization(sutProvider, organization);
+        SetupUser(sutProvider, user, organizationUser);
+        SetupSuccessfulPasswordUpdate(sutProvider, user, newMasterPassword);
+        SetupPolicy(sutProvider, user);
+        EnableMultiOrgCheck(sutProvider);
+
+        organizationUser.OrganizationId = organization.Id;
+        SetupMemberships(sutProvider, user, organizationUser, otherMembership);
+        SetupHasConfirmedOwnersExcept(sutProvider, hasOtherOwners: true);
+
+        sutProvider.GetDependency<IRemoveOrganizationUserCommand>()
+            .RemoveUsersAsync(otherMembership.OrganizationId, Arg.Any<IEnumerable<Guid>>(), null)
+            .ThrowsAsync(new BadRequestException("Organization must have at least one confirmed owner."));
+
+        var request = CreateRequest(organization.Id, organizationUser,
+            resetMasterPassword: true, resetTwoFactor: false,
+            newMasterPasswordHash: newMasterPassword, key: key);
+        SetupValidValidator(sutProvider);
+
+        // Act & Assert
+        await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.RecoverAccountAsync(request));
+
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceive().ReplaceAsync(Arg.Any<User>());
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceive()
+            .PushAsync(Arg.Any<PushNotification<LogOutPushNotification>>());
+    }
+
     private static RecoverAccountRequest CreateRequest(
         Guid orgId,
         OrganizationUser organizationUser,
@@ -734,6 +992,33 @@ public class AdminRecoverAccountCommandTests
         sutProvider.GetDependency<IUserService>()
             .UpdatePasswordHash(user, newMasterPassword)
             .Returns(IdentityResult.Success);
+    }
+
+    private static void EnableMultiOrgCheck(SutProvider<AdminRecoverAccountCommand> sutProvider)
+    {
+        sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.AccountRecoveryMultiOrgCheck)
+            .Returns(true);
+    }
+
+    private static void SetupMemberships(SutProvider<AdminRecoverAccountCommand> sutProvider, User user,
+        params OrganizationUser[] memberships)
+    {
+        foreach (var membership in memberships)
+        {
+            membership.UserId = user.Id;
+        }
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByUserAsync(user.Id)
+            .Returns(memberships.ToList());
+    }
+
+    private static void SetupHasConfirmedOwnersExcept(SutProvider<AdminRecoverAccountCommand> sutProvider, bool hasOtherOwners)
+    {
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>())
+            .Returns(hasOtherOwners);
     }
 
     private static void SetupPolicy(SutProvider<AdminRecoverAccountCommand> sutProvider, User user)
