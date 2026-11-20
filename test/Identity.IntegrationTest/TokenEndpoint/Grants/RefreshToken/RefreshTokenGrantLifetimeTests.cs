@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.IntegrationTestCommon.Factories;
 using Xunit;
+using static Bit.Identity.IntegrationTest.Helpers.PasswordGrantTestHelpers;
 using static Bit.Identity.IntegrationTest.Helpers.RefreshTokenGrantTestHelpers;
 using static Bit.Identity.IntegrationTest.Helpers.TokenResponseAssertions;
 
@@ -30,7 +31,7 @@ public class RefreshTokenGrantLifetimeTests
     public async Task RefreshToken_Use_MovesExpiryToClientSlidingWindow(string clientId, int windowDays)
     {
         using var factory = new IdentityApplicationFactory();
-        var (user, _, refreshToken) = await RegisterAndLoginAsync(factory, clientId);
+        var (user, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory, clientId);
         // Login already set the expiry to now + window. Move it, so the refresh must set it again.
         await SetRefreshTokenGrantExpirationAsync(factory, user.Id, DateTime.UtcNow.AddHours(1));
 
@@ -52,7 +53,7 @@ public class RefreshTokenGrantLifetimeTests
         using var factory = new IdentityApplicationFactory();
         factory.UpdateConfiguration(
             "globalSettings:identityServer:slidingRefreshTokenLifetimeSeconds", "7200"); // 2 hours
-        var (user, _, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (user, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
         // Login already set the expiry to now + 2 h. Move it, so the refresh must set it again.
         await SetRefreshTokenGrantExpirationAsync(factory, user.Id, DateTime.UtcNow.AddMinutes(30));
 
@@ -78,7 +79,7 @@ public class RefreshTokenGrantLifetimeTests
             "globalSettings:identityServer:absoluteRefreshTokenLifetimeSeconds", "259200"); // 3 days
         factory.UpdateConfiguration(
             "globalSettings:identityServer:slidingRefreshTokenLifetimeSeconds", "3600"); // 1 hour
-        var (user, _, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (user, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
         var grantBefore = await GetRefreshTokenGrantAsync(factory, user.Id);
         Assert.NotNull(grantBefore.ExpirationDate);
         // Login sets the expiry from the 3-day absolute lifetime, not the 1 h sliding window.
@@ -103,7 +104,7 @@ public class RefreshTokenGrantLifetimeTests
         factory.UpdateConfiguration("globalSettings:identityServer:absoluteRefreshTokenLifetimeSeconds", "3");
         factory.UpdateConfiguration(
             "globalSettings:identityServer:slidingRefreshTokenLifetimeSeconds", "3600"); // 1 hour
-        var (_, _, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (_, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
         var firstContext = await PostRefreshTokenAsync(factory, refreshToken);
         using var firstBody = await AssertDefaultTokenBodyAsync(firstContext);
         // The server checks the lifetime in the stored grant data, so the test waits it out.
@@ -128,7 +129,7 @@ public class RefreshTokenGrantLifetimeTests
             "globalSettings:identityServer:absoluteRefreshTokenLifetimeSeconds", "3600"); // 1 hour
         factory.UpdateConfiguration(
             "globalSettings:identityServer:slidingRefreshTokenLifetimeSeconds", "7200"); // 2 hours
-        var (user, _, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (user, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
 
         var context = await PostRefreshTokenAsync(factory, refreshToken);
 
@@ -151,7 +152,7 @@ public class RefreshTokenGrantLifetimeTests
         factory.UpdateConfiguration("globalSettings:identityServer:absoluteRefreshTokenLifetimeSeconds", "3");
         factory.UpdateConfiguration(
             "globalSettings:identityServer:slidingRefreshTokenLifetimeSeconds", "3600"); // 1 hour
-        var (_, _, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (_, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
         var firstContext = await PostRefreshTokenAsync(factory, refreshToken);
         using var firstBody = await AssertDefaultTokenBodyAsync(firstContext);
         // The server checks the lifetime in the stored grant data, so the test waits it out.
@@ -171,7 +172,7 @@ public class RefreshTokenGrantLifetimeTests
     {
         using var factory = new IdentityApplicationFactory();
         factory.UpdateConfiguration("globalSettings:identityServer:slidingRefreshTokenLifetimeSeconds", "1");
-        var (_, _, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (_, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
         // The server checks the lifetime in the stored grant data, so the test waits it out.
         await Task.Delay(TimeSpan.FromSeconds(2));
 

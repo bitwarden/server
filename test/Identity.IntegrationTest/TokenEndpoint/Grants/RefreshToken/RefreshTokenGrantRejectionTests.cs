@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Enums;
 using Bit.IntegrationTestCommon.Factories;
 using Xunit;
+using static Bit.Identity.IntegrationTest.Helpers.PasswordGrantTestHelpers;
 using static Bit.Identity.IntegrationTest.Helpers.RefreshTokenGrantTestHelpers;
 using static Bit.Identity.IntegrationTest.Helpers.TokenResponseAssertions;
 
@@ -21,7 +22,7 @@ public class RefreshTokenGrantRejectionTests
     {
         using var factory = new IdentityApplicationFactory();
         // A real grant exists, so the rejection depends only on the token value.
-        var (_, _, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (_, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
         var changedToken = refreshToken[..^1] + (refreshToken[^1] == 'A' ? 'B' : 'A');
 
         var context = await PostRefreshTokenAsync(factory, changedToken);
@@ -42,7 +43,7 @@ public class RefreshTokenGrantRejectionTests
     public async Task RefreshToken_SentByAnotherClient_IsRejected(string issuedToClientId, string sentByClientId)
     {
         using var factory = new IdentityApplicationFactory();
-        var (_, _, refreshToken) = await RegisterAndLoginAsync(factory, issuedToClientId);
+        var (_, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory, issuedToClientId);
 
         var context = await PostRefreshTokenAsync(factory, refreshToken, sentByClientId);
 
@@ -83,7 +84,7 @@ public class RefreshTokenGrantRejectionTests
     public async Task RefreshToken_AfterSecurityStampChange_IsRejected()
     {
         using var factory = new IdentityApplicationFactory();
-        var (user, _, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (user, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
 
         // The token works before the change, so the later rejection comes from the new stamp only.
         var beforeChangeContext = await PostRefreshTokenAsync(factory, refreshToken);

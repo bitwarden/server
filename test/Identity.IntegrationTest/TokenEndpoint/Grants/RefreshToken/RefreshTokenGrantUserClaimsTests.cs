@@ -3,6 +3,7 @@ using Bit.IntegrationTestCommon.Factories;
 using Duende.IdentityModel;
 using Xunit;
 using static Bit.Identity.IntegrationTest.Helpers.AccessTokenAssertions;
+using static Bit.Identity.IntegrationTest.Helpers.PasswordGrantTestHelpers;
 using static Bit.Identity.IntegrationTest.Helpers.RefreshTokenGrantTestHelpers;
 using static Bit.Identity.IntegrationTest.Helpers.TokenResponseAssertions;
 
@@ -24,7 +25,7 @@ public class RefreshTokenGrantUserClaimsTests
     public async Task RefreshToken_RebuildsAccountClaimsFromDatabase()
     {
         using var factory = new IdentityApplicationFactory();
-        var (user, accessToken, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (user, accessToken, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
         var loginClaims = ReadPayload(accessToken);
         // Each new value differs from the login value, so the values after the refresh can only come from the database.
         Assert.Equal("false", loginClaims.GetProperty(Claims.Premium).ToString().ToLowerInvariant());
@@ -61,7 +62,7 @@ public class RefreshTokenGrantUserClaimsTests
     public async Task RefreshToken_KeepsClaimValueFromLogin(string claimType)
     {
         using var factory = new IdentityApplicationFactory();
-        var (_, accessToken, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (_, accessToken, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
         Assert.True(ReadPayload(accessToken).TryGetProperty(claimType, out var loginValue));
 
         var context = await PostRefreshTokenAsync(factory, refreshToken);

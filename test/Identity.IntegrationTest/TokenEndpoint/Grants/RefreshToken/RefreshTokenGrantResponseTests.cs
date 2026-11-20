@@ -2,6 +2,7 @@
 using Bit.IntegrationTestCommon.Factories;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
+using static Bit.Identity.IntegrationTest.Helpers.PasswordGrantTestHelpers;
 using static Bit.Identity.IntegrationTest.Helpers.RefreshTokenGrantTestHelpers;
 using static Bit.Identity.IntegrationTest.Helpers.TokenResponseAssertions;
 
@@ -22,7 +23,7 @@ public class RefreshTokenGrantResponseTests
     public async Task RefreshToken_Success()
     {
         using var factory = new IdentityApplicationFactory();
-        var (_, _, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (_, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
 
         var context = await PostRefreshTokenAsync(factory, refreshToken);
 
@@ -38,7 +39,7 @@ public class RefreshTokenGrantResponseTests
     public async Task RefreshToken_ReturnsOnlyTokenFields()
     {
         using var factory = new IdentityApplicationFactory();
-        var (_, _, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (_, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
 
         var context = await PostRefreshTokenAsync(factory, refreshToken);
 
@@ -54,7 +55,7 @@ public class RefreshTokenGrantResponseTests
     public async Task RefreshToken_ReturnsSameRefreshToken()
     {
         using var factory = new IdentityApplicationFactory();
-        var (_, _, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (_, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
 
         var context = await PostRefreshTokenAsync(factory, refreshToken);
 
@@ -69,7 +70,7 @@ public class RefreshTokenGrantResponseTests
     public async Task RefreshToken_UsedAgain_Succeeds()
     {
         using var factory = new IdentityApplicationFactory();
-        var (_, _, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (_, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
 
         var firstContext = await PostRefreshTokenAsync(factory, refreshToken);
         using var firstBody = await AssertDefaultTokenBodyAsync(firstContext);
@@ -92,7 +93,7 @@ public class RefreshTokenGrantResponseTests
     public async Task RefreshToken_AccessTokenLifetime_MatchesClient(string clientId, int expectedExpiresIn)
     {
         using var factory = new IdentityApplicationFactory();
-        var (_, _, refreshToken) = await RegisterAndLoginAsync(factory, clientId);
+        var (_, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory, clientId);
 
         var context = await PostRefreshTokenAsync(factory, refreshToken, clientId);
 
@@ -113,7 +114,7 @@ public class RefreshTokenGrantResponseTests
     {
         using var factory = new IdentityApplicationFactory();
         factory.UpdateConfiguration("globalSettings:identityServer:accessTokenLifetimeSeconds", "1200"); // 20 min
-        var (_, _, refreshToken) = await RegisterAndLoginAsync(factory, clientId);
+        var (_, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory, clientId);
 
         var context = await PostRefreshTokenAsync(factory, refreshToken, clientId);
 
@@ -127,7 +128,7 @@ public class RefreshTokenGrantResponseTests
     public async Task RefreshToken_LogsNoLoginEvent()
     {
         using var factory = new IdentityApplicationFactory();
-        var (user, _, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (user, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
         // The login's own event shows that the count finds login events.
         Assert.Equal(1, await CountLoginEventsAsync(factory, user.Id));
 
@@ -145,7 +146,7 @@ public class RefreshTokenGrantResponseTests
     public async Task RefreshToken_KeepsFailedLoginCount()
     {
         using var factory = new IdentityApplicationFactory();
-        var (user, _, refreshToken) = await RegisterAndLoginAsync(factory);
+        var (user, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
         // A successful login resets this count to 0.
         await UpdateUserAsync(factory, user.Id, u => u.FailedLoginCount = 2);
 

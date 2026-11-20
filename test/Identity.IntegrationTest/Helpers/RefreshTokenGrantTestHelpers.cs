@@ -13,20 +13,6 @@ namespace Bit.Identity.IntegrationTest.Helpers;
 /// </summary>
 public static class RefreshTokenGrantTestHelpers
 {
-    /// <summary>
-    /// Registers the default password-grant user and logs in with the password grant on the given client.
-    /// </summary>
-    public static async Task<(User User, string AccessToken, string RefreshToken)> RegisterAndLoginAsync(
-        IdentityApplicationFactory factory, string clientId = "web")
-    {
-        await PasswordGrantTestHelpers.RegisterUserAsync(factory);
-        var (accessToken, refreshToken) = await factory.TokenFromPasswordAsync(
-            PasswordGrantTestHelpers.DefaultUsername, PasswordGrantTestHelpers.DefaultPassword, clientId: clientId);
-        var user = await factory.Services.GetRequiredService<IUserRepository>()
-            .GetByEmailAsync(PasswordGrantTestHelpers.DefaultUsername);
-        return (user!, accessToken, refreshToken);
-    }
-
     public static async Task<HttpContext> PostRefreshTokenAsync(
         IdentityApplicationFactory factory, string refreshToken, string clientId = "web")
     {
