@@ -63,6 +63,7 @@ using Bit.Infrastructure.EntityFramework;
 using Bit.SharedWeb.Play;
 using DnsClient;
 using Duende.IdentityModel;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
@@ -468,7 +469,13 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services, GlobalSettings globalSettings, IWebHostEnvironment environment,
         Action<AuthorizationOptions> addAuthorization)
     {
-        services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+        // AddAuthentication would also register Data Protection, only take the parts the JWT bearer handler needs.
+        services.AddAuthenticationCore(options => options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme);
+        services.AddWebEncoders();
+        services.TryAddSingleton(TimeProvider.System);
+        services.TryAddSingleton<IAuthenticationConfigurationProvider, AuthenticationConfigurationProvider>();
+
+        new AuthenticationBuilder(services)
             .AddJwtBearer(options =>
             {
                 options.MapInboundClaims = false;
