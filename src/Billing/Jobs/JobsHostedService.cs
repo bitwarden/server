@@ -27,6 +27,7 @@ public class JobsHostedService(
         if (!_globalSettings.SelfHosted)
         {
             jobs.Add(new(typeof(SendInvoicePriceMigrationJob), SendInvoicePriceMigrationJob.GetTrigger()));
+            jobs.Add(new(typeof(ReconcilePremiumJob), ReconcilePremiumJob.GetTrigger()));
         }
 
         Jobs = jobs;
@@ -38,6 +39,7 @@ public class JobsHostedService(
     {
         services.AddTransient<AliveJob>();
         services.AddTransient<SendInvoicePriceMigrationJob>();
+        services.AddTransient<ReconcilePremiumJob>();
         // add this service as a singleton so we can inject it where needed
         services.AddSingleton<JobsHostedService>();
         services.AddHostedService(sp => sp.GetRequiredService<JobsHostedService>());
