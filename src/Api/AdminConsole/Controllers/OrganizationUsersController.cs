@@ -224,7 +224,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
 
     [HttpGet("report-details")]
     [Authorize<AccessReportsRequirement>]
-    public async Task<ListResponseModel<OrganizationUserReportDetailsResponseModel>> GetReportDetails([FromRoute] Guid orgId)
+    public async Task<Bit.HttpExtensions.ListResponseModel<OrganizationUserReportDetailsResponseModel>> GetReportDetails([FromRoute] Guid orgId)
     {
         var request = new OrganizationUserUserDetailsQueryRequest
         {
@@ -234,7 +234,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         };
 
         var results = await _organizationUserUserDetailsQuery.Get(request);
-        return new ListResponseModel<OrganizationUserReportDetailsResponseModel>(
+        return new Bit.HttpExtensions.ListResponseModel<OrganizationUserReportDetailsResponseModel>(
             results.Select(result => new OrganizationUserReportDetailsResponseModel(result)));
     }
 
