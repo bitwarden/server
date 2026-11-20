@@ -1,0 +1,5 @@
+# Authentication Review: Prelogin and KDF implementation
+Location - server side
+src/Identity/Controllers/AccountsController.cs
+Line 237- 279
+From line 237 - 241, the MakePasswordPreloginCall when a user requests prelogin call, the server checks the repositories using _userRepository.GetKdfInformationByEmailAsync(model.Email) line 239. If the user exists, it the call returns and loads to the user’s specific key derivation function. If the user does not exists, the code generates a decoy config through GetDefaultKdf(model.Email). Without the pattern present, an attacker could script automated requests to access valid user email addresses registered in the platform.
