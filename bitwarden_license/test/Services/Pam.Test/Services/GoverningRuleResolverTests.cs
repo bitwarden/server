@@ -494,6 +494,127 @@ public class GoverningRuleResolverTests
         Assert.IsType<IpAllowlistCondition>(Assert.Single(result.AutomatedConditions));
     }
 
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_SingleActiveLease_EveryPathGovernedBySingletonRule_IsTrue(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
+        Collection collectionA, Collection collectionB, AccessRule ruleA, AccessRule ruleB)
+    {
+        ruleA.SingleActiveLease = true;
+        ruleB.SingleActiveLease = true;
+        SetupGovernedCollections(sutProvider, userId, cipherId, (collectionA, ruleA), (collectionB, ruleB));
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.True(result!.SingleActiveLease);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_SingleActiveLease_NoReachableCollections_ResolvesNothing(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId)
+    {
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByUserIdCipherIdAsync(userId, cipherId)
+            .Returns(new List<CollectionCipher>());
+
+        Assert.Null(await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_SingleActiveLease_OneUngatedPath_ResolvesNothing(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
+        Collection singletonCollection, Collection ungatedCollection, AccessRule singletonRule)
+    {
+        singletonRule.SingleActiveLease = true;
+        singletonCollection.AccessRuleId = singletonRule.Id;
+        singletonRule.Enabled = true;
+        ungatedCollection.AccessRuleId = null;
+        SetupReachableCollections(sutProvider, userId, cipherId, singletonCollection, ungatedCollection);
+        sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(singletonRule.Id).Returns(singletonRule);
+
+        Assert.Null(await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_SingleActiveLease_OneNonSingletonRulePath_IsFalse(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
+        Collection singletonCollection, Collection plainCollection, AccessRule singletonRule, AccessRule plainRule)
+    {
+        singletonRule.SingleActiveLease = true;
+        plainRule.SingleActiveLease = false;
+        SetupGovernedCollections(sutProvider, userId, cipherId, (singletonCollection, singletonRule), (plainCollection, plainRule));
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.False(result!.SingleActiveLease);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_SingleActiveLease_MissingRuleOnPath_ResolvesNothing(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, Collection collection, Guid ruleId)
+    {
+        collection.AccessRuleId = ruleId;
+        sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(ruleId).Returns((AccessRule?)null);
+        SetupReachableCollections(sutProvider, userId, cipherId, collection);
+
+        Assert.Null(await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_SingleActiveLease_OneDisabledSingletonRulePath_ResolvesNothing(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
+        Collection singletonCollection, Collection disabledCollection, AccessRule singletonRule,
+        AccessRule disabledRule)
+    {
+        singletonRule.SingleActiveLease = true;
+        disabledRule.SingleActiveLease = true;
+        SetupGovernedCollections(sutProvider, userId, cipherId, (singletonCollection, singletonRule), (disabledCollection, disabledRule));
+        disabledRule.Enabled = false;
+
+        Assert.Null(await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_SingleActiveLease_OnlyPathGovernedByDisabledSingletonRule_ResolvesNothing(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
+        Collection collection, AccessRule rule)
+    {
+        rule.SingleActiveLease = true;
+        SetupGovernedCollection(sutProvider, userId, cipherId, collection, rule);
+        rule.Enabled = false;
+
+        Assert.Null(await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals));
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolveAsync_SingleActiveLease_ChosenRuleIsSingletonButAnotherPathIsNot_IsFalse(
+        SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId,
+        Collection collectionA, Collection collectionB, AccessRule singletonRule, AccessRule plainRule)
+    {
+        singletonRule.SingleActiveLease = true;
+        singletonRule.Conditions = _admits;
+        plainRule.SingleActiveLease = false;
+        plainRule.Conditions = _denies;
+        SetupGovernedCollections(sutProvider, userId, cipherId, (collectionA, singletonRule), (collectionB, plainRule));
+
+        var result = await sutProvider.Sut.ResolveAsync(userId, cipherId, _signals);
+
+        Assert.Equal(singletonRule.Id, result!.RuleId);
+        Assert.False(result.SingleActiveLease);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ResolvePinnedAsync_SingleActiveLeaseRule_LeavesTheAllPathsFlagFalse(
+        SutProvider<GoverningRuleResolver> sutProvider, AccessRule rule, Guid collectionId)
+    {
+        rule.Enabled = true;
+        rule.SingleActiveLease = true;
+        sutProvider.GetDependency<IAccessRuleRepository>().GetByIdAsync(rule.Id).Returns(rule);
+
+        var result = await sutProvider.Sut.ResolvePinnedAsync(rule.Id, collectionId);
+
+        Assert.False(result!.SingleActiveLease);
+    }
+
     private static void SetupReachableCollections(
         SutProvider<GoverningRuleResolver> sutProvider, Guid userId, Guid cipherId, params Collection[] collections)
     {
