@@ -38,6 +38,14 @@ public class PasswordGrantResponseTests
 
         using var body = await AssertDefaultTokenBodyAsync(context);
         var root = body.RootElement;
+        var expectedFields = new[]
+        {
+            "access_token", "expires_in", "refresh_token", "scope", "token_type", "AccountKeys",
+            "ForcePasswordReset", "Kdf", "KdfIterations", "KdfMemory", "KdfParallelism", "Key",
+            "MasterPasswordPolicy", "PrivateKey", "UserDecryptionOptions",
+        };
+        Assert.Equal(expectedFields.Order(StringComparer.Ordinal),
+            root.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal));
         AssertRefreshTokenExists(root);
         AssertHelper.AssertJsonProperty(root, "ForcePasswordReset", JsonValueKind.False);
         var kdf = AssertHelper.AssertJsonProperty(root, "Kdf", JsonValueKind.Number).GetInt32();
@@ -49,28 +57,6 @@ public class PasswordGrantResponseTests
             expectedKdfIterations: KdfConstants.PBKDF2_ITERATIONS.Default,
             expectedMasterKeyEncryptedUserKey: requestModel.UserSymmetricKey!,
             expectedSalt: requestModel.Email);
-    }
-
-    /// <summary>
-    /// A login returns the token fields and the account data that the client needs to unlock the vault.
-    /// </summary>
-    [Fact]
-    public async Task PasswordGrant_ReturnsTokenAndAccountFields()
-    {
-        using var factory = new IdentityApplicationFactory();
-        await RegisterUserAsync(factory);
-
-        var context = await factory.ContextFromPasswordAsync(DefaultUsername, DefaultPassword);
-
-        using var body = await AssertDefaultTokenBodyAsync(context);
-        var expectedFields = new[]
-        {
-            "access_token", "expires_in", "refresh_token", "scope", "token_type", "AccountKeys",
-            "ForcePasswordReset", "Kdf", "KdfIterations", "KdfMemory", "KdfParallelism", "Key",
-            "MasterPasswordPolicy", "PrivateKey", "UserDecryptionOptions",
-        };
-        Assert.Equal(expectedFields.Order(StringComparer.Ordinal),
-            body.RootElement.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal));
     }
 
     /// <summary>
