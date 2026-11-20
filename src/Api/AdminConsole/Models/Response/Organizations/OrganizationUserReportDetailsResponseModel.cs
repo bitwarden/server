@@ -4,6 +4,12 @@ using Bit.HttpExtensions;
 
 namespace Bit.Api.AdminConsole.Models.Response.Organizations;
 
+/// <summary>
+/// The member details used by organization reports (Member Access Report and Access Intelligence). It is returned to
+/// users who can access reports but may not manage users, so it deliberately omits the permissions, collections, SSO
+/// and other management data exposed by <see cref="OrganizationUserUserDetailsResponseModel"/>. Only add a field here
+/// if a report needs it.
+/// </summary>
 public class OrganizationUserReportDetailsResponseModel : ResponseModel
 {
     public OrganizationUserReportDetailsResponseModel(

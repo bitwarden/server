@@ -222,6 +222,14 @@ public class OrganizationUsersController : BaseAdminConsoleController
             organizationUserUserDetails.Select(ou => new OrganizationUserUserMiniDetailsResponseModel(ou)));
     }
 
+    /// <summary>
+    /// Returns the member details that organization reports need, such as the Member Access Report and Access
+    /// Intelligence. This is available to users who can access reports, including Custom users with the Access
+    /// Reports permission who cannot manage users. It is separate from <see cref="GetAll"/> so that reports do not
+    /// depend on the Members page rules, and it returns only the fields the reports read.
+    /// </summary>
+    /// <param name="orgId">Organization identifier</param>
+    /// <returns>List of users for the organization, with their group IDs.</returns>
     [HttpGet("report-details")]
     [Authorize<AccessReportsRequirement>]
     public async Task<Bit.HttpExtensions.ListResponseModel<OrganizationUserReportDetailsResponseModel>> GetReportDetails([FromRoute] Guid orgId)
