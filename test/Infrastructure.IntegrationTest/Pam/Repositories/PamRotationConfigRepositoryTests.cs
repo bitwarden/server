@@ -302,6 +302,96 @@ public class PamRotationConfigRepositoryTests
         Assert.Null(await pamRotationConfigRepository.GetDetailsByIdAsync(Guid.NewGuid()));
     }
 
+    // LastJobFailed reads the newest job only, so a running job is not yet failed and a later success clears it.
+    [DatabaseTheory, DatabaseData]
+    public async Task GetDetailsByIdAsync_ProjectsLastJobFailed_WhenRetryBudgetExhausted(
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        IApiKeyRepository apiKeyRepository,
+        IPamAccessConnectorRepository pamAccessConnectorRepository,
+        ICipherRepository cipherRepository,
+        IPamRotationConfigRepository pamRotationConfigRepository,
+        IPamRotationJobRepository pamRotationJobRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var target = await CreateAutomaticTargetAsync(pamTargetSystemRepository, organization.Id, now);
+        var accessConnector = await CreateEnrolledAccessConnectorAsync(
+            apiKeyRepository, pamAccessConnectorRepository, organization.Id);
+        await AssignAsync(pamAccessConnectorRepository, accessConnector.Id, target.Id, organization.Id, now);
+        var cipher = await CreateCipherAsync(cipherRepository, organization.Id);
+        var config = await pamRotationConfigRepository.CreateAsync(BuildConfig(organization.Id, cipher.Id, target.Id, now));
+
+        // No history at all reads as not failed, rather than as unknown.
+        var beforeJob = await pamRotationConfigRepository.GetDetailsByIdAsync(config.Id);
+        Assert.False(beforeJob!.LastJobFailed);
+
+        var job = BuildPendingJob(config.Id, now);
+        await pamRotationJobRepository.CreateGuardedAsync(job);
+
+        // A job still running is active, and not yet a failure.
+        var running = await pamRotationConfigRepository.GetDetailsByIdAsync(config.Id);
+        Assert.True(running!.HasActiveJob);
+        Assert.False(running.LastJobFailed);
+
+        var claim = await pamRotationJobRepository.ClaimAsync(
+            job.Id, accessConnector.Id, now, TimeSpan.FromMinutes(15));
+        await pamRotationJobRepository.MarkAttemptErroredAsync(
+            claim.AttemptId!.Value, accessConnector.Id, "target refused the credential",
+            PamRotationSyncState.TargetUnchanged, now, maxAttempts: 1, TimeSpan.FromMinutes(1));
+
+        var afterFailure = await pamRotationConfigRepository.GetDetailsByIdAsync(config.Id);
+        Assert.False(afterFailure!.HasActiveJob);
+        Assert.True(afterFailure.LastJobFailed);
+
+        // A newer job that succeeds supersedes the failure, since only the newest job counts.
+        var retry = BuildPendingJob(config.Id, now.AddMinutes(5));
+        await pamRotationJobRepository.CreateGuardedAsync(retry);
+        var retryClaim = await pamRotationJobRepository.ClaimAsync(
+            retry.Id, accessConnector.Id, now.AddMinutes(5), TimeSpan.FromMinutes(15));
+        await pamRotationJobRepository.AcceptCipherWriteAsync(
+            retryClaim.AttemptId!.Value, accessConnector.Id, "{\"rotated\":true}", cipher.RevisionDate,
+            now.AddMinutes(5));
+        await pamRotationJobRepository.MarkAttemptRotatedAsync(
+            retryClaim.AttemptId!.Value, accessConnector.Id, PamSessionTerminationOutcome.NotRequested,
+            now.AddMinutes(5));
+
+        var afterRetry = await pamRotationConfigRepository.GetDetailsByIdAsync(config.Id);
+        Assert.False(afterRetry!.LastJobFailed);
+    }
+
+    // A timeout is derived, so it only counts as failed once the sweep has journalled it - the same moment
+    // HasActiveJob releases the config.
+    [DatabaseTheory, DatabaseData]
+    public async Task GetDetailsByIdAsync_ProjectsLastJobFailed_OnceTimeoutIsSwept(
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        ICipherRepository cipherRepository,
+        IPamRotationConfigRepository pamRotationConfigRepository,
+        IPamRotationJobRepository pamRotationJobRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var target = await CreateAutomaticTargetAsync(pamTargetSystemRepository, organization.Id, now);
+        var cipher = await CreateCipherAsync(cipherRepository, organization.Id);
+        var config = await pamRotationConfigRepository.CreateAsync(BuildConfig(organization.Id, cipher.Id, target.Id, now));
+
+        var job = BuildPendingJob(config.Id, now);
+        await pamRotationJobRepository.CreateGuardedAsync(job);
+
+        // Past its expiry but unswept: still held active, so not yet reported as failed.
+        var pastExpiry = job.ExpirationDate.AddMinutes(1);
+        var beforeSweep = await pamRotationConfigRepository.GetDetailsByIdAsync(config.Id);
+        Assert.True(beforeSweep!.HasActiveJob);
+        Assert.False(beforeSweep.LastJobFailed);
+
+        await pamRotationJobRepository.TimeoutDueAsync(pastExpiry);
+
+        var afterSweep = await pamRotationConfigRepository.GetDetailsByIdAsync(config.Id);
+        Assert.False(afterSweep!.HasActiveJob);
+        Assert.True(afterSweep.LastJobFailed);
+    }
+
     private static async Task<PamTargetSystem> CreateAutomaticTargetAsync(
         IPamTargetSystemRepository pamTargetSystemRepository, Guid organizationId, DateTime now,
         PamTargetSystemStatus status = PamTargetSystemStatus.Active)
