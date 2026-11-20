@@ -139,8 +139,8 @@ public class AdminRecoverAccountCommand(
     }
 
     /// <summary>
-    /// Removes the user from every organization other than the recovering one. A membership is kept when removing
-    /// it would leave its organization without a confirmed owner, the same rule the remove command enforces.
+    /// Removes the user from every organization, following the same exceptions as
+    /// <see cref="IHasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync"/>.
     /// </summary>
     private async Task RemoveFromOtherOrganizationsAsync(Guid userId, Guid recoveringOrganizationId)
     {
