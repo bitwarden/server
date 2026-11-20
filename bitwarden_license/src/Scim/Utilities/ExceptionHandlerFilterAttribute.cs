@@ -26,6 +26,11 @@ public class ExceptionHandlerFilterAttribute : ExceptionFilterAttribute
         {
             statusCode = StatusCodes.Status404NotFound;
         }
+        else if (exception is ScimInvalidFilterException)
+        {
+            statusCode = StatusCodes.Status400BadRequest;
+            scimErrorResponseModel.ScimType = ScimErrorTypes.InvalidFilter;
+        }
         else if (exception is BadRequestException)
         {
             statusCode = StatusCodes.Status400BadRequest;
