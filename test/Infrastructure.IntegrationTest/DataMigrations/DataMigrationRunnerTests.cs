@@ -29,6 +29,21 @@ public class DataMigrationRunnerTests
     }
 
     [Theory, DatabaseData]
+    public async Task RunAsync_AsTheJob_ConvertsEveryPartitionOnceStarted(IServiceProvider services)
+    {
+        await using var table = await ScratchTable.CreateAsync(services, Values(10));
+        var migration = new SampleMigration(table, partitionCount: 3, maxParallelBatches: 3);
+        var runner = Runner(services, migration);
+        await runner.EnsurePartitionsAsync(migration.Name, Ct);
+        await Repository(services).ResumeAsync(migration.Name, Ct);
+
+        Assert.All(await runner.RunAsync(migration.Name, _job, Ct), r => Assert.Equal(PartitionRunStatus.Completed, r.Status));
+
+        Assert.All(await table.ReadAllAsync(), r => Assert.Equal(r.Value!.ToUpperInvariant(), r.Value));
+        Assert.Empty(await runner.RunAsync(migration.Name, _job, Ct));
+    }
+
+    [Theory, DatabaseData]
     public async Task RunToCompletionAsync_ConvertsEveryRowOnceAcrossPartitions(IServiceProvider services)
     {
         await using var table = await ScratchTable.CreateAsync(services, Values(10).Append("DONE").Append("ALSO"));
