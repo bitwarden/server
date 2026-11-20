@@ -7,8 +7,11 @@ using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.Models.Request;
 using Bit.Api.Models.Request.Organizations;
 using Bit.Api.Models.Response;
+using Bit.Api.Providers.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Models;
@@ -39,6 +42,7 @@ namespace Bit.Api.Billing.Controllers;
 public class OrganizationsController(
     IOrganizationRepository organizationRepository,
     IOrganizationUserRepository organizationUserRepository,
+    IProviderUserRepository providerUserRepository,
     IOrganizationService organizationService,
     IUserService userService,
     IStripePaymentService paymentService,
@@ -159,7 +163,7 @@ public class OrganizationsController(
 
     [HttpPost("{id}/sm-subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<ProfileOrganizationResponseModel> PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
+    public async Task<BaseProfileOrganizationResponseModel> PostSmSubscription(Guid id, [FromBody] SecretsManagerSubscriptionUpdateRequestModel model)
     {
         if (!await currentContext.EditSubscription(id))
         {
@@ -186,7 +190,7 @@ public class OrganizationsController(
 
     [HttpPost("{id:guid}/subscription")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<ProfileOrganizationResponseModel> PostSubscription(Guid id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
+    public async Task<BaseProfileOrganizationResponseModel> PostSubscription(Guid id, [FromBody] OrganizationSubscriptionUpdateRequestModel model)
     {
         if (!await currentContext.EditSubscription(id))
         {
@@ -202,7 +206,7 @@ public class OrganizationsController(
 
     [HttpPost("{id:guid}/subscribe-secrets-manager")]
     [SelfHosted(NotSelfHostedOnly = true)]
-    public async Task<ProfileOrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscribeRequestModel model)
+    public async Task<BaseProfileOrganizationResponseModel> PostSubscribeSecretsManagerAsync(Guid id, [FromBody] SecretsManagerSubscribeRequestModel model)
     {
         if (!await currentContext.EditSubscription(id))
         {
@@ -344,7 +348,10 @@ public class OrganizationsController(
         }
     }
 
-    private async Task<ProfileOrganizationResponseModel> GetProfileOrganizationResponseModelAsync(
+    /// <summary>
+    /// Builds the organization sync data for the caller, whether they are a member or a provider user.
+    /// </summary>
+    private async Task<BaseProfileOrganizationResponseModel> GetProfileOrganizationResponseModelAsync(
         Guid organizationId,
         Guid userId)
     {
@@ -353,9 +360,24 @@ public class OrganizationsController(
             organizationId,
             OrganizationUserStatusType.Confirmed);
 
-        var organizationIdsClaimingActiveUser = (await userService.GetOrganizationsClaimingUserAsync(userId))
-            .Select(o => o.Id);
+        if (organizationUserDetails != null)
+        {
+            var organizationIdsClaimingActiveUser = (await userService.GetOrganizationsClaimingUserAsync(userId))
+                .Select(o => o.Id);
 
-        return new ProfileOrganizationResponseModel(organizationUserDetails, organizationIdsClaimingActiveUser);
+            return new ProfileOrganizationResponseModel(organizationUserDetails, organizationIdsClaimingActiveUser);
+        }
+
+        var providerOrganizationDetails = (await providerUserRepository.GetManyOrganizationDetailsByUserAsync(
+                userId,
+                ProviderUserStatusType.Confirmed))
+            .FirstOrDefault(details => details.OrganizationId == organizationId);
+
+        if (providerOrganizationDetails == null)
+        {
+            throw new NotFoundException();
+        }
+
+        return new ProfileProviderOrganizationResponseModel(providerOrganizationDetails);
     }
 }
