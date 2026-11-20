@@ -1,6 +1,4 @@
-﻿using Bit.Core.Entities;
-using Bit.Core.Repositories;
-using Bit.Infrastructure.EntityFramework.Auth.Models;
+﻿using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.IntegrationTestCommon.Factories;
 using Microsoft.EntityFrameworkCore;
 
@@ -46,13 +44,5 @@ public static class RefreshTokenGrantTestHelpers
             .SingleAsync(g => g.SubjectId == userId.ToString() && g.Type == "refresh_token");
         grant.ExpirationDate = expirationDate;
         await databaseContext.SaveChangesAsync();
-    }
-
-    public static async Task UpdateUserAsync(IdentityApplicationFactory factory, Guid userId, Action<User> change)
-    {
-        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
-        var user = await userRepository.GetByIdAsync(userId);
-        change(user!);
-        await userRepository.ReplaceAsync(user!);
     }
 }

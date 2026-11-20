@@ -6,6 +6,7 @@ using static Bit.Identity.IntegrationTest.Helpers.AccessTokenAssertions;
 using static Bit.Identity.IntegrationTest.Helpers.PasswordGrantTestHelpers;
 using static Bit.Identity.IntegrationTest.Helpers.RefreshTokenGrantTestHelpers;
 using static Bit.Identity.IntegrationTest.Helpers.TokenResponseAssertions;
+using static Bit.Identity.IntegrationTest.Helpers.UserTestHelpers;
 
 #nullable enable
 
