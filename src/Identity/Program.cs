@@ -6,6 +6,8 @@ public class Program
 {
     public static void Main(string[] args)
     {
+        RegexDefaults.ConfigureDefaultMatchTimeout();
+
         CreateHostBuilder(args)
             .Build()
             .Run();
