@@ -2765,6 +2765,10 @@ public class CipherServiceTests
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Collection> { defaultCollection });
+        // The target collections are not default collections.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(targetCollectionIds)))
+            .Returns(new List<Collection>());
         // The acting user owns no default collections.
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByUserIdAsync(userId)
@@ -2828,6 +2832,68 @@ public class CipherServiceTests
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Collection> { foreignDefaultCollection, sharedCollection });
+        // The target collections are not default collections.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(targetCollectionIds)))
+            .Returns(new List<Collection>());
+
+        await sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateBulkCollectionAssignmentAsync_AddingToAnotherUsersDefaultCollection_ThrowsNotFound(
+        SutProvider<CipherService> sutProvider,
+        Guid userId,
+        Guid cipherId,
+        Collection foreignDefaultCollection)
+    {
+        foreignDefaultCollection.Type = CollectionType.DefaultUserCollection;
+        var targetCollectionIds = new[] { foreignDefaultCollection.Id };
+
+        // The requested (added) collection is another member's default collection.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new List<Collection> { foreignDefaultCollection });
+        // The acting user owns no default collections.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>());
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipherId }, userId));
+
+        // Rejected from the target collections alone, before any cipher is loaded.
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs().GetByIdAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateBulkCollectionAssignmentAsync_AddingToOwnDefaultCollection_DoesNotThrow(
+        SutProvider<CipherService> sutProvider,
+        Guid userId,
+        Cipher cipher,
+        Collection ownDefaultCollection)
+    {
+        cipher.OrganizationId = Guid.NewGuid();
+        ownDefaultCollection.Type = CollectionType.DefaultUserCollection;
+        var targetCollectionIds = new[] { ownDefaultCollection.Id };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipher.Id)
+            .Returns(cipher);
+        // The cipher is not in any collection yet.
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetCollectionIdsByCipherIdAsync(cipher.Id)
+            .Returns(new List<Guid>());
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(targetCollectionIds)))
+            .Returns(new List<Collection> { ownDefaultCollection });
+        // The acting user owns the requested default collection.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(userId)
+            .Returns(new List<CollectionDetails>
+            {
+                new() { Id = ownDefaultCollection.Id, Type = CollectionType.DefaultUserCollection }
+            });
 
         await sutProvider.Sut.ValidateBulkCollectionAssignmentAsync(targetCollectionIds, new[] { cipher.Id }, userId);
     }
@@ -3018,6 +3084,103 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICollectionCipherRepository>()
             .Received(1)
             .UpdateCollectionsForAdminAsync(cipher.Id, cipher.OrganizationId.Value, targetCollectionIds);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_AdminCreateInAnotherUsersDefaultCollection_ThrowsAndDoesNotCreate(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, Collection foreignDefaultCollection)
+    {
+        var collectionIds = ArrangeAdminCreate(sutProvider, cipher, foreignDefaultCollection, CollectionType.DefaultUserCollection);
+        // The saving user owns no default collections.
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(savingUserId)
+            .Returns(new List<CollectionDetails>());
+
+        var exception = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SaveAsync(
+            cipher, savingUserId, null, collectionIds, skipPermissionCheck: true, limitCollectionScope: false));
+
+        // A generic permission message, so the response reveals nothing about the collection.
+        Assert.Equal("You do not have permissions to edit this.", exception.Message);
+        await sutProvider.GetDependency<ICipherRepository>()
+            .DidNotReceiveWithAnyArgs().CreateAsync(default(Cipher)!, default(IEnumerable<Guid>)!);
+        await sutProvider.GetDependency<ICipherSyncPushService>()
+            .DidNotReceiveWithAnyArgs().PushSyncCipherCreateAsync(default!, default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_AdminCreateInOwnDefaultCollection_Creates(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, Collection ownDefaultCollection)
+    {
+        var collectionIds = ArrangeAdminCreate(sutProvider, cipher, ownDefaultCollection, CollectionType.DefaultUserCollection);
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(savingUserId)
+            .Returns(new List<CollectionDetails>
+            {
+                new() { Id = ownDefaultCollection.Id, Type = CollectionType.DefaultUserCollection }
+            });
+
+        await sutProvider.Sut.SaveAsync(
+            cipher, savingUserId, null, collectionIds, skipPermissionCheck: true, limitCollectionScope: false);
+
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(cipher, collectionIds);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_AdminCreateInSharedCollection_CreatesWithoutOwnershipLookup(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, Collection sharedCollection)
+    {
+        var collectionIds = ArrangeAdminCreate(sutProvider, cipher, sharedCollection, CollectionType.SharedCollection);
+
+        await sutProvider.Sut.SaveAsync(
+            cipher, savingUserId, null, collectionIds, skipPermissionCheck: true, limitCollectionScope: false);
+
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(cipher, collectionIds);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_AdminCreateWithDefaultCollectionFromAnotherOrganization_IgnoresIt(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, Collection otherOrgDefaultCollection)
+    {
+        var collectionIds = ArrangeAdminCreate(sutProvider, cipher, otherOrgDefaultCollection, CollectionType.DefaultUserCollection);
+        // Collections outside the organization are ignored so the error cannot reveal anything about another organization.
+        otherOrgDefaultCollection.OrganizationId = Guid.NewGuid();
+
+        await sutProvider.Sut.SaveAsync(
+            cipher, savingUserId, null, collectionIds, skipPermissionCheck: true, limitCollectionScope: false);
+
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(cipher, collectionIds);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SaveAsync_UserScopedCreate_DoesNotCheckDefaultCollections(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, Collection collection)
+    {
+        // The user-scoped create sproc already limits collections to those the user can access.
+        var collectionIds = ArrangeAdminCreate(sutProvider, cipher, collection, CollectionType.DefaultUserCollection);
+
+        await sutProvider.Sut.SaveAsync(cipher, savingUserId, null, collectionIds, skipPermissionCheck: true);
+
+        Assert.Equal(savingUserId, cipher.UserId);
+        await sutProvider.GetDependency<ICipherRepository>().Received(1).CreateAsync(cipher, collectionIds);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByManyIdsAsync(default!);
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+    }
+
+    private static List<Guid> ArrangeAdminCreate(
+        SutProvider<CipherService> sutProvider, Cipher cipher, Collection collection, CollectionType collectionType)
+    {
+        cipher.Id = default;
+        cipher.UserId = null;
+        cipher.OrganizationId = Guid.NewGuid();
+        collection.OrganizationId = cipher.OrganizationId.Value;
+        collection.Type = collectionType;
+        var collectionIds = new List<Guid> { collection.Id };
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByManyIdsAsync(collectionIds)
+            .Returns(new List<Collection> { collection });
+        return collectionIds;
     }
 
     private static void RefusesMutation(SutProvider<CipherService> sutProvider) =>
