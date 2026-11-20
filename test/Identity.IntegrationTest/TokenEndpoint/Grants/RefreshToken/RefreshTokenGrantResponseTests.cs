@@ -1,12 +1,8 @@
-﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
-using Bit.Core.Enums;
-using Bit.Core.Test.Auth.AutoFixture;
+﻿using Bit.Core.Enums;
 using Bit.IntegrationTestCommon.Factories;
-using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 using static Bit.Identity.IntegrationTest.Helpers.RefreshTokenGrantTestHelpers;
-using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
 using static Bit.Identity.IntegrationTest.Helpers.TokenResponseAssertions;
 
 #nullable enable
@@ -22,24 +18,13 @@ public class RefreshTokenGrantResponseTests
     /// <summary>
     /// A valid refresh token gets a new access token in the default token response.
     /// </summary>
-    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
-    public async Task RefreshToken_Success(RegisterFinishRequestModel requestModel)
+    [Fact]
+    public async Task RefreshToken_Success()
     {
-        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
-        var localFactory = new IdentityApplicationFactory();
+        using var factory = new IdentityApplicationFactory();
+        var (_, _, refreshToken) = await RegisterAndLoginAsync(factory);
 
-        await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
-
-        var (_, refreshToken) = await localFactory.TokenFromPasswordAsync(
-            requestModel.Email, requestModel.MasterPasswordHash!);
-
-        using var formContent = new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "grant_type", "refresh_token" },
-            { "client_id", "web" },
-            { "refresh_token", refreshToken },
-        });
-        var context = await localFactory.Server.PostAsync("/connect/token", formContent);
+        var context = await PostRefreshTokenAsync(factory, refreshToken);
 
         using var body = await AssertDefaultTokenBodyAsync(context);
         AssertRefreshTokenExists(body.RootElement);
@@ -50,7 +35,7 @@ public class RefreshTokenGrantResponseTests
     /// and decryption options, is not sent again.
     /// </summary>
     [Fact]
-    public async Task RefreshToken_ResponseHasOnlyTokenFields()
+    public async Task RefreshToken_ReturnsOnlyTokenFields()
     {
         using var factory = new IdentityApplicationFactory();
         var (_, _, refreshToken) = await RegisterAndLoginAsync(factory);
@@ -66,7 +51,7 @@ public class RefreshTokenGrantResponseTests
     /// Refresh tokens are reusable: a refresh returns the refresh token that the client sent, not a new one.
     /// </summary>
     [Fact]
-    public async Task RefreshToken_ReturnsTheSameRefreshToken()
+    public async Task RefreshToken_ReturnsSameRefreshToken()
     {
         using var factory = new IdentityApplicationFactory();
         var (_, _, refreshToken) = await RegisterAndLoginAsync(factory);
