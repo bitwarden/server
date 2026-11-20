@@ -21,7 +21,7 @@ namespace Bit.Api.IntegrationTest.Auth.Helpers;
 /// <c>TwoFactorController</c> integration-test classes. State-bound wrappers
 /// (<c>EnrollUserInDuo</c>, etc.) live in each test class and delegate here.
 /// </summary>
-internal static class TwoFactorIntegrationTestHelpers
+internal static class TwoFactorTestHelpers
 {
     public const string MasterPasswordHash = "master_password_hash";
     public const string AuthenticatorKey = "JBSWY3DPEHPK3PXP";

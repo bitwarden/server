@@ -8,11 +8,11 @@ using Bit.Core.Auth.Services;
 using Bit.Core.Repositories;
 using Bit.Core.Tokens;
 using Xunit;
-using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorIntegrationTestHelpers;
+using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorTestHelpers;
 
 namespace Bit.Api.IntegrationTest.Auth.TwoFactor;
 
-public class TwoFactorControllerYubiKeyTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class TwoFactorYubiKeyTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -22,7 +22,7 @@ public class TwoFactorControllerYubiKeyTests : IClassFixture<ApiApplicationFacto
 
     private string _userEmail = null!;
 
-    public TwoFactorControllerYubiKeyTests(ApiApplicationFactory factory)
+    public TwoFactorYubiKeyTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         SubstituteTwoFactorProviderServices(_factory);
