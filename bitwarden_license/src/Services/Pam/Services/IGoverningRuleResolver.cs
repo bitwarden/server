@@ -7,8 +7,9 @@ public interface IGoverningRuleResolver
 {
     /// <summary>
     /// Resolves the rule that governs <paramref name="cipherId"/> for the caller, or null unless every collection they
-    /// reach it through has an enabled rule. The oldest rule wins regardless of <paramref name="signals"/>; conditions
-    /// are returned unevaluated.
+    /// reach it through has an enabled rule. Of several, an automatic rule that admits <paramref name="signals"/> wins,
+    /// then a human-approval rule, then an automatic rule that denies, then an unreadable rule; the oldest wins within
+    /// each. Signals only choose among the rules, never whether one governs. The returned conditions are unevaluated.
     /// </summary>
     Task<GoverningRule?> ResolveAsync(Guid userId, Guid cipherId, AccessSignals signals);
 

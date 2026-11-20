@@ -4,6 +4,7 @@ using Bit.Commercial.Core.Billing.Providers.Services;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Constants;
@@ -35,13 +36,13 @@ public class BusinessUnitConverterTests
     private readonly GlobalSettings _globalSettings = new();
     private readonly ILogger<BusinessUnitConverter> _logger = Substitute.For<ILogger<BusinessUnitConverter>>();
     private readonly IMailService _mailService = Substitute.For<IMailService>();
-    private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
     private readonly IOrganizationUserRepository _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
     private readonly IProviderOrganizationRepository _providerOrganizationRepository = Substitute.For<IProviderOrganizationRepository>();
     private readonly IProviderPlanRepository _providerPlanRepository = Substitute.For<IProviderPlanRepository>();
     private readonly IProviderRepository _providerRepository = Substitute.For<IProviderRepository>();
     private readonly IProviderUserRepository _providerUserRepository = Substitute.For<IProviderUserRepository>();
+    private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand = Substitute.For<IReplaceOrganizationAndUpdateCacheCommand>();
     private readonly IStripeAdapter _stripeAdapter = Substitute.For<IStripeAdapter>();
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly IUserRepository _userRepository = Substitute.For<IUserRepository>();
@@ -51,13 +52,13 @@ public class BusinessUnitConverterTests
         _globalSettings,
         _logger,
         _mailService,
-        _organizationService,
         _organizationUserRepository,
         _pricingClient,
         _providerOrganizationRepository,
         _providerPlanRepository,
         _providerRepository,
         _providerUserRepository,
+        _replaceOrganizationAndUpdateCacheCommand,
         _stripeAdapter,
         _subscriberService,
         _userRepository);
@@ -157,7 +158,7 @@ public class BusinessUnitConverterTests
                 arguments.Items[1].Price == updatedPriceId &&
                 arguments.Items[1].Quantity == organization.Seats));
 
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(arguments =>
+        await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(Arg.Is<Organization>(arguments =>
             arguments.PlanType == PlanType.EnterpriseAnnually &&
             arguments.Status == OrganizationStatusType.Managed &&
             arguments.UseRiskInsights == enterpriseAnnually.HasRiskInsights &&

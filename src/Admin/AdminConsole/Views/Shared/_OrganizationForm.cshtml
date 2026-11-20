@@ -23,9 +23,8 @@
     var canManagePlanMigrationCohorts = AccessControlService.UserHasPermission(Permission.Tools_ManagePlanMigrationCohorts);
     var businessPlanPriceMigrationEnabled = FeatureService.IsEnabled(FeatureFlagKeys.PM35215_BusinessPlanPriceMigration);
     var canViewMigrationCohortAssignment = businessPlanPriceMigrationEnabled && canManagePlanMigrationCohorts;
-    var pamBillingSupportEnabled = FeatureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support);
-    var showPamCheckbox = !pamBillingSupportEnabled || Model.Provider == null;
-    var showPamConfiguration = pamBillingSupportEnabled && Model.Provider == null;
+    // Provider-managed organizations don't get the PAM section; the controller turns PAM off for them on save.
+    var showPam = Model.Provider == null;
 }
 
 <form method="post" id="edit-form" asp-route-providerId="@Model.Provider?.Id">
@@ -261,7 +260,7 @@
                             <label class="form-check-label" asp-for="UseRiskInsights"></label>
                         </div>
                     </div>
-                    @if (showPamCheckbox)
+                    @if (showPam)
                     {
                         <div class="col-6">
                             <h3>Privileged Access Management</h3>
@@ -269,7 +268,7 @@
                                 <input type="checkbox" class="form-check-input" asp-for="UsePam" disabled='@(canEditPlan ? null : "disabled")'>
                                 <label class="form-check-label" asp-for="UsePam"></label>
                             </div>
-                            @if (showPamConfiguration && !Model.UsePam && Model.PrivilegedControlsStripeSeats.HasValue)
+                            @if (!Model.UsePam && Model.PrivilegedControlsStripeSeats.HasValue)
                             {
                                 <div class="alert alert-warning mt-2"><strong>Privileged Access Management doesn't match Stripe.</strong> Privileged Access Management is off, but the Stripe subscription has a Privileged Access Management line for @Model.PrivilegedControlsStripeSeats seats.</div>
                             }
@@ -348,7 +347,7 @@
         </div>
     }
 
-    @if (canViewPlan && showPamConfiguration)
+    @if (canViewPlan && showPam)
     {
         <div id="organization-pam-configuration" hidden="@(!Model.UsePam)">
             <h2>Privileged Access Management Configuration</h2>
@@ -361,12 +360,6 @@
                     <div class="mb-3">
                         <label class="form-label" asp-for="PamSeats"></label>
                         <input type="number" class="form-control" asp-for="PamSeats" min="1" readonly='@(!canEditPlan)'>
-                    </div>
-                </div>
-                <div class="col-sm">
-                    <div class="mb-3">
-                        <label class="form-label" asp-for="MaxAutoscalePamSeats"></label>
-                        <input type="number" class="form-control" asp-for="MaxAutoscalePamSeats" min="1" readonly='@(!canEditPlan)'>
                     </div>
                 </div>
             </div>

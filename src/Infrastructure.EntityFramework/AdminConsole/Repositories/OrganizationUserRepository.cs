@@ -477,6 +477,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         Status = ou.Status,
                         Type = ou.Type,
                         ExternalId = ou.ExternalId,
+                        ExternalName = ou.ExternalName,
                         SsoExternalId = ou.User.SsoUsers
                             .Where(su => su.OrganizationId == ou.OrganizationId)
                             .Select(su => su.ExternalId)
@@ -898,12 +899,14 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
     {
         // EF Core cannot use the WITH (UPDLOCK, READPAST) hints of the MSSQL procedure. Thus, claim 1 member at a time.
         // The update changes the row only if the row did not change after the read.
-        // A member is claimed only when the update changes 1 row. Thus, 2 claims never get the same member.
+        // A member is claimed only when the update changes 1 row. Thus, 2 claims never get the same member for the same due date.
+        // Skip members this call already claimed. When the next due date is now, they still match the read.
         using var scope = ServiceScopeFactory.CreateScope();
 
         var dbContext = GetDatabaseContext(scope);
 
         var claimed = new List<OrganizationUserInviteReminder>();
+        var claimedIds = new List<Guid>();
         var consecutiveMisses = 0;
         while (claimed.Count < batchSize && consecutiveMisses < MaxConsecutiveInviteReminderClaimMisses)
         {
@@ -916,7 +919,8 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                           ou.InviteReminderDueDate <= now &&
                           ou.InviteReminderDueDate >= oldestDueDate &&
                           ou.InviteRemindersSentCount < MaxInviteReminders &&
-                          o.Enabled
+                          o.Enabled &&
+                          !claimedIds.Contains(ou.Id)
                     orderby ou.InviteReminderDueDate
                     select new
                     {
@@ -955,6 +959,7 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
 
             consecutiveMisses = 0;
 
+            claimedIds.Add(candidate.Id);
             claimed.Add(new OrganizationUserInviteReminder
             {
                 Id = candidate.Id,

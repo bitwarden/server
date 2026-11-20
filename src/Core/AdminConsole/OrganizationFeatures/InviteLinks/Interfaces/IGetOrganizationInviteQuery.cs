@@ -3,12 +3,13 @@
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 
 /// <summary>
-/// Retrieves the opaque invite for an invite link after validating that the user is eligible to use it.
+/// Retrieves the opaque invite for an invite link after validating that the user is eligible to use it. Failures are
+/// returned as coded <see cref="InviteLinkValidationError"/>s.
 /// </summary>
 /// <remarks>
 /// Eligibility is validated by <see cref="IGetOrganizationInviteValidator"/>.
 /// </remarks>
 public interface IGetOrganizationInviteQuery
 {
-    Task<CommandResult<string>> GetInviteAsync(GetOrganizationInviteRequest request);
+    Task<Result<string, InviteLinkValidationError>> GetInviteAsync(GetOrganizationInviteRequest request);
 }

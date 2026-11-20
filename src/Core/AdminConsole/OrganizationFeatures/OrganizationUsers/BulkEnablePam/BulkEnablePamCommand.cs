@@ -2,17 +2,16 @@
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
-using Bit.Core.Billing.Organizations.Queries;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Helpers;
 using Bit.Core.Repositories;
-using Bit.Core.Settings;
 using OneOf.Types;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.BulkEnablePam;
 
 public class BulkEnablePamCommand(
     IOrganizationUserRepository organizationUserRepository,
-    ICountNewPamSeatsRequiredQuery countNewPamSeatsRequiredQuery,
-    IGlobalSettings globalSettings) : IBulkEnablePamCommand
+    IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand) : IBulkEnablePamCommand
 {
     public async Task<CommandResult> BulkEnablePamAsync(Organization organization, IEnumerable<Guid> organizationUserIds)
     {
@@ -31,11 +30,12 @@ public class BulkEnablePamCommand(
             return new PamNotEnabled();
         }
 
-        var additionalPamSeatsRequired =
-            await countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, organizationUsers.Count);
-        if (additionalPamSeatsRequired > 0 && globalSettings.SelfHosted)
+        var privilegedControlsSeatsRequested =
+            organizationUsers.Count(u => PrivilegedControlsSeatOccupancy.OccupiesSeat(u.Status));
+        var reservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, privilegedControlsSeatsRequested);
+        if (!reservation.Success)
         {
-            return new CannotAutoscalePamSeatsOnSelfHost();
+            return reservation.Error!;
         }
 
         foreach (var organizationUser in organizationUsers)

@@ -20,14 +20,14 @@
       <mj-section background-color="#fff" padding="10px 10px 16px 10px">
         <mj-column>
           <mj-text
-            css-class="ac-text"
+            mj-class="ac-text"
             padding="15px 15px 0px 15px"
           >
             It looks like you haven't joined the <b>{{OrganizationName}}</b> vault
             on Bitwarden yet.
           </mj-text>
           <mj-text
-            css-class="ac-text"
+            mj-class="ac-text"
             padding="15px 15px 0px 15px"
           >
             Accepting your invite gives you secure, encrypted access to the
@@ -35,7 +35,7 @@
             get to work without delay.
           </mj-text>
           <mj-text
-            css-class="ac-text"
+            mj-class="ac-text"
             padding="15px 15px 0px 15px"
           >
             If you have questions about this invite, reach out to your admin

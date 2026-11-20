@@ -134,7 +134,10 @@ public class Saml2Rsa15DeprecationNoticeCommand(
         await mailer.SendEmail(new Saml2Rsa15DeprecationMail
         {
             ToEmails = emails,
-            View = new Saml2Rsa15DeprecationMailView()
+            View = new Saml2Rsa15DeprecationMailView
+            {
+                DeprecationDate = globalSettings.Sso.Rsa15DeprecationDate
+            }
         });
     }
 }

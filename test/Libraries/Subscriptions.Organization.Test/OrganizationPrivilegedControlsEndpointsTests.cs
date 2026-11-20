@@ -1,6 +1,5 @@
 ﻿using Bit.Core;
 using Bit.Core.Auth.Identity;
-using Bit.Invoicing;
 using Bit.OrganizationAuthorization;
 using Bit.Subscriptions.Organization.Requirements;
 using Bitwarden.Server.Sdk.Features;
@@ -35,7 +34,7 @@ public class OrganizationPrivilegedControlsEndpointsTests
     }
 
     [Fact]
-    public void MapOrganizationPrivilegedControlsEndpoints_GatesOnPamBillingFlagAndNotPreviewDrivenCart()
+    public void MapOrganizationPrivilegedControlsEndpoints_GatesOnPamBillingFlag()
     {
         var app = WebApplication.CreateBuilder().Build();
 
@@ -53,7 +52,6 @@ public class OrganizationPrivilegedControlsEndpointsTests
         Assert.All(featureChecks, metadata => Assert.True(metadata.FeatureCheck(featureService)));
 
         featureService.Received().IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support, Arg.Any<bool>());
-        featureService.DidNotReceive().IsEnabled(InvoicingFeatureFlags.PM36631_PreviewDrivenCart, Arg.Any<bool>());
     }
 
     [Fact]

@@ -57,6 +57,7 @@ public class CiphersController : Controller
     private readonly IArchiveCiphersCommand _archiveCiphersCommand;
     private readonly IUnarchiveCiphersCommand _unarchiveCiphersCommand;
     private readonly ICipherLeaseGate _cipherLeaseGate;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IAuthorizationService _authorizationService;
 
     public CiphersController(
@@ -74,7 +75,8 @@ public class CiphersController : Controller
         IArchiveCiphersCommand archiveCiphersCommand,
         IUnarchiveCiphersCommand unarchiveCiphersCommand,
         ICipherLeaseGate cipherLeaseGate,
-        IAuthorizationService authorizationService)
+        IAuthorizationService authorizationService,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _cipherRepository = cipherRepository;
         _collectionCipherRepository = collectionCipherRepository;
@@ -91,6 +93,7 @@ public class CiphersController : Controller
         _unarchiveCiphersCommand = unarchiveCiphersCommand;
         _cipherLeaseGate = cipherLeaseGate;
         _authorizationService = authorizationService;
+        _featureService = featureService;
     }
 
     /// <summary>
@@ -98,7 +101,10 @@ public class CiphersController : Controller
     /// cipher is withheld entirely rather than sent partial — see <see cref="PartialCipherSupport"/>.
     /// </summary>
     private bool ClientSupportsPartialCiphers =>
-        PartialCipherSupport.IsSupportedBy(_currentContext.DeviceType);
+        PartialCipherSupport.IsSupportedBy(
+            _currentContext.DeviceType,
+            _currentContext.ClientVersion,
+            _featureService.IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers));
 
     /// <summary>
     /// Resolves single-cipher read access under credential leasing. Returns null when the caller gets the
@@ -151,7 +157,7 @@ public class CiphersController : Controller
     /// </remarks>
     private async Task<FullCipherAccess> AuthorizeWriteReturnOrThrowAsync(Guid userId, Cipher cipher)
     {
-        var access = await _cipherLeaseGate.AuthorizeWriteReturnAsync(userId, cipher);
+        var access = await _cipherLeaseGate.AuthorizeIgnoringLeaseAsync(userId, cipher);
         if (access is null && !ClientSupportsPartialCiphers)
         {
             throw new NotFoundException();
@@ -167,7 +173,7 @@ public class CiphersController : Controller
     private async Task<FullCipherAccess> AuthorizeAdminWriteReturnOrThrowAsync(
         Guid userId, Guid organizationId, Cipher cipher)
     {
-        var access = await _cipherLeaseGate.AuthorizeAdminWriteReturnAsync(userId, organizationId, cipher);
+        var access = await _cipherLeaseGate.AuthorizeAdminIgnoringLeaseAsync(userId, organizationId, cipher);
         if (access is null && !ClientSupportsPartialCiphers)
         {
             throw new NotFoundException();
@@ -320,9 +326,9 @@ public class CiphersController : Controller
         // The bulk witness authorizes only the ciphers that are not leasing-gated: lease state is
         // deliberately not consulted here, so a gated cipher yields the partial shape on a list read even
         // when the caller holds a valid lease. Secrets are only released through the single-cipher GET
-        // above. The self-loading overload is used deliberately so nothing extra is queried while the
-        // flag is off.
-        var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, ciphers);
+        // above. The mappings loaded above are reused; the gate loads the caller's collections only when
+        // one of these ciphers can be gated.
+        var fullAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, ciphers, collectionCiphersGroupDict);
         var responses = VisibleToClient(ciphers, fullAccess)
             .Select(cipher => CipherDetailsResponseModel.From(
                 fullAccess, cipher, user, GetOrganizationAbility(cipher, organizationAbilities), _globalSettings,
@@ -1066,7 +1072,7 @@ public class CiphersController : Controller
 
         // This writes straight to the repository, so the service-level gate does not cover it. A caller who can
         // edit every cipher also reaches unassigned ones, so takes the "/admin" decision.
-        var ciphers = model.CipherIds.Select(id => new Cipher { Id = id });
+        var ciphers = model.CipherIds.Select(id => new Cipher { Id = id, OrganizationId = model.OrganizationId });
         if (await CanEditAllCiphersAsync(model.OrganizationId))
         {
             await _cipherLeaseGate.EnsureCanMutateManyAsAdminAsync(userId, model.OrganizationId, ciphers);

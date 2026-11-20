@@ -1,6 +1,7 @@
 ﻿using Bit.Admin.Auth.Models.SalesAssistedTrial;
 using Bit.Admin.Enums;
 using Bit.Admin.Utilities;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.TrialInitiation.Registration;
 using Bit.Core.Exceptions;
@@ -36,7 +37,7 @@ public class SalesAssistedTrialController(
         {
             ProductTier = ProductTierType.Enterprise,
             Products = [ProductType.PasswordManager],
-            TrialLength = 30
+            TrialLength = TrialInitiationConstants.DefaultTrialLengthDays
         });
     }
 

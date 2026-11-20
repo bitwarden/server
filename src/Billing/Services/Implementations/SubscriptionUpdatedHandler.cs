@@ -31,6 +31,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     private readonly IStripeEventService _stripeEventService;
     private readonly IStripeEventUtilityService _stripeEventUtilityService;
     private readonly IOrganizationService _organizationService;
+    private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand;
     private readonly IStripeAdapter _stripeAdapter;
     private readonly IOrganizationSponsorshipRenewCommand _organizationSponsorshipRenewCommand;
     private readonly IUserService _userService;
@@ -52,6 +53,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         IStripeEventService stripeEventService,
         IStripeEventUtilityService stripeEventUtilityService,
         IOrganizationService organizationService,
+        IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
         IStripeAdapter stripeAdapter,
         IOrganizationSponsorshipRenewCommand organizationSponsorshipRenewCommand,
         IUserService userService,
@@ -72,6 +74,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         _stripeEventService = stripeEventService;
         _stripeEventUtilityService = stripeEventUtilityService;
         _organizationService = organizationService;
+        _replaceOrganizationAndUpdateCacheCommand = replaceOrganizationAndUpdateCacheCommand;
         _providerService = providerService;
         _stripeAdapter = stripeAdapter;
         _organizationSponsorshipRenewCommand = organizationSponsorshipRenewCommand;
@@ -445,8 +448,9 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
     {
         try
         {
-            // Only act on schedule-managed subscriptions (schedule transitions set ScheduleId)
-            if (subscription.ScheduleId == null)
+            // Only act on schedule-managed subscriptions (the event's copy still carries the schedule
+            // even when the schedule has released by the time the event is processed)
+            if (!HadScheduleWhenEventFired(parsedEvent))
             {
                 return;
             }
@@ -497,7 +501,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             organization.UsersGetPremium = familiesPlan.UsersGetPremium;
             organization.Seats = familiesPlan.PasswordManager.BaseSeats;
 
-            await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+            await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
 
             _logger.LogInformation(
                 "Updated organization ({OrganizationId}) to FamiliesAnnually plan after schedule transition",
@@ -520,6 +524,14 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         }
     }
 
+    /// <summary>
+    /// The event's copy of the subscription is frozen when the price changed, so it still shows the
+    /// schedule when the event is processed after the schedule released (late delivery or a Stripe
+    /// retry). A fresh fetch of the subscription would not.
+    /// </summary>
+    private static bool HadScheduleWhenEventFired(Event parsedEvent) =>
+        parsedEvent.Data.Object is Subscription { ScheduleId: not null };
+
     private async Task HandleScheduleTriggeredBusinessMigrationAsync(
         Event parsedEvent,
         Subscription subscription,
@@ -532,7 +544,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 return;
             }
 
-            if (subscription.ScheduleId == null)
+            if (!HadScheduleWhenEventFired(parsedEvent))
             {
                 return;
             }
@@ -647,7 +659,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
                 organization.Seats = (int)Math.Max(Math.Max(1L, billedSeatQuantity), (long)(organization.SmSeats ?? 0));
             }
 
-            await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+            await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
 
             var sourceProvidedServiceAccounts = sourcePlan.SecretsManager?.BaseServiceAccount ?? 0;
             var targetProvidedServiceAccounts = targetPlan.SecretsManager?.BaseServiceAccount ?? 0;
@@ -746,7 +758,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
         // is annual, ResolveAnnualLatestPlanType returns null and the handler returns early.
         try
         {
-            if (subscription.ScheduleId == null)
+            if (!HadScheduleWhenEventFired(parsedEvent))
             {
                 return;
             }
@@ -787,7 +799,7 @@ public class SubscriptionUpdatedHandler : ISubscriptionUpdatedHandler
             }
 
             organization.ChangePlan(targetPlan);
-            await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+            await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
 
             _logger.LogInformation(
                 "Schedule-triggered annual upgrade applied for organization ({OrganizationId}): PlanType {SourcePlanType} -> {TargetPlanType}",

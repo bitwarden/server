@@ -29,6 +29,7 @@ public class SendInviteRemindersCommand(
     IOrgUserInviteTokenableFactory orgUserInviteTokenableFactory,
     IDataProtectorTokenFactory<OrgUserInviteTokenable> dataProtectorTokenFactory,
     IMailService mailService,
+    IEventService eventService,
     ILogger<SendInviteRemindersCommand> logger) : ISendInviteRemindersCommand
 {
     public async Task<SendInviteRemindersResult> SendInviteRemindersAsync()
@@ -51,7 +52,7 @@ public class SendInviteRemindersCommand(
         var claimed = await organizationUserRepository.ClaimInviteReminderSequencesAsync(
             now,
             now.AddDays(-InviteReminderConstants.MaxLatenessDays),
-            now.AddDays(InviteReminderConstants.ReminderIntervalDays),
+            now.AddHours(InviteReminderSchedule.GetIntervalHours(globalSettings, logger)),
             batchSize);
         if (claimed.Count == 0)
         {
@@ -93,7 +94,36 @@ public class SendInviteRemindersCommand(
             }
         }
 
+        await LogReminderEventsAsync(sentMembers, now);
+
         return new SendInviteRemindersResult(claimed.Count, claimed.Count - sentMembers.Count, sentMembers);
+    }
+
+    /// <summary>
+    /// Writes 1 reminder event for each member who got their email, in 1 bulk call. The emails are already
+    /// sent, so a failure here is logged instead of thrown.
+    /// </summary>
+    private async Task LogReminderEventsAsync(List<OrganizationUserInviteReminder> sentMembers, DateTime now)
+    {
+        if (sentMembers.Count == 0)
+        {
+            return;
+        }
+
+        try
+        {
+            // Invited members are not linked to a user yet, so the ID and organization ID are enough.
+            await eventService.LogOrganizationUserEventsAsync(sentMembers.Select(m => (
+                new OrganizationUser { Id = m.Id, OrganizationId = m.OrganizationId },
+                EventType.OrganizationUser_InviteReminderSent,
+                EventSystemUser.ScheduledJob,
+                (DateTime?)now)));
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Invite reminder events could not be written for {MemberCount} members",
+                sentMembers.Count);
+        }
     }
 
     private int GetBatchSize()

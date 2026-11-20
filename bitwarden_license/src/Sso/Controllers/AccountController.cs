@@ -12,6 +12,9 @@ using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Auth.Models.Data;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Registration;
+using Bit.Core.Billing.Organizations;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Api;
@@ -59,6 +62,8 @@ public class AccountController : Controller
     private readonly IOrganizationDomainRepository _organizationDomainRepository;
     private readonly IRegisterUserCommand _registerUserCommand;
     private readonly ISendOrganizationInvitesCommand _sendOrganizationInvitesCommand;
+    private readonly IReservePrivilegedControlsSeatsCommand _reservePrivilegedControlsSeatsCommand;
+    private readonly ISendPrivilegedControlsSeatNeededEmailCommand _sendPrivilegedControlsSeatNeededEmailCommand;
 
     public AccountController(
         IAuthenticationSchemeProvider schemeProvider,
@@ -80,7 +85,9 @@ public class AccountController : Controller
         IDataProtectorTokenFactory<SsoTokenable> dataProtector,
         IOrganizationDomainRepository organizationDomainRepository,
         IRegisterUserCommand registerUserCommand,
-        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand)
+        ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
+        IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
+        ISendPrivilegedControlsSeatNeededEmailCommand sendPrivilegedControlsSeatNeededEmailCommand)
     {
         _schemeProvider = schemeProvider;
         _clientStore = clientStore;
@@ -102,6 +109,8 @@ public class AccountController : Controller
         _organizationDomainRepository = organizationDomainRepository;
         _registerUserCommand = registerUserCommand;
         _sendOrganizationInvitesCommand = sendOrganizationInvitesCommand;
+        _reservePrivilegedControlsSeatsCommand = reservePrivilegedControlsSeatsCommand;
+        _sendPrivilegedControlsSeatNeededEmailCommand = sendPrivilegedControlsSeatNeededEmailCommand;
     }
 
     [HttpGet]
@@ -693,10 +702,20 @@ public class AccountController : Controller
         // won't complete. Staged rows aren't seat-counted; a Staged→Invited promotion
         // consumes a seat and must gate here alongside the fresh-JIT case.
         var willPromoteStagedOrgUser = possibleOrgUser?.Status == OrganizationUserStatusType.Staged;
+        PrivilegedControlsSeatReservationResult? privilegedControlsSeatReservation = null;
 
         if (possibleOrgUser == null || willPromoteStagedOrgUser)
         {
             await EnsureSeatAvailableAsync(organization);
+
+            if (possibleOrgUser is { Status: OrganizationUserStatusType.Staged, AccessPam: true })
+            {
+                privilegedControlsSeatReservation = await _reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
+                if (!privilegedControlsSeatReservation.Success)
+                {
+                    possibleOrgUser.AccessPam = false;
+                }
+            }
         }
 
         // If the email domain is verified, we can mark the email as verified
@@ -772,13 +791,21 @@ public class AccountController : Controller
 
             if (possibleOrgUser.Status == OrganizationUserStatusType.Staged)
             {
-                // Seat availability was verified up-front before user creation so safe to consume this seat.
+                // The Password Manager member seat was checked up front, before user creation, so it is safe to
+                // consume it here. If the Privileged Controls seat reservation failed, AccessPam was set to false on
+                // possibleOrgUser in memory, and the ReplaceAsync below saves that change.
                 possibleOrgUser.Status = OrganizationUserStatusType.Invited;
             }
 
             possibleOrgUser.UserId = newUser.Id;
             possibleOrgUser.RevisionDate = DateTime.UtcNow;
             await _organizationUserRepository.ReplaceAsync(possibleOrgUser);
+
+            if (privilegedControlsSeatReservation?.Error is PrivilegedControlsSeatLimitReachedError)
+            {
+                await _sendPrivilegedControlsSeatNeededEmailCommand.RunAsync(
+                    organization, possibleOrgUser.Email ?? newUser.Email);
+            }
         }
 
         // Create the SsoUser record to link the user to the SSO provider.
@@ -851,6 +878,17 @@ public class AccountController : Controller
 
         var previousStatus = orgUser.Status;
         var previousRevisionDate = orgUser.RevisionDate;
+        var previousAccessPam = orgUser.AccessPam;
+
+        PrivilegedControlsSeatReservationResult? privilegedControlsSeatReservation = null;
+        if (orgUser.AccessPam)
+        {
+            privilegedControlsSeatReservation = await _reservePrivilegedControlsSeatsCommand.RunAsync(organization, 1);
+            if (!privilegedControlsSeatReservation.Success)
+            {
+                orgUser.AccessPam = false;
+            }
+        }
 
         orgUser.Status = OrganizationUserStatusType.Invited;
         orgUser.RevisionDate = DateTime.UtcNow;
@@ -873,9 +911,15 @@ public class AccountController : Controller
 
             orgUser.Status = previousStatus;
             orgUser.RevisionDate = previousRevisionDate;
+            orgUser.AccessPam = previousAccessPam;
             await _organizationUserRepository.ReplaceAsync(orgUser);
 
             throw;
+        }
+
+        if (privilegedControlsSeatReservation?.Error is PrivilegedControlsSeatLimitReachedError)
+        {
+            await _sendPrivilegedControlsSeatNeededEmailCommand.RunAsync(organization, orgUser.Email!);
         }
     }
 

@@ -10,6 +10,7 @@ namespace Bit.Core.Settings;
 public class GlobalSettings : IGlobalSettings
 {
     public const int DefaultOrganizationInviteReminderBatchSize = 500;
+    public const int DefaultOrganizationInviteReminderIntervalHours = 120; // 5 days
 
     private string _mailTemplateDirectory;
     private string _licenseDirectory;
@@ -56,6 +57,11 @@ public class GlobalSettings : IGlobalSettings
     /// </summary>
     public virtual int OrganizationInviteExpirationHours { get; set; } = 120; // 5 days
     public virtual int OrganizationInviteReminderBatchSize { get; set; } = DefaultOrganizationInviteReminderBatchSize; // Set to 0 to turn off invite reminders
+    /// <summary>
+    /// Hours from the invite to the first reminder, and between each later reminder.
+    /// 0 sends each reminder on the next job run. Negative values use the default.
+    /// </summary>
+    public virtual int OrganizationInviteReminderIntervalHours { get; set; } = DefaultOrganizationInviteReminderIntervalHours;
     /// <summary>
     /// Lifetime of emergency access invite links, in hours.
     /// </summary>
@@ -786,6 +792,8 @@ public class GlobalSettings : IGlobalSettings
 
     public class SsoSettings : ISsoSettings
     {
+        private string _rsa15DeprecationDate;
+
         public int CacheLifetimeInSeconds { get; set; } = 60;
         public double SsoTokenLifetimeInSeconds { get; set; } = 5;
         public bool EnforceSsoPolicyForAllUsers { get; set; }
@@ -794,6 +802,15 @@ public class GlobalSettings : IGlobalSettings
         /// The default is 7. A value of 0 or less turns the email off.
         /// </summary>
         public int Rsa15DeprecationEmailCooldownInDays { get; set; } = 7;
+        /// <summary>
+        /// Date shown in the RSA 1.5 deprecation email, as display text.
+        /// The default is "January 19, 2027". An empty or whitespace value uses the default.
+        /// </summary>
+        public string Rsa15DeprecationDate
+        {
+            get => string.IsNullOrWhiteSpace(_rsa15DeprecationDate) ? "January 19, 2027" : _rsa15DeprecationDate;
+            set => _rsa15DeprecationDate = value;
+        }
     }
 
     public class StripeSettings

@@ -12,6 +12,7 @@ namespace Bit.Core.Test.Auth.Sso;
 
 public class Saml2Rsa15DeprecationMailTests
 {
+    private const string _deprecationDate = "March 3, 2030";
     private const string _expectedSubject = "Security alert: Update your identity provider's single sign-on encryption method";
 
     private static async Task<(MailMessage? Sent, Saml2Rsa15DeprecationMail Mail)> SendAsync(string[] toEmails)
@@ -26,7 +27,7 @@ public class Saml2Rsa15DeprecationMailTests
         var mail = new Saml2Rsa15DeprecationMail
         {
             ToEmails = toEmails,
-            View = new Saml2Rsa15DeprecationMailView()
+            View = new Saml2Rsa15DeprecationMailView { DeprecationDate = _deprecationDate }
         };
 
         MailMessage? sentMessage = null;
@@ -50,7 +51,7 @@ public class Saml2Rsa15DeprecationMailTests
 
         foreach (var content in new[] { sentMessage.HtmlContent, sentMessage.TextContent })
         {
-            Assert.Contains("December 1, 2026", content);
+            Assert.Contains(_deprecationDate, content);
             Assert.Contains("RSAES-PKCS1 v1.5", content);
             Assert.Contains("https://bitwarden.com/help/RSAES-PKCS1/", content);
             Assert.DoesNotContain("{{", content);

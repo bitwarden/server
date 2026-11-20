@@ -23,6 +23,7 @@ public class CipherAccessStateResponseModel : ResponseModel
         ApprovedRequest = state.ApprovedRequest is null ? null : new AccessRequestDetailsResponseModel(state.ApprovedRequest);
         ExtensionsAllowed = state.ExtensionsAllowed;
         MaxExtensionDurationSeconds = state.MaxExtensionDurationSeconds;
+        CanRequest = state.CanRequest;
     }
 
     public Guid CipherId { get; set; }
@@ -45,4 +46,10 @@ public class CipherAccessStateResponseModel : ResponseModel
     /// not allow extensions.
     /// </summary>
     public int? MaxExtensionDurationSeconds { get; set; }
+
+    /// <summary>
+    /// False when no lease or request is in play and the rule's conditions would refuse a new request now, for example
+    /// outside its IP allowlist. Submit would fail the same way. Absent means true.
+    /// </summary>
+    public bool CanRequest { get; set; } = true;
 }

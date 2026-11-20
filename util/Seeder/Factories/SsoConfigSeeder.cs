@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
+using Bit.Seeder.Data.Static;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
 namespace Bit.Seeder.Factories;
 
@@ -40,4 +42,43 @@ internal static class SsoConfigSeeder
 
         return ssoConfig;
     }
+
+    internal static SsoConfig CreateOidc(
+        Guid organizationId,
+        string authority,
+        string clientId,
+        string clientSecret,
+        string? metadataAddress = null,
+        OpenIdConnectRedirectBehavior redirectBehavior = OpenIdConnectRedirectBehavior.RedirectGet,
+        bool getClaimsFromUserInfoEndpoint = true,
+        MemberDecryptionType memberDecryptionType = MemberDecryptionType.MasterPassword)
+    {
+        var data = new SsoConfigurationData
+        {
+            ConfigType = SsoType.OpenIdConnect,
+            MemberDecryptionType = memberDecryptionType,
+            Authority = authority,
+            ClientId = clientId,
+            ClientSecret = clientSecret,
+            MetadataAddress = metadataAddress,
+            RedirectBehavior = redirectBehavior,
+            GetClaimsFromUserInfoEndpoint = getClaimsFromUserInfoEndpoint,
+        };
+
+        var ssoConfig = new SsoConfig
+        {
+            OrganizationId = organizationId,
+            Enabled = true,
+        };
+        ssoConfig.SetData(data);
+
+        return ssoConfig;
+    }
+
+    internal static SsoConfig CreateLocalSaml(
+        Guid organizationId,
+        string idpX509PublicCert,
+        MemberDecryptionType memberDecryptionType = MemberDecryptionType.MasterPassword) =>
+        Create(organizationId, LocalSamlIdp.EntityId, LocalSamlIdp.SingleSignOnServiceUrl, idpX509PublicCert,
+            memberDecryptionType);
 }

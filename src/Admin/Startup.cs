@@ -4,6 +4,7 @@ using Bit.Core.Context;
 using Bit.Core.Settings;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
+using Bit.Subscriptions.Organization;
 using Microsoft.AspNetCore.Identity;
 using Stripe;
 using Microsoft.AspNetCore.Mvc;
@@ -98,6 +99,7 @@ public class Startup
         services.AddScoped<IAccessControlService, AccessControlService>();
         services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
+        services.AddPrivilegedControlsSeatAutoscaling();
         services.AddHttpClient();
         services.AddHttpClient(HomeController.ExternalHttpClientName).AddSsrfProtection();
 

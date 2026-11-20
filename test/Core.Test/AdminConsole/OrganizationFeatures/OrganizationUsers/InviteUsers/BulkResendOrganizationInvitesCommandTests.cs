@@ -5,6 +5,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
+using Bit.Core.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using NSubstitute;
@@ -52,6 +53,11 @@ public class BulkResendOrganizationInvitesCommandTests
                 req.Organization == organization &&
                 req.Users.Length == 2 &&
                 req.InitOrganization == false));
+        await sutProvider.GetDependency<IEventService>()
+            .Received(1)
+            .LogOrganizationUserEventsAsync(Arg.Is<IEnumerable<(OrganizationUser, EventType, DateTime?)>>(events =>
+                events.Select(e => e.Item1.Id).SequenceEqual(new[] { validUser1.Id, validUser2.Id }) &&
+                events.All(e => e.Item2 == EventType.OrganizationUser_Reinvited)));
     }
 
     [Theory]
@@ -77,6 +83,8 @@ public class BulkResendOrganizationInvitesCommandTests
         Assert.All(result, r => Assert.Equal("User invalid.", r.Item2));
         await sutProvider.GetDependency<ISendOrganizationInvitesCommand>().DidNotReceive()
             .SendInvitesAsync(Arg.Any<SendInvitesRequest>());
+        await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
+            .LogOrganizationUserEventsAsync(default(IEnumerable<(OrganizationUser, EventType, DateTime?)>)!);
     }
 
     [Theory]

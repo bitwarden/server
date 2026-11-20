@@ -116,6 +116,27 @@ public class GetOrganizationRestartQueryTests
     }
 
     [Fact]
+    public async Task Run_WithPrivilegedControls_MapsPrivilegedControlsSeatItem()
+    {
+        var organization = new Organization { PlanType = PlanType.EnterpriseAnnually };
+        var plan = MockPlans.Get(PlanType.EnterpriseAnnually);
+        _pricingClient.ListPlans().Returns([plan]);
+
+        var restart = await _query.Run(organization, CanceledSubscription(
+            (plan.PasswordManager.StripeSeatPlanId, 10),
+            (plan.SecretsManager.StripeSeatPlanId, 4),
+            (plan.PrivilegedControls.StripeSeatPlanId, 3)));
+
+        Assert.Equal(
+            [
+                new OrganizationRestartItem(plan.PasswordManager.StripeSeatPlanId, 10),
+                new OrganizationRestartItem(plan.SecretsManager.StripeSeatPlanId, 4),
+                new OrganizationRestartItem(plan.PrivilegedControls.StripeSeatPlanId, 3)
+            ],
+            restart.Items);
+    }
+
+    [Fact]
     public async Task Run_DisabledPlan_ReturnsEnabledReplacementWithRemappedPrices()
     {
         var organization = new Organization { PlanType = PlanType.TeamsAnnually2020 };

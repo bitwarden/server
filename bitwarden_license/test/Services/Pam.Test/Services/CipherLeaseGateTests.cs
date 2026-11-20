@@ -110,7 +110,7 @@ public class CipherLeaseGateTests
 
         var access = await sutProvider.Sut.AuthorizeReadManyAsync(
             userId,
-            [new Cipher { Id = gatedCipherId }],
+            [new Cipher { Id = gatedCipherId, OrganizationId = _organizationId }],
             [LeasingCollection(leasingCollectionId)],
             Group(new CollectionCipher { CipherId = gatedCipherId, CollectionId = leasingCollectionId }));
 
@@ -126,7 +126,7 @@ public class CipherLeaseGateTests
 
         var access = await sutProvider.Sut.AuthorizeReadManyAsync(
             userId,
-            [new Cipher { Id = gatedCipherId }, new Cipher { Id = plainCipherId }],
+            [new Cipher { Id = gatedCipherId, OrganizationId = _organizationId }, new Cipher { Id = plainCipherId, OrganizationId = _organizationId }],
             [LeasingCollection(leasingCollectionId)],
             Group(new CollectionCipher { CipherId = gatedCipherId, CollectionId = leasingCollectionId }));
 
@@ -144,7 +144,7 @@ public class CipherLeaseGateTests
 
         var access = await sutProvider.Sut.AuthorizeReadManyAsync(
             userId,
-            [new Cipher { Id = gatedCipherId }],
+            [new Cipher { Id = gatedCipherId, OrganizationId = _organizationId }],
             [LeasingCollection(leasingCollectionId)],
             Group(new CollectionCipher { CipherId = gatedCipherId, CollectionId = leasingCollectionId }));
 
@@ -261,7 +261,7 @@ public class CipherLeaseGateTests
             .Returns([new CollectionCipher { CipherId = gatedCipherId, CollectionId = leasingCollectionId }]);
 
         var access = await sutProvider.Sut.AuthorizeReadManyAsync(
-            userId, [new Cipher { Id = gatedCipherId }, new Cipher { Id = plainCipherId }]);
+            userId, [new Cipher { Id = gatedCipherId, OrganizationId = _organizationId }, new Cipher { Id = plainCipherId, OrganizationId = _organizationId }]);
 
         Assert.False(access.Authorizes(gatedCipherId));
         Assert.True(access.Authorizes(plainCipherId));
@@ -285,11 +285,11 @@ public class CipherLeaseGateTests
     }
 
     [Fact]
-    public async Task AuthorizeWriteReturnAsync_FlagOff_AuthorizesWithoutQuerying()
+    public async Task AuthorizeIgnoringLeaseAsync_FlagOff_AuthorizesWithoutQuerying()
     {
         var (sutProvider, userId, cipherId) = Setup(enabled: false);
 
-        var access = await sutProvider.Sut.AuthorizeWriteReturnAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
+        var access = await sutProvider.Sut.AuthorizeIgnoringLeaseAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
 
         Assert.NotNull(access);
         Assert.True(access.Authorizes(cipherId));
@@ -298,12 +298,12 @@ public class CipherLeaseGateTests
     }
 
     [Fact]
-    public async Task AuthorizeWriteReturnAsync_NotGated_Authorizes()
+    public async Task AuthorizeIgnoringLeaseAsync_NotGated_Authorizes()
     {
         var (sutProvider, userId, cipherId) = Setup();
         NotGated(sutProvider, userId, cipherId);
 
-        var access = await sutProvider.Sut.AuthorizeWriteReturnAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
+        var access = await sutProvider.Sut.AuthorizeIgnoringLeaseAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
 
         Assert.NotNull(access);
         Assert.True(access.Authorizes(cipherId));
@@ -313,35 +313,35 @@ public class CipherLeaseGateTests
     /// A lease widens the single read, not the echo of a mutation.
     /// </remarks>
     [Fact]
-    public async Task AuthorizeWriteReturnAsync_GatedWithActiveLease_Withholds()
+    public async Task AuthorizeIgnoringLeaseAsync_GatedWithActiveLease_Withholds()
     {
         var (sutProvider, userId, cipherId) = Setup();
         Gated(sutProvider, userId, cipherId);
         HasActiveLease(sutProvider, userId, cipherId);
 
-        var access = await sutProvider.Sut.AuthorizeWriteReturnAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
+        var access = await sutProvider.Sut.AuthorizeIgnoringLeaseAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
 
         Assert.Null(access);
     }
 
     [Fact]
-    public async Task AuthorizeWriteReturnAsync_GatedNoLease_Withholds()
+    public async Task AuthorizeIgnoringLeaseAsync_GatedNoLease_Withholds()
     {
         var (sutProvider, userId, cipherId) = Setup();
         Gated(sutProvider, userId, cipherId);
 
-        var access = await sutProvider.Sut.AuthorizeWriteReturnAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
+        var access = await sutProvider.Sut.AuthorizeIgnoringLeaseAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
 
         Assert.Null(access);
     }
 
     [Fact]
-    public async Task AuthorizeWriteReturnAsync_Gated_DoesNotReadLeases()
+    public async Task AuthorizeIgnoringLeaseAsync_Gated_DoesNotReadLeases()
     {
         var (sutProvider, userId, cipherId) = Setup();
         Gated(sutProvider, userId, cipherId);
 
-        await sutProvider.Sut.AuthorizeWriteReturnAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
+        await sutProvider.Sut.AuthorizeIgnoringLeaseAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
 
         // Lease state cannot change the answer, so paying for the query would be waste.
         await sutProvider.GetDependency<IAccessLeaseRepository>()
@@ -349,11 +349,11 @@ public class CipherLeaseGateTests
     }
 
     [Fact]
-    public async Task AuthorizeAdminWriteReturnAsync_FlagOff_AuthorizesWithoutQuerying()
+    public async Task AuthorizeAdminIgnoringLeaseAsync_FlagOff_AuthorizesWithoutQuerying()
     {
         var (sutProvider, userId, cipherId) = Setup(enabled: false);
 
-        var access = await sutProvider.Sut.AuthorizeAdminWriteReturnAsync(
+        var access = await sutProvider.Sut.AuthorizeAdminIgnoringLeaseAsync(
             userId, Guid.NewGuid(), new Cipher { Id = cipherId, OrganizationId = _organizationId });
 
         Assert.NotNull(access);
@@ -363,14 +363,14 @@ public class CipherLeaseGateTests
     }
 
     [Fact]
-    public async Task AuthorizeAdminWriteReturnAsync_NotGated_Authorizes()
+    public async Task AuthorizeAdminIgnoringLeaseAsync_NotGated_Authorizes()
     {
         var (sutProvider, userId, cipherId) = Setup();
         var organizationId = Guid.NewGuid();
         OrganizationLeasingCollection(sutProvider, organizationId, Guid.NewGuid());
         CipherIsInCollections(sutProvider, cipherId, Guid.NewGuid());
 
-        var access = await sutProvider.Sut.AuthorizeAdminWriteReturnAsync(
+        var access = await sutProvider.Sut.AuthorizeAdminIgnoringLeaseAsync(
             userId, organizationId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
 
         Assert.NotNull(access);
@@ -378,7 +378,7 @@ public class CipherLeaseGateTests
     }
 
     [Fact]
-    public async Task AuthorizeAdminWriteReturnAsync_GatedWithActiveLease_Withholds()
+    public async Task AuthorizeAdminIgnoringLeaseAsync_GatedWithActiveLease_Withholds()
     {
         var (sutProvider, userId, cipherId) = Setup();
         var organizationId = Guid.NewGuid();
@@ -387,7 +387,7 @@ public class CipherLeaseGateTests
         CipherIsInCollections(sutProvider, cipherId, collectionId);
         HasActiveLease(sutProvider, userId, cipherId);
 
-        var access = await sutProvider.Sut.AuthorizeAdminWriteReturnAsync(
+        var access = await sutProvider.Sut.AuthorizeAdminIgnoringLeaseAsync(
             userId, organizationId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
 
         Assert.Null(access);
@@ -396,7 +396,7 @@ public class CipherLeaseGateTests
     }
 
     [Fact]
-    public async Task AuthorizeAdminWriteReturnAsync_DisabledRule_Authorizes()
+    public async Task AuthorizeAdminIgnoringLeaseAsync_DisabledRule_Authorizes()
     {
         var (sutProvider, userId, cipherId) = Setup();
         var organizationId = Guid.NewGuid();
@@ -404,7 +404,7 @@ public class CipherLeaseGateTests
         OrganizationLeasingCollection(sutProvider, organizationId, collectionId, ruleEnabled: false);
         CipherIsInCollections(sutProvider, cipherId, collectionId);
 
-        var access = await sutProvider.Sut.AuthorizeAdminWriteReturnAsync(
+        var access = await sutProvider.Sut.AuthorizeAdminIgnoringLeaseAsync(
             userId, organizationId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
 
         Assert.NotNull(access);
@@ -512,7 +512,7 @@ public class CipherLeaseGateTests
         CallerGates(sutProvider, userId);
 
         var access = await sutProvider.Sut.EnsureCanMutateManyAsync(
-            userId, [new Cipher { Id = firstCipherId }, new Cipher { Id = secondCipherId }]);
+            userId, [new Cipher { Id = firstCipherId, OrganizationId = _organizationId }, new Cipher { Id = secondCipherId, OrganizationId = _organizationId }]);
 
         Assert.True(access.Authorizes(firstCipherId));
         Assert.True(access.Authorizes(secondCipherId));
@@ -530,7 +530,7 @@ public class CipherLeaseGateTests
 
         // All-or-nothing: a half-applied bulk delete would leave the caller unable to tell what happened.
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.EnsureCanMutateManyAsync(
-            userId, [new Cipher { Id = plainCipherId }, new Cipher { Id = gatedCipherId }]));
+            userId, [new Cipher { Id = plainCipherId, OrganizationId = _organizationId }, new Cipher { Id = gatedCipherId, OrganizationId = _organizationId }]));
     }
 
     [Fact]
@@ -541,7 +541,7 @@ public class CipherLeaseGateTests
         HasActiveLeasesFor(sutProvider, userId, gatedCipherId);
 
         var access = await sutProvider.Sut.EnsureCanMutateManyAsync(
-            userId, [new Cipher { Id = gatedCipherId }]);
+            userId, [new Cipher { Id = gatedCipherId, OrganizationId = _organizationId }]);
 
         // Deliberately unlike the bulk *read*, which withholds a gated cipher whatever the lease state.
         Assert.True(access.Authorizes(gatedCipherId));
@@ -557,7 +557,7 @@ public class CipherLeaseGateTests
         sutProvider.GetDependency<ICollectionCipherRepository>().GetManyByUserIdAsync(userId)
             .Returns([new CollectionCipher { CipherId = cipherId, CollectionId = disabledRuleCollectionId }]);
 
-        var access = await sutProvider.Sut.EnsureCanMutateManyAsync(userId, [new Cipher { Id = cipherId }]);
+        var access = await sutProvider.Sut.EnsureCanMutateManyAsync(userId, [new Cipher { Id = cipherId, OrganizationId = _organizationId }]);
 
         Assert.True(access.Authorizes(cipherId));
     }
@@ -574,8 +574,8 @@ public class CipherLeaseGateTests
         // MoveManyAsync forwards request ids straight through, so duplicates reach the gate.
         await sutProvider.Sut.EnsureCanMutateManyAsync(userId,
         [
-            new Cipher { Id = firstCipherId }, new Cipher { Id = secondCipherId },
-            new Cipher { Id = plainCipherId }, new Cipher { Id = firstCipherId }
+            new Cipher { Id = firstCipherId, OrganizationId = _organizationId }, new Cipher { Id = secondCipherId, OrganizationId = _organizationId },
+            new Cipher { Id = plainCipherId, OrganizationId = _organizationId }, new Cipher { Id = firstCipherId, OrganizationId = _organizationId }
         ]);
 
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId);
@@ -737,7 +737,7 @@ public class CipherLeaseGateTests
 
         // Licensing is read off the lease, so a cipher passed without its organization is still covered.
         await Assert.ThrowsAsync<NotFoundException>(
-            () => sutProvider.Sut.EnsureCanMutateManyAsync(userId, [new Cipher { Id = cipherId }]));
+            () => sutProvider.Sut.EnsureCanMutateManyAsync(userId, [new Cipher { Id = cipherId, OrganizationId = _organizationId }]));
     }
 
     [Fact]
@@ -827,7 +827,7 @@ public class CipherLeaseGateTests
         HasActiveLease(sutProvider, userId, gatedCipherId);
 
         var access = await sutProvider.Sut.AuthorizeAdminReadManyAsync(userId, organizationId,
-            [new Cipher { Id = gatedCipherId }, new Cipher { Id = plainCipherId }]);
+            [new Cipher { Id = gatedCipherId, OrganizationId = _organizationId }, new Cipher { Id = plainCipherId, OrganizationId = _organizationId }]);
 
         Assert.False(access.Authorizes(gatedCipherId));
         Assert.True(access.Authorizes(plainCipherId));
@@ -919,7 +919,7 @@ public class CipherLeaseGateTests
     }
 
     [Fact]
-    public async Task AuthorizeAdminWriteReturnAsync_ExemptAdmin_AuthorizesGated()
+    public async Task AuthorizeAdminIgnoringLeaseAsync_ExemptAdmin_AuthorizesGated()
     {
         var (sutProvider, userId, cipherId) = Setup();
         var collectionId = Guid.NewGuid();
@@ -927,7 +927,7 @@ public class CipherLeaseGateTests
         OrganizationLeasingCollection(sutProvider, _organizationId, collectionId);
         CipherIsInCollections(sutProvider, cipherId, collectionId);
 
-        var access = await sutProvider.Sut.AuthorizeAdminWriteReturnAsync(userId, _organizationId,
+        var access = await sutProvider.Sut.AuthorizeAdminIgnoringLeaseAsync(userId, _organizationId,
             new Cipher { Id = cipherId, OrganizationId = _organizationId });
 
         Assert.NotNull(access);
@@ -1011,7 +1011,7 @@ public class CipherLeaseGateTests
         var (sutProvider, userId, cipherId) = Setup(enabled: false);
 
         var access = await sutProvider.Sut.EnsureCanMutateManyAsAdminAsync(userId, _organizationId,
-            [new Cipher { Id = cipherId }]);
+            [new Cipher { Id = cipherId, OrganizationId = _organizationId }]);
 
         Assert.True(access.Authorizes(cipherId));
         await sutProvider.GetDependency<IGatingCollectionResolver>().DidNotReceiveWithAnyArgs()
@@ -1027,7 +1027,7 @@ public class CipherLeaseGateTests
         HasNoActiveLeases(sutProvider, userId);
 
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.EnsureCanMutateManyAsAdminAsync(userId,
-            _organizationId, [new Cipher { Id = gatedCipherId }, new Cipher { Id = plainCipherId }]));
+            _organizationId, [new Cipher { Id = gatedCipherId, OrganizationId = _organizationId }, new Cipher { Id = plainCipherId, OrganizationId = _organizationId }]));
     }
 
     [Fact]
@@ -1039,7 +1039,7 @@ public class CipherLeaseGateTests
         HasActiveLeasesFor(sutProvider, userId, gatedCipherId);
 
         var access = await sutProvider.Sut.EnsureCanMutateManyAsAdminAsync(userId, _organizationId,
-            [new Cipher { Id = gatedCipherId }, new Cipher { Id = plainCipherId }]);
+            [new Cipher { Id = gatedCipherId, OrganizationId = _organizationId }, new Cipher { Id = plainCipherId, OrganizationId = _organizationId }]);
 
         Assert.True(access.Authorizes(gatedCipherId));
         Assert.True(access.Authorizes(plainCipherId));
@@ -1053,13 +1053,471 @@ public class CipherLeaseGateTests
         OrganizationGates(sutProvider, _organizationId, gatedCipherId);
 
         var access = await sutProvider.Sut.EnsureCanMutateManyAsAdminAsync(userId, _organizationId,
-            [new Cipher { Id = gatedCipherId }]);
+            [new Cipher { Id = gatedCipherId, OrganizationId = _organizationId }]);
 
         Assert.True(access.Authorizes(gatedCipherId));
         await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs()
             .GetManyByOrganizationIdAsync(default);
         await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
             .GetManyActiveByRequesterIdAsync(default, default);
+    }
+
+    [Fact]
+    public async Task AuthorizeReadAsync_PersonalCipher_AuthorizesWithoutResolving()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+
+        var access = await sutProvider.Sut.AuthorizeReadAsync(userId, new Cipher { Id = cipherId, UserId = userId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+        await sutProvider.GetDependency<IGoverningRuleResolver>()
+            .DidNotReceiveWithAnyArgs().ResolveAsync(default, default, default!);
+    }
+
+    [Fact]
+    public async Task AuthorizeReadAsync_OrganizationWithoutPam_AuthorizesWithoutResolving()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        Gated(sutProvider, userId, cipherId);
+        OrganizationAbilityIs(sutProvider, usePam: false);
+
+        var access = await sutProvider.Sut.AuthorizeReadAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+        await sutProvider.GetDependency<IGoverningRuleResolver>()
+            .DidNotReceiveWithAnyArgs().ResolveAsync(default, default, default!);
+    }
+
+    [Fact]
+    public async Task AuthorizeReadAsync_OrganizationWithPam_StillGates()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        Gated(sutProvider, userId, cipherId);
+        OrganizationAbilityIs(sutProvider, usePam: true);
+
+        Assert.Null(await sutProvider.Sut.AuthorizeReadAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId }));
+    }
+
+    [Fact]
+    public async Task AuthorizeIgnoringLeaseAsync_OrganizationWithoutPam_Authorizes()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        Gated(sutProvider, userId, cipherId);
+        OrganizationAbilityIs(sutProvider, usePam: false);
+
+        var access = await sutProvider.Sut.AuthorizeIgnoringLeaseAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+    }
+
+    [Fact]
+    public async Task EnsureCanMutateAsync_OrganizationWithoutPam_AllowsWithoutLease()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        Gated(sutProvider, userId, cipherId);
+        OrganizationAbilityIs(sutProvider, usePam: false);
+
+        var access = await sutProvider.Sut.EnsureCanMutateAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
+
+        Assert.True(access.Authorizes(cipherId));
+    }
+
+    [Fact]
+    public async Task AuthorizeReadManyAsync_InMemory_OrganizationWithoutPam_AuthorizesRuledCollections()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        var collectionId = Guid.NewGuid();
+        OrganizationAbilityIs(sutProvider, usePam: false);
+
+        var access = await sutProvider.Sut.AuthorizeReadManyAsync(userId,
+            [new Cipher { Id = cipherId, OrganizationId = _organizationId }],
+            [LeasingCollection(collectionId)],
+            Group(new CollectionCipher { CipherId = cipherId, CollectionId = collectionId }));
+
+        Assert.True(access.Authorizes(cipherId));
+    }
+
+    [Fact]
+    public async Task AuthorizeReadManyAsync_InMemory_OtherOrganizationStillGates()
+    {
+        var (sutProvider, userId, gatedCipherId) = Setup();
+        var openCipherId = Guid.NewGuid();
+        var otherOrganizationId = Guid.NewGuid();
+        var gatingCollectionId = Guid.NewGuid();
+        var openCollectionId = Guid.NewGuid();
+        OrganizationAbilitiesAre(sutProvider,
+            new OrganizationAbility { Id = _organizationId, UsePam = true },
+            new OrganizationAbility { Id = otherOrganizationId, UsePam = false });
+        var openCollection = LeasingCollection(openCollectionId);
+        openCollection.OrganizationId = otherOrganizationId;
+
+        var access = await sutProvider.Sut.AuthorizeReadManyAsync(userId,
+            [
+                new Cipher { Id = gatedCipherId, OrganizationId = _organizationId },
+                new Cipher { Id = openCipherId, OrganizationId = otherOrganizationId },
+            ],
+            [LeasingCollection(gatingCollectionId), openCollection],
+            Group(
+                new CollectionCipher { CipherId = gatedCipherId, CollectionId = gatingCollectionId },
+                new CollectionCipher { CipherId = openCipherId, CollectionId = openCollectionId }));
+
+        Assert.False(access.Authorizes(gatedCipherId));
+        Assert.True(access.Authorizes(openCipherId));
+    }
+
+    [Fact]
+    public async Task AuthorizeReadManyAsync_SelfLoading_OrganizationWithoutPam_LoadsNothing()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        CallerGates(sutProvider, userId, cipherId);
+        OrganizationAbilityIs(sutProvider, usePam: false);
+
+        var access = await sutProvider.Sut.AuthorizeReadManyAsync(userId,
+            [new Cipher { Id = cipherId, OrganizationId = _organizationId }, new Cipher { Id = Guid.NewGuid(), UserId = userId }]);
+
+        Assert.True(access.Authorizes(cipherId));
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+        await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+    }
+
+    [Fact]
+    public async Task AuthorizeReadManyAsync_SelfLoading_PersonalCiphersOnly_LoadsNothing()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+
+        var access = await sutProvider.Sut.AuthorizeReadManyAsync(userId, [new Cipher { Id = cipherId, UserId = userId }]);
+
+        Assert.True(access.Authorizes(cipherId));
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+        await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+    }
+
+    [Fact]
+    public async Task AuthorizeReadManyAsync_WithMappings_LoadsOnlyCollectionsAndWithholdsGated()
+    {
+        var (sutProvider, userId, gatedCipherId) = Setup();
+        var plainCipherId = Guid.NewGuid();
+        var leasingCollectionId = Guid.NewGuid();
+        sutProvider.GetDependency<ICollectionRepository>().GetManyByUserIdAsync(userId)
+            .Returns([LeasingCollection(leasingCollectionId)]);
+
+        var access = await sutProvider.Sut.AuthorizeReadManyAsync(userId,
+            [
+                new Cipher { Id = gatedCipherId, OrganizationId = _organizationId },
+                new Cipher { Id = plainCipherId, OrganizationId = _organizationId },
+            ],
+            Group(new CollectionCipher { CipherId = gatedCipherId, CollectionId = leasingCollectionId }));
+
+        Assert.False(access.Authorizes(gatedCipherId));
+        Assert.True(access.Authorizes(plainCipherId));
+        await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByUserIdAsync(userId);
+        await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+    }
+
+    [Fact]
+    public async Task AuthorizeReadManyAsync_WithNullMappings_LoadsMappingsAndWithholdsGated()
+    {
+        var (sutProvider, userId, gatedCipherId) = Setup();
+        var plainCipherId = Guid.NewGuid();
+        CallerGates(sutProvider, userId, gatedCipherId);
+
+        var access = await sutProvider.Sut.AuthorizeReadManyAsync(userId,
+            [
+                new Cipher { Id = gatedCipherId, OrganizationId = _organizationId },
+                new Cipher { Id = plainCipherId, OrganizationId = _organizationId },
+            ],
+            collectionCiphersByCipher: null);
+
+        Assert.False(access.Authorizes(gatedCipherId));
+        Assert.True(access.Authorizes(plainCipherId));
+        await sutProvider.GetDependency<ICollectionCipherRepository>().Received(1).GetManyByUserIdAsync(userId);
+    }
+
+    [Fact]
+    public async Task AuthorizeReadManyAsync_WithMappings_OrganizationWithoutPam_LoadsNothing()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        OrganizationAbilityIs(sutProvider, usePam: false);
+
+        var access = await sutProvider.Sut.AuthorizeReadManyAsync(userId,
+            [new Cipher { Id = cipherId, OrganizationId = _organizationId }],
+            Group(new CollectionCipher { CipherId = cipherId, CollectionId = Guid.NewGuid() }));
+
+        Assert.True(access.Authorizes(cipherId));
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+    }
+
+    [Fact]
+    public async Task EnsureCanMutateManyAsync_OrganizationWithoutPam_LoadsNothing()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        CallerGates(sutProvider, userId, cipherId);
+        HasNoActiveLeases(sutProvider, userId);
+        OrganizationAbilityIs(sutProvider, usePam: false);
+
+        var access = await sutProvider.Sut.EnsureCanMutateManyAsync(userId,
+            [new Cipher { Id = cipherId, OrganizationId = _organizationId }]);
+
+        Assert.True(access.Authorizes(cipherId));
+        await sutProvider.GetDependency<ICollectionRepository>().DidNotReceiveWithAnyArgs().GetManyByUserIdAsync(default);
+        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyActiveByRequesterIdAsync(default, default);
+    }
+
+    [Fact]
+    public async Task AuthorizeAdminReadManyAsync_OrganizationWithoutPam_LoadsNothing()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        OrganizationGates(sutProvider, _organizationId, cipherId);
+        OrganizationAbilityIs(sutProvider, usePam: false);
+
+        var access = await sutProvider.Sut.AuthorizeAdminReadManyAsync(userId, _organizationId,
+            [new Cipher { Id = cipherId, OrganizationId = _organizationId }]);
+
+        Assert.True(access.Authorizes(cipherId));
+        await sutProvider.GetDependency<IGatingCollectionResolver>().DidNotReceiveWithAnyArgs()
+            .GetGatingCollectionIdsAsync(default);
+        await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyByOrganizationIdAsync(default);
+    }
+
+    [Fact]
+    public async Task AuthorizeAdminReadAsync_OrganizationWithoutPam_LoadsNothing()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        OrganizationAbilityIs(sutProvider, usePam: false);
+
+        var access = await sutProvider.Sut.AuthorizeAdminReadAsync(userId, _organizationId,
+            new Cipher { Id = cipherId, OrganizationId = _organizationId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+        await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs()
+            .GetCollectionIdsByCipherIdAsync(default);
+    }
+
+    /// <remarks>
+    /// Desktop, mobile, CLI, the browser extension with its flag off, and an unidentified caller all keep what they
+    /// are sent, so a lease must not land the secret in their local store.
+    /// </remarks>
+    [Theory]
+    [InlineData(DeviceType.WindowsDesktop)]
+    [InlineData(DeviceType.Android)]
+    [InlineData(DeviceType.WindowsCLI)]
+    [InlineData(DeviceType.ChromeExtension)]
+    [InlineData(null)]
+    public async Task AuthorizeReadAsync_GatedWithActiveLease_ClientWithoutPartials_ReturnsNull(DeviceType? deviceType)
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        ClientIs(sutProvider, deviceType);
+        Gated(sutProvider, userId, cipherId);
+        HasActiveLease(sutProvider, userId, cipherId);
+
+        Assert.Null(await sutProvider.Sut.AuthorizeReadAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId }));
+        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
+            .GetActiveByRequesterIdCipherIdAsync(default, default, default);
+    }
+
+    [Fact]
+    public async Task AuthorizeReadAsync_GatedWithActiveLease_BrowserExtensionWithFlagOn_Authorizes()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        ClientIs(sutProvider, DeviceType.ChromeExtension, browserPartialCiphersEnabled: true);
+        Gated(sutProvider, userId, cipherId);
+        HasActiveLease(sutProvider, userId, cipherId);
+
+        var access = await sutProvider.Sut.AuthorizeReadAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+    }
+
+    [Fact]
+    public async Task AuthorizeReadAsync_NotGated_ClientWithoutPartials_Authorizes()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        ClientIs(sutProvider, DeviceType.WindowsDesktop);
+        NotGated(sutProvider, userId, cipherId);
+
+        var access = await sutProvider.Sut.AuthorizeReadAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+    }
+
+    [Fact]
+    public async Task AuthorizeReadAsync_OrganizationWithoutPam_ClientWithoutPartials_Authorizes()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        ClientIs(sutProvider, DeviceType.WindowsDesktop);
+        Gated(sutProvider, userId, cipherId);
+        OrganizationAbilityIs(sutProvider, usePam: false);
+
+        var access = await sutProvider.Sut.AuthorizeReadAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+    }
+
+    [Fact]
+    public async Task AuthorizeAdminReadAsync_GatedWithActiveLease_ClientWithoutPartials_Withholds()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        ClientIs(sutProvider, DeviceType.WindowsDesktop);
+        var collectionId = Guid.NewGuid();
+        OrganizationLeasingCollection(sutProvider, _organizationId, collectionId);
+        CipherIsInCollections(sutProvider, cipherId, collectionId);
+        HasActiveLease(sutProvider, userId, cipherId);
+
+        var access = await sutProvider.Sut.AuthorizeAdminReadAsync(userId, _organizationId,
+            new Cipher { Id = cipherId, OrganizationId = _organizationId });
+
+        Assert.Null(access);
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserType.Owner)]
+    [InlineData(OrganizationUserType.Admin)]
+    public async Task AuthorizeAdminReadAsync_ExemptAdmin_ClientWithoutPartials_Withholds(OrganizationUserType type)
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        ClientIs(sutProvider, DeviceType.WindowsDesktop);
+        var collectionId = Guid.NewGuid();
+        CallerHasRole(sutProvider, _organizationId, type, allowAdminAccessToAllCollectionItems: true);
+        OrganizationLeasingCollection(sutProvider, _organizationId, collectionId);
+        CipherIsInCollections(sutProvider, cipherId, collectionId);
+
+        var access = await sutProvider.Sut.AuthorizeAdminReadAsync(userId, _organizationId,
+            new Cipher { Id = cipherId, OrganizationId = _organizationId });
+
+        Assert.Null(access);
+    }
+
+    [Fact]
+    public async Task AuthorizeAdminReadAsync_ExemptAdmin_ClientWithoutPartials_NotGated_Authorizes()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        ClientIs(sutProvider, DeviceType.WindowsDesktop);
+        CallerHasRole(sutProvider, _organizationId, OrganizationUserType.Owner, allowAdminAccessToAllCollectionItems: true);
+        OrganizationLeasingCollection(sutProvider, _organizationId, Guid.NewGuid());
+        CipherIsInCollections(sutProvider, cipherId, Guid.NewGuid());
+
+        var access = await sutProvider.Sut.AuthorizeAdminReadAsync(userId, _organizationId,
+            new Cipher { Id = cipherId, OrganizationId = _organizationId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+    }
+
+    [Fact]
+    public async Task AuthorizeAdminReadManyAsync_ExemptAdmin_ClientWithoutPartials_StripsGated()
+    {
+        var (sutProvider, userId, gatedCipherId) = Setup();
+        ClientIs(sutProvider, DeviceType.WindowsDesktop);
+        var plainCipherId = Guid.NewGuid();
+        CallerHasRole(sutProvider, _organizationId, OrganizationUserType.Admin, allowAdminAccessToAllCollectionItems: true);
+        OrganizationGates(sutProvider, _organizationId, gatedCipherId);
+
+        var access = await sutProvider.Sut.AuthorizeAdminReadManyAsync(userId, _organizationId,
+        [
+            new Cipher { Id = gatedCipherId, OrganizationId = _organizationId },
+            new Cipher { Id = plainCipherId, OrganizationId = _organizationId },
+        ]);
+
+        Assert.False(access.Authorizes(gatedCipherId));
+        Assert.True(access.Authorizes(plainCipherId));
+    }
+
+    [Fact]
+    public async Task AuthorizeAdminIgnoringLeaseAsync_ExemptAdmin_ClientWithoutPartials_Withholds()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        ClientIs(sutProvider, DeviceType.WindowsDesktop);
+        var collectionId = Guid.NewGuid();
+        CallerHasRole(sutProvider, _organizationId, OrganizationUserType.Owner, allowAdminAccessToAllCollectionItems: true);
+        OrganizationLeasingCollection(sutProvider, _organizationId, collectionId);
+        CipherIsInCollections(sutProvider, cipherId, collectionId);
+
+        var access = await sutProvider.Sut.AuthorizeAdminIgnoringLeaseAsync(userId, _organizationId,
+            new Cipher { Id = cipherId, OrganizationId = _organizationId });
+
+        Assert.Null(access);
+    }
+
+    [Fact]
+    public async Task AuthorizeAdminReadAsync_OrganizationWithoutPam_ClientWithoutPartials_Authorizes()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        ClientIs(sutProvider, DeviceType.WindowsDesktop);
+        OrganizationAbilityIs(sutProvider, usePam: false);
+
+        var access = await sutProvider.Sut.AuthorizeAdminReadAsync(userId, _organizationId,
+            new Cipher { Id = cipherId, OrganizationId = _organizationId });
+
+        Assert.NotNull(access);
+        Assert.True(access.Authorizes(cipherId));
+    }
+
+    [Fact]
+    public async Task EnsureCanMutateAsync_GatedWithActiveLease_ClientWithoutPartials_ThrowsNotFound()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        ClientIs(sutProvider, DeviceType.WindowsDesktop);
+        Gated(sutProvider, userId, cipherId);
+        HasActiveLease(sutProvider, userId, cipherId);
+
+        await Assert.ThrowsAsync<NotFoundException>(() =>
+            sutProvider.Sut.EnsureCanMutateAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId }));
+    }
+
+    [Fact]
+    public async Task EnsureCanMutateManyAsync_GatedWithActiveLease_ClientWithoutPartials_ThrowsNotFound()
+    {
+        var (sutProvider, userId, gatedCipherId) = Setup();
+        ClientIs(sutProvider, DeviceType.WindowsDesktop);
+        CallerGates(sutProvider, userId, gatedCipherId);
+        HasActiveLeasesFor(sutProvider, userId, gatedCipherId);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.EnsureCanMutateManyAsync(
+            userId, [new Cipher { Id = gatedCipherId, OrganizationId = _organizationId }]));
+    }
+
+    [Fact]
+    public async Task EnsureCanMutateAsAdminAsync_ExemptAdmin_ClientWithoutPartials_ThrowsNotFound()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        ClientIs(sutProvider, DeviceType.WindowsDesktop);
+        var collectionId = Guid.NewGuid();
+        CallerHasRole(sutProvider, _organizationId, OrganizationUserType.Admin, allowAdminAccessToAllCollectionItems: true);
+        OrganizationLeasingCollection(sutProvider, _organizationId, collectionId);
+        CipherIsInCollections(sutProvider, cipherId, collectionId);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.EnsureCanMutateAsAdminAsync(userId,
+            new Cipher { Id = cipherId, OrganizationId = _organizationId }));
+    }
+
+    /// <summary>
+    /// Sets the cached ability of the organization every fixture belongs to.
+    /// </summary>
+    private static void OrganizationAbilityIs(SutProvider<CipherLeaseGate> sutProvider, bool usePam) =>
+        OrganizationAbilitiesAre(sutProvider, new OrganizationAbility { Id = _organizationId, UsePam = usePam });
+
+    private static void OrganizationAbilitiesAre(SutProvider<CipherLeaseGate> sutProvider,
+        params OrganizationAbility[] abilities)
+    {
+        var cache = sutProvider.GetDependency<IOrganizationAbilityCacheService>();
+        foreach (var ability in abilities)
+        {
+            cache.GetOrganizationAbilityAsync(ability.Id, Arg.Any<CancellationToken>()).Returns(ability);
+        }
+
+        cache.GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns(ci => (IDictionary<Guid, OrganizationAbility>)abilities
+                .Where(a => ci.Arg<IEnumerable<Guid>>().Contains(a.Id))
+                .ToDictionary(a => a.Id));
     }
 
     /// <summary>
@@ -1094,6 +1552,7 @@ public class CipherLeaseGateTests
             .Returns(new OrganizationAbility
             {
                 Id = organizationId,
+                UsePam = true,
                 AllowAdminAccessToAllCollectionItems = allowAdminAccessToAllCollectionItems,
             });
     }
@@ -1113,7 +1572,17 @@ public class CipherLeaseGateTests
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns("198.51.100.7");
         // Licensed by default: every case below is about gating and leases, not entitlement.
         sutProvider.GetDependency<ICurrentContext>().AccessPam(_organizationId).Returns(true);
+        // The web vault by default, which can hold partials: client capability has its own cases.
+        ClientIs(sutProvider, DeviceType.ChromeBrowser);
         return (sutProvider, Guid.NewGuid(), Guid.NewGuid());
+    }
+
+    private static void ClientIs(SutProvider<CipherLeaseGate> sutProvider, DeviceType? deviceType,
+        bool browserPartialCiphersEnabled = false)
+    {
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(Core.FeatureFlagKeys.PamBrowserPartialCiphers)
+            .Returns(browserPartialCiphersEnabled);
     }
 
     private static void Unlicensed(SutProvider<CipherLeaseGate> sutProvider) =>
@@ -1158,7 +1627,7 @@ public class CipherLeaseGateTests
         HasActiveLeasesFor(sutProvider, userId);
 
     private static CollectionDetails LeasingCollection(Guid id) =>
-        new() { Id = id, AccessRuleId = Guid.NewGuid(), HasEnabledAccessRule = true };
+        new() { Id = id, OrganizationId = _organizationId, AccessRuleId = Guid.NewGuid(), HasEnabledAccessRule = true };
 
     /// <summary>
     /// A collection still associated with a rule the admin has switched off.

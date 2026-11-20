@@ -894,6 +894,7 @@ public class OrganizationUserRepositoryTests
         Assert.Equal(orgUser1.ResetPasswordKey, result.ResetPasswordKey);
         Assert.Equal(organization.PublicKey, result.PublicKey);
         Assert.Equal(organization.PrivateKey, result.PrivateKey);
+        Assert.Equal(organization.OrganizationKeyId, result.OrganizationKeyId);
         Assert.Equal(orgUser1.Status, result.Status);
         Assert.Equal(orgUser1.Type, result.Type);
         Assert.Equal(organization.Enabled, result.Enabled);

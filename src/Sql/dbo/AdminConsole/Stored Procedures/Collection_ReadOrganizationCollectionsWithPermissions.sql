@@ -72,18 +72,9 @@ BEGIN
     -- Access Intelligence needs My Items collections to attribute items in a member's personal vault.
     SELECT
         [C].*,
-        CAST(ISNULL(MIN(CASE
-            -- A group with no grant on this collection is not a restriction; ignore it
-            WHEN [CU].[CollectionId] IS NULL AND [CG].[CollectionId] IS NULL THEN NULL
-            WHEN COALESCE([CU].[ReadOnly], [CG].[ReadOnly], 0) = 0 THEN 0
-            ELSE 1
-        END), 0) AS BIT) AS [ReadOnly],
-        CAST(ISNULL(MIN(CASE
-            -- A group with no grant on this collection is not a restriction; ignore it
-            WHEN [CU].[CollectionId] IS NULL AND [CG].[CollectionId] IS NULL THEN NULL
-            WHEN COALESCE([CU].[HidePasswords], [CG].[HidePasswords], 0) = 0 THEN 0
-            ELSE 1
-        END), 0) AS BIT) AS [HidePasswords],
+        -- ReadOnly and HidePasswords are the Edit (2) and ViewPassword (1) parts of the highest rank, inverted; no rank means 3
+        CAST(1 - (ISNULL(MAX([R].[Rank]), 3) / 2) % 2 AS BIT) AS [ReadOnly],
+        CAST(1 - ISNULL(MAX([R].[Rank]), 3) % 2 AS BIT) AS [HidePasswords],
         CAST(MAX(CASE
             WHEN COALESCE([CU].[Manage], [CG].[Manage], 0) = 0 THEN 0
             ELSE 1
@@ -111,6 +102,17 @@ BEGIN
         AND [CG].[GroupId] = [UG].[GroupId]
     LEFT JOIN
         [dbo].[AccessRule] [AR] ON [AR].[Id] = [C].[AccessRuleId]
+    -- Rank orders a grant by Manage, then Edit, then ViewPassword; a group with no grant on this collection has no rank
+    CROSS APPLY (
+        SELECT
+            CASE
+                WHEN [CU].[CollectionId] IS NULL AND [CG].[CollectionId] IS NULL THEN NULL
+                ELSE
+                    CASE WHEN COALESCE([CU].[Manage], [CG].[Manage], 0) = 1 THEN 4 ELSE 0 END
+                    + CASE WHEN COALESCE([CU].[ReadOnly], [CG].[ReadOnly], 0) = 0 THEN 2 ELSE 0 END
+                    + CASE WHEN COALESCE([CU].[HidePasswords], [CG].[HidePasswords], 0) = 0 THEN 1 ELSE 0 END
+            END AS [Rank]
+    ) [R]
     WHERE
         [C].[OrganizationId] = @OrganizationId
         AND [C].[Type] IN (0, 1)

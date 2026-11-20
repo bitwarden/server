@@ -11,6 +11,7 @@ using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.SecretsManager.Repositories.Noop;
 using Bit.Core.Utilities;
 using Bit.SharedWeb.Utilities;
+using Bit.Subscriptions.Organization;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Quartz;
 using Stripe;
@@ -83,6 +84,7 @@ public class Startup
         services.AddDefaultServices(globalSettings);
         services.AddDistributedCache(globalSettings);
         services.AddBillingOperations();
+        services.AddPrivilegedControlsSeatAutoscaling();
         services.AddCommercialCoreServices();
 
         services.TryAddSingleton<IHttpContextAccessor, HttpContextAccessor>();

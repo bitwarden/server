@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
@@ -2440,7 +2441,7 @@ public class ProviderBillingServiceTests
 
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var replaceOrganizationAndUpdateCacheCommand = sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var customerId = organization.GatewayCustomerId;
         var subscriptionId = organization.GatewaySubscriptionId;
@@ -2455,7 +2456,7 @@ public class ProviderBillingServiceTests
         {
             priceIncreaseScheduler.Release(customerId, subscriptionId, orgId);
             stripeAdapter.CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
-            organizationService.ReplaceAndUpdateCacheAsync(organization);
+            replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
             providerOrganizationRepository.CreateAsync(Arg.Any<ProviderOrganization>());
         });
         await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
@@ -2475,7 +2476,7 @@ public class ProviderBillingServiceTests
         ArrangeAddExistingOrganizationHappyPath(sutProvider, provider, organization);
 
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var replaceOrganizationAndUpdateCacheCommand = sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
         // Capture before Act — AddExistingOrganization clears GatewaySubscriptionId
@@ -2489,7 +2490,7 @@ public class ProviderBillingServiceTests
 
         // Assert
         await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
-        await organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization);
+        await replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(organization);
         Assert.Equal(MockPlans.Get(PlanType.EnterpriseMonthly).HasRiskInsights, organization.UseRiskInsights);
         await providerOrganizationRepository.Received(1).CreateAsync(Arg.Is<ProviderOrganization>(po =>
             po.ProviderId == provider.Id && po.OrganizationId == organization.Id && po.Key == key));
@@ -2536,7 +2537,7 @@ public class ProviderBillingServiceTests
 
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var replaceOrganizationAndUpdateCacheCommand = sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var customerId = organization.GatewayCustomerId;
         var subscriptionId = organization.GatewaySubscriptionId;
@@ -2553,11 +2554,11 @@ public class ProviderBillingServiceTests
             priceIncreaseScheduler.Release(customerId, subscriptionId, orgId);
             stripeAdapter.UpdateSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionUpdateOptions>());
             stripeAdapter.CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
-            organizationService.ReplaceAndUpdateCacheAsync(organization);
+            replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
             providerOrganizationRepository.CreateAsync(Arg.Any<ProviderOrganization>());
         });
         await priceIncreaseScheduler.Received(1).Release(customerId, subscriptionId, orgId);
-        await organizationService.Received(1).ReplaceAndUpdateCacheAsync(Arg.Is<Organization>(o =>
+        await replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(Arg.Is<Organization>(o =>
             o.Id == organization.Id && o.PlanType == PlanType.TeamsMonthly));
     }
 
@@ -2577,7 +2578,7 @@ public class ProviderBillingServiceTests
 
         var priceIncreaseScheduler = sutProvider.GetDependency<IPriceIncreaseScheduler>();
         var stripeAdapter = sutProvider.GetDependency<IStripeAdapter>();
-        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        var replaceOrganizationAndUpdateCacheCommand = sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>();
         var providerOrganizationRepository = sutProvider.GetDependency<IProviderOrganizationRepository>();
         var eventService = sutProvider.GetDependency<IEventService>();
         var subscriptionId = organization.GatewaySubscriptionId;
@@ -2595,7 +2596,7 @@ public class ProviderBillingServiceTests
             .UpdateSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionUpdateOptions>());
         await stripeAdapter.Received(0)
             .CancelSubscriptionAsync(subscriptionId, Arg.Any<SubscriptionCancelOptions>());
-        await organizationService.Received(0).ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await replaceOrganizationAndUpdateCacheCommand.Received(0).RunAsync(Arg.Any<Organization>());
         await providerOrganizationRepository.Received(0).CreateAsync(Arg.Any<ProviderOrganization>());
         await eventService.Received(0).LogProviderOrganizationEventAsync(
             Arg.Any<ProviderOrganization>(), Arg.Any<EventType>());

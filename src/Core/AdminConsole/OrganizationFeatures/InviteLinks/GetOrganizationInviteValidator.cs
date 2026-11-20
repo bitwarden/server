@@ -1,9 +1,7 @@
 ﻿using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
-using Bit.Core.AdminConsole.Utilities.v2;
-using Bit.Core.AdminConsole.Utilities.v2.Validation;
+using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Enums;
-using static Bit.Core.AdminConsole.Utilities.v2.Validation.ValidationResultHelpers;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 
@@ -15,7 +13,7 @@ public class GetOrganizationInviteValidator(
     IPreAccessEnforcerQuery preAccessEnforcerQuery)
     : IGetOrganizationInviteValidator
 {
-    public async Task<ValidationResult<OrganizationInviteLinkValidationRequest>> ValidateAsync(
+    public async Task<Result<OrganizationInviteLinkValidationRequest, InviteLinkValidationError>> ValidateAsync(
         OrganizationInviteLinkValidationRequest request)
     {
         var eligibilityError = inviteLinkValidationService.ValidateEligibility(
@@ -25,13 +23,13 @@ public class GetOrganizationInviteValidator(
             request.User);
         if (eligibilityError is not null)
         {
-            return Invalid(request, eligibilityError);
+            return eligibilityError;
         }
 
         var membershipStatusError = ValidateMembershipStatus(request);
         if (membershipStatusError is not null)
         {
-            return Invalid(request, membershipStatusError);
+            return membershipStatusError;
         }
 
         // ValidateEligibility guarantees the organization exists.
@@ -42,7 +40,7 @@ public class GetOrganizationInviteValidator(
             request.ExistingOrganizationUser);
         if (seatAvailabilityError is not null)
         {
-            return Invalid(request, seatAvailabilityError);
+            return seatAvailabilityError;
         }
 
         var joinRequirementsResult = await inviteLinkValidationService.ValidateJoinRequirementsAsync(
@@ -53,10 +51,10 @@ public class GetOrganizationInviteValidator(
 
         if (joinRequirementsResult.IsError)
         {
-            return Invalid(request, joinRequirementsResult.Error!);
+            return joinRequirementsResult.Error!;
         }
 
-        return Valid(request);
+        return request;
     }
 
     /// <summary>
@@ -66,7 +64,7 @@ public class GetOrganizationInviteValidator(
     /// Must run after <see cref="IInviteLinkValidationService.ValidateEligibility"/>, which guarantees the invite link and
     /// organization exist.
     /// </remarks>
-    private static Error? ValidateMembershipStatus(OrganizationInviteLinkValidationRequest request) =>
+    private static InviteLinkValidationError? ValidateMembershipStatus(OrganizationInviteLinkValidationRequest request) =>
         request.ExistingInviteLink!.SupportsConfirmation
             ? InviteLinkRules.ValidateConfirmMembershipStatus(request.Organization!, request.ExistingOrganizationUser)
             : InviteLinkRules.ValidateAcceptMembershipStatus(request.Organization!, request.ExistingOrganizationUser);

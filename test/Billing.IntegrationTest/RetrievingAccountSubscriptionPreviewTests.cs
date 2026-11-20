@@ -6,8 +6,8 @@ using Bit.Test.Common.Helpers;
 
 namespace Bit.Billing.IntegrationTest;
 
-public class RetrievingAccountSubscriptionPreviewTests(PreviewDrivenCartFixture fixture)
-    : IClassFixture<PreviewDrivenCartFixture>
+public class RetrievingAccountSubscriptionPreviewTests(StripeTestsFixture fixture)
+    : IClassFixture<StripeTestsFixture>
 {
     [BillingFact]
     public async Task Preview_ForActivePremiumUser_ReturnsPreviewAtTheClientContractRoute()

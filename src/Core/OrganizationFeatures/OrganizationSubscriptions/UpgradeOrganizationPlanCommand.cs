@@ -5,6 +5,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.OrganizationConnectionConfigs;
 using Bit.Core.AdminConsole.OrganizationFeatures.Organizations;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Utilities;
@@ -41,6 +42,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
     private readonly IServiceAccountRepository _serviceAccountRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
+    private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IOrganizationBillingService _organizationBillingService;
     private readonly IPricingClient _pricingClient;
@@ -59,6 +61,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         IServiceAccountRepository serviceAccountRepository,
         IOrganizationRepository organizationRepository,
         IOrganizationService organizationService,
+        IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
         Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IOrganizationBillingService organizationBillingService,
         IPricingClient pricingClient,
@@ -76,6 +79,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
         _serviceAccountRepository = serviceAccountRepository;
         _organizationRepository = organizationRepository;
         _organizationService = organizationService;
+        _replaceOrganizationAndUpdateCacheCommand = replaceOrganizationAndUpdateCacheCommand;
         _featureService = featureService;
         _organizationBillingService = organizationBillingService;
         _pricingClient = pricingClient;
@@ -303,7 +307,7 @@ public class UpgradeOrganizationPlanCommand : IUpgradeOrganizationPlanCommand
                                              upgrade.AdditionalServiceAccounts.GetValueOrDefault();
         }
 
-        await _organizationService.ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.RunAsync(organization);
         return new Tuple<bool, string>(success, paymentIntentClientSecret);
     }
 

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing;
 using Bit.Core.Billing.Commands;
@@ -9,7 +10,6 @@ using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
-using Bit.Core.Services;
 using Bit.Core.Test.Billing.Mocks;
 using Bit.Core.Test.Billing.Mocks.Plans;
 using NSubstitute;
@@ -22,7 +22,8 @@ namespace Bit.Core.Test.Billing.Organizations.Commands;
 public class AddSecretsManagerSubscriptionCommandTests
 {
     private readonly IPricingClient _pricingClient = Substitute.For<IPricingClient>();
-    private readonly IOrganizationService _organizationService = Substitute.For<IOrganizationService>();
+    private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand =
+        Substitute.For<IReplaceOrganizationAndUpdateCacheCommand>();
     private readonly IProviderRepository _providerRepository = Substitute.For<IProviderRepository>();
     private readonly IUpdateOrganizationSubscriptionCommand _updateOrganizationSubscriptionCommand =
         Substitute.For<IUpdateOrganizationSubscriptionCommand>();
@@ -31,7 +32,7 @@ public class AddSecretsManagerSubscriptionCommandTests
     public AddSecretsManagerSubscriptionCommandTests()
     {
         _command = new AddSecretsManagerSubscriptionCommand(
-            _organizationService,
+            _replaceOrganizationAndUpdateCacheCommand,
             _providerRepository,
             _pricingClient,
             _updateOrganizationSubscriptionCommand);
@@ -161,7 +162,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         Assert.Equal(plan.SecretsManager.BaseSeats + 5, organization.SmSeats);
         Assert.Equal(plan.SecretsManager.BaseServiceAccount + 5, organization.SmServiceAccounts);
         Assert.True(organization.UseSecretsManager);
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(organization);
     }
 
     [Fact]
@@ -277,7 +278,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         await Assert.ThrowsAsync<BillingException>(() =>
             _command.RunAsync(organization, additionalSmSeats: 5, additionalServiceAccounts: 10));
 
-        await _organizationService.DidNotReceiveWithAnyArgs().ReplaceAndUpdateCacheAsync(Arg.Any<Organization>());
+        await _replaceOrganizationAndUpdateCacheCommand.DidNotReceiveWithAnyArgs().RunAsync(Arg.Any<Organization>());
     }
 
     [Fact]
@@ -293,7 +294,7 @@ public class AddSecretsManagerSubscriptionCommandTests
         Assert.Equal(plan.SecretsManager.BaseSeats + 5, organization.SmSeats);
         Assert.Equal(plan.SecretsManager.BaseServiceAccount + 10, organization.SmServiceAccounts);
         Assert.True(organization.UseSecretsManager);
-        await _organizationService.Received(1).ReplaceAndUpdateCacheAsync(organization);
+        await _replaceOrganizationAndUpdateCacheCommand.Received(1).RunAsync(organization);
     }
 
     private void SetupSubscriptionCommandSuccess()

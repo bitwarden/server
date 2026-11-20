@@ -11,7 +11,7 @@ using Bit.Core.Billing.Tax.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Subscriptions.Organization.Commands;
+using Bit.Subscriptions.Organization.Commands.Purchase;
 using Braintree;
 using Microsoft.Extensions.Logging.Abstractions;
 using NSubstitute;

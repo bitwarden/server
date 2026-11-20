@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
+using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -26,6 +27,8 @@ public class InviteStagedOrganizationUsersCommand(
     IUpdateSecretsManagerSubscriptionCommand updateSecretsManagerSubscriptionCommand,
     IStripePaymentService stripePaymentService,
     IPricingClient pricingClient,
+    IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
+    IRevertPrivilegedControlsSeatsCommand revertPrivilegedControlsSeatsCommand,
     ISendOrganizationInvitesCommand sendOrganizationInvitesCommand,
     IEventService eventService,
     TimeProvider timeProvider,
@@ -71,6 +74,7 @@ public class InviteStagedOrganizationUsersCommand(
 
         // Captured before the subscription grows, because a successful update writes the new total onto the entity.
         var initialSecretsManagerSeats = organization.SmSeats;
+        var initialPrivilegedControlsSeats = organization.PamSeats;
 
         // Password Manager seats first: the subscription rejects more Secrets Manager seats than it has PM seats.
         var secretsManagerSeatReservationError = await AdjustSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, dryRun: false);
@@ -80,12 +84,24 @@ public class InviteStagedOrganizationUsersCommand(
             return secretsManagerSeatReservationError;
         }
 
+        var membersWithPrivilegedControls = eligible.Count(organizationUser => organizationUser.AccessPam);
+        var privilegedControlsSeatReservation = await reservePrivilegedControlsSeatsCommand.RunAsync(organization, membersWithPrivilegedControls);
+        if (!privilegedControlsSeatReservation.Success)
+        {
+            // Privileged Controls seats go back first: Password Manager seats can't drop below them.
+            await ReleasePrivilegedControlsSeatsAsync(organization, initialPrivilegedControlsSeats);
+            await ReleaseSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, initialSecretsManagerSeats);
+            await ReleaseSeatsAsync(organization, seatsToAdd);
+            return privilegedControlsSeatReservation.Error!;
+        }
+
         try
         {
             await InviteAsync(eligible, organization, request.PerformedBy);
         }
         catch
         {
+            await ReleasePrivilegedControlsSeatsAsync(organization, initialPrivilegedControlsSeats);
             await ReleaseSecretsManagerSeatsAsync(organization, secretsManagerSeatsToAdd, initialSecretsManagerSeats);
             await ReleaseSeatsAsync(organization, seatsToAdd);
             throw;
@@ -389,6 +405,29 @@ public class InviteStagedOrganizationUsersCommand(
             logger.LogError(ex,
                 "Failed to release {SeatsToRelease} auto-added seat(s) for organization {OrganizationId}",
                 seatsToRelease, organization.Id);
+        }
+    }
+
+    /// <summary>
+    /// Restores the Privileged Controls seat count captured before the reservation when a later step means
+    /// nobody will be invited.
+    /// </summary>
+    private async Task ReleasePrivilegedControlsSeatsAsync(Organization organization, int? initialPrivilegedControlsSeats)
+    {
+        if (initialPrivilegedControlsSeats is null || initialPrivilegedControlsSeats == organization.PamSeats)
+        {
+            return;
+        }
+
+        try
+        {
+            await revertPrivilegedControlsSeatsCommand.RunAsync(organization, initialPrivilegedControlsSeats.Value);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex,
+                "Failed to release Privileged Controls seat(s) for organization {OrganizationId}",
+                organization.Id);
         }
     }
 }

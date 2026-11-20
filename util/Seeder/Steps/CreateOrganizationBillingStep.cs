@@ -10,7 +10,7 @@ namespace Bit.Seeder.Steps;
 /// <remarks>
 /// Deferred until after the bulk commit (<see cref="IPostCommitStep"/>) because the billing services persist
 /// their changes with <c>IOrganizationRepository.ReplaceAsync</c> — the organization row has to exist first.
-/// Registered only by <c>RecipeBuilderExtensions.WithStripeOrganizationBilling</c>, never appended
+/// Registered only by <c>RecipeBuilderOrganizationExtensions.WithStripeOrganizationBilling</c>, never appended
 /// automatically, so a default seed makes no Stripe calls.
 /// </remarks>
 internal sealed class CreateOrganizationBillingStep(

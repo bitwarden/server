@@ -36,6 +36,12 @@ Additional flags include `--region`, `--kdf-iterations`, and `--plan-type`. Run 
 
 `--region` only changes generated vault items, so it needs `-c`. It sets the name locale for login usernames, the card brands, and identity names, titles, addresses, country code and SSN format. It does not change the item mix or which companies logins use. The default is `Global`.
 
+Add `--use-pam` for an org subscribed to Privileged Access Management. No plan turns PAM on by default, so this flag is the only way to get it, and every member the run seeds is created with `AccessPam = 1`. Presets can do the same with `"usePam": true` on the preset's `organization` block.
+
+```bash
+dotnet run -- organization -n "PAM Org" -d pam.example -u 10 --use-pam --mangle
+```
+
 Add `--stripe-billing` for an org whose subscription pages actually work — see [Stripe billing](#stripe-billing) below.
 
 ### `individual` - Seed an Individual User
@@ -180,5 +186,4 @@ All three are checked **before any entity is created**, so a misconfigured opt-i
 - Seeded Teams and Enterprise orgs carry `UseSecretsManager = 1` with `SmSeats` NULL. Secrets Manager is included in the subscription only when `SmSeats` has a value, so those orgs have the flag set in the database but no Secrets Manager line items in Stripe.
 - Organization billing runs **after** the database commit. If Stripe rejects the request at that point (expired key, network failure), the organization is already committed and the command exits non-zero with the Stripe error and whatever gateway IDs made it through — a failure before customer creation leaves both NULL, but a failure during subscription creation leaves a real `GatewayCustomerId` behind. Check the error message for the actual state; cancel any orphaned Stripe customer before re-seeding.
 - Premium billing runs **before** the database commit, as the last step, so the user row is written once with its gateway IDs. If Stripe rejects the request, nothing is committed, and the error names any Stripe customer already created. If the commit fails after billing succeeded, the Stripe customer and subscription exist with no user row: find the customer in the Stripe test dashboard by the seeded email and cancel it.
-- An organization's **Billing → Subscription** page renders an `incomplete` subscription (e.g. `fails-on-charge` with `--skip-trial`) only with the `pm-36631-preview-driven-cart` flag on; without it the page is blank.
 - Destroying the local database does not cancel the Stripe-side subscriptions. Test-mode subscriptions auto-cancel after roughly 90 days.

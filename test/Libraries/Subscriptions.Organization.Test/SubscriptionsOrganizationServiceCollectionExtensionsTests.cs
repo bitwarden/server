@@ -1,10 +1,14 @@
-﻿using Bit.Core.Billing.Organizations.Commands;
+﻿using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
+using Bit.Core.Billing.Organizations.Commands;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Billing.Tax.Services;
+using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
-using Bit.Subscriptions.Organization.Commands;
+using Bit.Core.Settings;
+using Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 using Bit.Subscriptions.Organization.Handlers;
 using Bit.Subscriptions.Organization.Queries;
 using Bitwarden.Server.Sdk.Environment;
@@ -47,7 +51,7 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         services.AddSingleton(Substitute.For<IOrganizationRepository>());
         services.AddSingleton(Substitute.For<IOrganizationUserRepository>());
         services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
-        services.AddSingleton(Substitute.For<IOrganizationService>());
+        services.AddSingleton(Substitute.For<IReplaceOrganizationAndUpdateCacheCommand>());
         services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
         services.AddLogging();
 
@@ -84,7 +88,7 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
         services.AddSingleton(Substitute.For<IOrganizationRepository>());
         services.AddSingleton(Substitute.For<IOrganizationUserRepository>());
-        services.AddSingleton(Substitute.For<IOrganizationService>());
+        services.AddSingleton(Substitute.For<IReplaceOrganizationAndUpdateCacheCommand>());
         services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
         services.AddLogging();
 
@@ -102,7 +106,7 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         services.AddSingleton(Substitute.For<IStripeAdapter>());
         services.AddSingleton(Substitute.For<IOrganizationRepository>());
         services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
-        services.AddSingleton(Substitute.For<IOrganizationService>());
+        services.AddSingleton(Substitute.For<IReplaceOrganizationAndUpdateCacheCommand>());
         services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
         services.AddLogging();
 
@@ -110,5 +114,34 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         using var scope = services.BuildServiceProvider().CreateScope();
 
         Assert.NotNull(scope.ServiceProvider.GetService<RemovePrivilegedControlsHandler>());
+    }
+
+    [Fact]
+    public void AddPrivilegedControlsSeatAutoscaling_ResolvesReserveAutoscaleRevertAndSeatNeededEmailCommands()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(Substitute.For<IStripeAdapter>());
+        services.AddSingleton(Substitute.For<IPricingClient>());
+        services.AddSingleton(Substitute.For<IReplaceOrganizationAndUpdateCacheCommand>());
+        services.AddSingleton(Substitute.For<ICountNewPamSeatsRequiredQuery>());
+        services.AddSingleton(Substitute.For<IOrganizationUserRepository>());
+        services.AddSingleton(Substitute.For<IUpdateOrganizationSubscriptionCommand>());
+        services.AddSingleton(Substitute.For<IMailer>());
+        services.AddSingleton(Substitute.For<IGlobalSettings>());
+        services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
+        services.AddSingleton(Substitute.For<IFeatureService>());
+        services.AddLogging();
+
+        services.AddPrivilegedControlsSeatAutoscaling();
+        using var scope = services.BuildServiceProvider().CreateScope();
+
+        Assert.IsType<AutoscalePrivilegedControlsSeatsCommand>(
+            scope.ServiceProvider.GetService<IAutoscalePrivilegedControlsSeatsCommand>());
+        Assert.IsType<RevertPrivilegedControlsSeatsCommand>(
+            scope.ServiceProvider.GetService<IRevertPrivilegedControlsSeatsCommand>());
+        Assert.IsType<ReservePrivilegedControlsSeatsCommand>(
+            scope.ServiceProvider.GetService<IReservePrivilegedControlsSeatsCommand>());
+        Assert.IsType<SendPrivilegedControlsSeatNeededEmailCommand>(
+            scope.ServiceProvider.GetService<ISendPrivilegedControlsSeatNeededEmailCommand>());
     }
 }

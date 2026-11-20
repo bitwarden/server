@@ -23,6 +23,7 @@ namespace Bit.Core.Test.Auth.Sso;
 public class Saml2Rsa15DeprecationNoticeCommandTests
 {
     private const string Recipient = "admin@example.com";
+    private const string ConfiguredDeprecationDate = "March 3, 2030";
 
     private static SutProvider<Saml2Rsa15DeprecationNoticeCommand> BuildSut(
         int cooldownInDays = 14, IMailDeliveryService? mailDeliveryService = null)
@@ -30,6 +31,7 @@ public class Saml2Rsa15DeprecationNoticeCommandTests
         var globalSettings = Substitute.For<IGlobalSettings>();
         var ssoSettings = Substitute.For<ISsoSettings>();
         ssoSettings.Rsa15DeprecationEmailCooldownInDays = cooldownInDays;
+        ssoSettings.Rsa15DeprecationDate = ConfiguredDeprecationDate;
         globalSettings.Sso.Returns(ssoSettings);
 
         var sutProvider = new SutProvider<Saml2Rsa15DeprecationNoticeCommand>()
@@ -108,6 +110,20 @@ public class Saml2Rsa15DeprecationNoticeCommandTests
         await AssertEmailSendCooldownStartedAsync(sutProvider, organizationId, nowTicks);
         await AssertEmailSentAsync(sutProvider);
         await AssertEmailSendCooldownNotRemovedAsync(sutProvider);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SendEmailIfDueAsync_SendsEmailWithConfiguredDeprecationDate(Guid organizationId)
+    {
+        var sutProvider = BuildSut();
+        SetStoredValue(sutProvider, organizationId, null);
+        SetupAdmins(sutProvider, organizationId, Recipient);
+
+        await sutProvider.Sut.SendEmailIfDueAsync(organizationId);
+
+        await sutProvider.GetDependency<IMailer>()
+            .Received(1)
+            .SendEmail(Arg.Is<Saml2Rsa15DeprecationMail>(m => m.View.DeprecationDate == ConfiguredDeprecationDate));
     }
 
     [Theory, BitAutoData]

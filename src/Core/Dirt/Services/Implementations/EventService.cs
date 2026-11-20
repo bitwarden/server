@@ -325,9 +325,9 @@ public class EventService : IEventService
                 SystemUser = systemUser
             };
 
-            if (systemUser is EventSystemUser.SCIM)
+            if (systemUser is EventSystemUser.SCIM or EventSystemUser.ScheduledJob)
             {
-                // System user only used for SCIM logs in this method
+                // SCIM and scheduled job events have no client device,
                 // and we want event logs to report server instead of unknown
                 e.DeviceType = DeviceType.Server;
             }
@@ -505,7 +505,7 @@ public class EventService : IEventService
                 OrganizationId = secret.OrganizationId,
                 Type = type,
                 SecretId = secret.Id,
-                ActingUserId = userId,
+                UserId = userId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             eventMessages.Add(e);
@@ -559,7 +559,7 @@ public class EventService : IEventService
                 OrganizationId = project.OrganizationId,
                 Type = type,
                 ProjectId = project.Id,
-                ActingUserId = userId,
+                UserId = userId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };
             eventMessages.Add(e);
@@ -622,7 +622,7 @@ public class EventService : IEventService
                 Type = type,
                 GrantedServiceAccountId = policy.GrantedServiceAccountId,
                 ServiceAccountId = serviceAccountId,
-                OrganizationUserId = policy.OrganizationUserId,
+                UserId = policy.OrganizationUserId,
                 ActingUserId = actingUserId,
                 Date = date.GetValueOrDefault(DateTime.UtcNow)
             };

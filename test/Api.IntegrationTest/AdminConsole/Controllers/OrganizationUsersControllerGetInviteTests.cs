@@ -6,7 +6,12 @@ using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Entities.Provider;
+using Bit.Core.AdminConsole.Enums;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bitwarden.Server.Sdk.Features;
@@ -89,6 +94,59 @@ public class OrganizationUsersControllerGetInviteTests : IClassFixture<ApiApplic
         Assert.Equal(_validEncryptedKey, result.Invite);
     }
 
+    [Fact]
+    public async Task GetInvite_WhenJoinerIsAlreadyAdminOfAFreeOrganization_ReturnsFreeAdminLimitError()
+    {
+        // Arrange
+        var code = await CreateInviteLinkAsync(["example.com"]);
+        await SetPlanTypeAsync(PlanType.Free);
+
+        var (joinerClient, joinerEmail) = await CreateJoinerClientAsync();
+        await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.Free, ownerEmail: joinerEmail);
+        await CreatePendingEmailInvitationAsync(joinerEmail, OrganizationUserType.Admin);
+
+        // Act
+        var response = await joinerClient.PostAsJsonAsync(
+            "/organizations/users/invite-link/invite", BuildRequest(_organization.Id, code));
+
+        // Assert
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "organizationId", "only_one_free_organization_admin_allowed");
+    }
+
+    [Fact]
+    public async Task GetInvite_WhenProviderUserJoinsAutoConfirmOrganization_ReturnsProviderUsersCannotJoinError()
+    {
+        // Arrange
+        var code = await CreateInviteLinkAsync(["example.com"]);
+        await EnablePolicyAsync(PolicyType.AutomaticUserConfirmation);
+
+        var (joinerClient, joinerEmail) = await CreateJoinerClientAsync();
+        await AddJoinerToProviderAsync(joinerEmail);
+
+        // Act
+        var response = await joinerClient.PostAsJsonAsync(
+            "/organizations/users/invite-link/invite", BuildRequest(_organization.Id, code));
+
+        // Assert
+        await ValidationProblemAssertions.AssertValidationProblemAsync(
+            response, HttpStatusCode.BadRequest, "code", "provider_users_cannot_join");
+    }
+
+    [Fact]
+    public async Task GetInvite_WithWrongCode_ReturnsNotFoundProblem()
+    {
+        // Arrange
+        var (joinerClient, _) = await CreateJoinerClientAsync();
+
+        // Act
+        var response = await joinerClient.PostAsJsonAsync(
+            "/organizations/users/invite-link/invite", BuildRequest(_organization.Id, Guid.NewGuid()));
+
+        // Assert
+        await ValidationProblemAssertions.AssertNotFoundProblemAsync(response, "code", "invite_link_not_found");
+    }
+
     private async Task<Guid> CreateInviteLinkAsync(string[] allowedDomains)
     {
         var createRequest = new CreateOrganizationInviteLinkRequestModel
@@ -114,6 +172,64 @@ public class OrganizationUsersControllerGetInviteTests : IClassFixture<ApiApplic
         var joinerLoginHelper = new LoginHelper(_factory, joinerClient);
         await joinerLoginHelper.LoginAsync(joinerEmail);
         return (joinerClient, joinerEmail);
+    }
+
+    private async Task SetPlanTypeAsync(PlanType planType)
+    {
+        _organization.PlanType = planType;
+        await _factory.GetService<IOrganizationRepository>().ReplaceAsync(_organization);
+        await _factory.GetService<IOrganizationAbilityCacheService>().UpsertOrganizationAbilityAsync(_organization);
+    }
+
+    private async Task EnablePolicyAsync(PolicyType policyType)
+    {
+        _organization.UsePolicies = true;
+        await _factory.GetService<IOrganizationRepository>().ReplaceAsync(_organization);
+
+        // Policy enforcement reads UsePolicies from the organization ability cache.
+        await _factory.GetService<IOrganizationAbilityCacheService>().UpsertOrganizationAbilityAsync(_organization);
+
+        await _factory.GetService<IPolicyRepository>().CreateAsync(new Policy
+        {
+            OrganizationId = _organization.Id,
+            Type = policyType,
+            Enabled = true,
+        });
+    }
+
+    // Creates a pending email invitation (Invited, no linked UserId), so the joiner joins with the invited role.
+    private async Task CreatePendingEmailInvitationAsync(string joinerEmail, OrganizationUserType type) =>
+        await _factory.GetService<IOrganizationUserRepository>().CreateAsync(new OrganizationUser
+        {
+            OrganizationId = _organization.Id,
+            UserId = null,
+            Email = joinerEmail,
+            Type = type,
+            Status = OrganizationUserStatusType.Invited,
+        });
+
+    private async Task AddJoinerToProviderAsync(string joinerEmail)
+    {
+        var joiner = await _factory.GetService<IUserRepository>().GetByEmailAsync(joinerEmail);
+        Assert.NotNull(joiner);
+
+        var provider = await _factory.GetService<IProviderRepository>().CreateAsync(new Provider
+        {
+            Name = "Integration Test Provider",
+            BillingEmail = "billing@example.com",
+            Type = ProviderType.Msp,
+            Status = ProviderStatusType.Created,
+            Enabled = true,
+        });
+
+        await _factory.GetService<IProviderUserRepository>().CreateAsync(new ProviderUser
+        {
+            ProviderId = provider.Id,
+            UserId = joiner.Id,
+            Type = ProviderUserType.ProviderAdmin,
+            Status = ProviderUserStatusType.Confirmed,
+            Key = Guid.NewGuid().ToString(),
+        });
     }
 
     private static GetOrganizationInviteRequestModel BuildRequest(Guid organizationId, Guid code) =>

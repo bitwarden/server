@@ -1,5 +1,5 @@
-﻿using Bit.Core.AdminConsole.AbilitiesCache;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations.Commands;
@@ -1159,7 +1159,7 @@ public class UpdateSecretsManagerSubscriptionCommandTests
 
         await sutProvider.GetDependency<IUpdateOrganizationSubscriptionCommand>().DidNotReceiveWithAnyArgs()
             .Run(default, default, default);
-        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>().DidNotReceiveWithAnyArgs().RunAsync(default);
     }
 
     [Theory]
@@ -1257,13 +1257,11 @@ public class UpdateSecretsManagerSubscriptionCommandTests
             .SendOrganizationMaxSeatLimitReachedEmailAsync(Arg.Any<Organization>(), Arg.Any<int>(),
                 Arg.Any<IEnumerable<string>>());
 
-        await sutProvider.GetDependency<IOrganizationRepository>().DidNotReceiveWithAnyArgs().ReplaceAsync(default);
-        await sutProvider.GetDependency<IOrganizationAbilityCacheService>().DidNotReceiveWithAnyArgs().UpsertOrganizationAbilityAsync(default);
+        await sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>().DidNotReceiveWithAnyArgs().RunAsync(default);
     }
 
     private void AssertUpdatedOrganization(Func<Organization> organizationMatcher, SutProvider<UpdateSecretsManagerSubscriptionCommand> sutProvider)
     {
-        sutProvider.GetDependency<IOrganizationRepository>().Received(1).ReplaceAsync(organizationMatcher());
-        sutProvider.GetDependency<IOrganizationAbilityCacheService>().Received(1).UpsertOrganizationAbilityAsync(organizationMatcher());
+        sutProvider.GetDependency<IReplaceOrganizationAndUpdateCacheCommand>().Received(1).RunAsync(organizationMatcher());
     }
 }

@@ -55,7 +55,6 @@ public static class ServiceCollectionExtensions
         services.AddTransient<IExportCohortAssignmentsQuery, ExportCohortAssignmentsQuery>();
         services.AddTransient<IRestartSubscriptionCommand, RestartSubscriptionCommand>();
         services.AddTransient<IGetOrganizationRestartQuery, GetOrganizationRestartQuery>();
-        services.AddTransient<IPreviewOrganizationTaxCommand, PreviewOrganizationTaxCommand>();
         services.AddTransient<IGetBitwardenSubscriptionQuery, GetBitwardenSubscriptionQuery>();
         services.AddTransient<IReinstateSubscriptionCommand, ReinstateSubscriptionCommand>();
         services.AddTransient<IBraintreeService, BraintreeService>();
@@ -86,8 +85,6 @@ public static class ServiceCollectionExtensions
     {
         services.AddScoped<ICreatePremiumCloudHostedSubscriptionCommand, CreatePremiumCloudHostedSubscriptionCommand>();
         services.AddScoped<ICreatePremiumSelfHostedSubscriptionCommand, CreatePremiumSelfHostedSubscriptionCommand>();
-        services.AddTransient<IPreviewPremiumTaxCommand, PreviewPremiumTaxCommand>();
-        services.AddScoped<IPreviewPremiumUpgradeProrationCommand, PreviewPremiumUpgradeProrationCommand>();
         services.AddScoped<IUpdatePremiumStorageCommand, UpdatePremiumStorageCommand>();
         services.AddScoped<IUpgradePremiumToOrganizationCommand, UpgradePremiumToOrganizationCommand>();
     }

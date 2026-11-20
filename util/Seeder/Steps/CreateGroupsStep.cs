@@ -13,7 +13,7 @@ internal sealed class CreateGroupsStep(int count, DensityProfile? density = null
     {
         var orgId = context.RequireOrgId();
         var hardenedOrgUserIds = context.Registry.HardenedOrgUserIds;
-        var progress = context.GetProgress();
+        var progress = context.Progress;
 
         var groups = new List<Group>(count);
         var groupIds = new List<Guid>(count);

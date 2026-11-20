@@ -133,6 +133,28 @@ public class OrganizationUserInviteReminderTests
     }
 
     [Theory, DatabaseData]
+    public async Task ClaimInviteReminderSequencesAsync_NextDueDateIsNow_ClaimsEachMemberOnce(
+        IOrganizationUserRepository organizationUserRepository,
+        IOrganizationRepository organizationRepository)
+    {
+        // Arrange - an interval of 0 hours makes the next due date equal to now
+        var (now, oldestDueDate, _) = CreateClaimWindow();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var first = await CreateInvitedAsync(organizationUserRepository, organization, now.AddDays(-1), 0);
+        var second = await CreateInvitedAsync(organizationUserRepository, organization, now.AddHours(-1), 1);
+
+        // Act
+        var claimed = await organizationUserRepository.ClaimInviteReminderSequencesAsync(
+            now, oldestDueDate, now, BatchSize);
+
+        // Assert
+        Assert.Equal(1, Assert.Single(claimed, c => c.Id == first.Id).InviteRemindersSentCount);
+        Assert.Equal(2, Assert.Single(claimed, c => c.Id == second.Id).InviteRemindersSentCount);
+        await AssertSequenceAsync(organizationUserRepository, first.Id, now, 1);
+        await AssertSequenceAsync(organizationUserRepository, second.Id, now, 2);
+    }
+
+    [Theory, DatabaseData]
     public async Task ClaimInviteReminderSequencesAsync_LastReminder_ClearsDueDate(
         IOrganizationUserRepository organizationUserRepository,
         IOrganizationRepository organizationRepository)

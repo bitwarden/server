@@ -2,14 +2,22 @@
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
+using Bit.Core.Billing.Constants;
 using Bit.Core.Billing.Enums;
+using Bit.Core.Billing.Pricing;
+using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
 using Bit.Core.Settings;
+using Bitwarden.Server.Sdk.Environment;
+using Bitwarden.Server.Sdk.Features;
+using NSubstitute;
+using Stripe;
 using Xunit;
 using V1_RestoreUserCommand = Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.RestoreUser.v1;
 
@@ -22,13 +30,24 @@ public class OrganizationUsersControllerBulkEnablePamTests
     private readonly HttpClient _client;
     private readonly LoginHelper _loginHelper;
 
+    private const string _subscriptionId = "sub_integration_test";
+    private const string _privilegedControlsSeatItemId = "si_privileged_controls_seats";
+
     private Organization _organization = null!;
     private string _ownerEmail = null!;
     private GlobalSettings _globalSettings = null!;
+    private IStripeAdapter _stripeAdapter = null!;
 
     public OrganizationUsersControllerBulkEnablePamTests(ApiApplicationFactory apiFactory)
     {
         _factory = apiFactory;
+        _factory.SubstituteService<IStripeAdapter>(_ => { });
+        _factory.SubstituteService<IFeatureService>(featureService =>
+            featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true));
+        // Billing reads self-hosted from the environment, which is fixed at startup, so it follows the settings flag
+        // the tests flip instead.
+        _factory.SubstituteService<IBitwardenEnvironment>(environment =>
+            environment.SelfHosted.Returns(_ => _factory.GetService<GlobalSettings>().SelfHosted));
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -37,11 +56,23 @@ public class OrganizationUsersControllerBulkEnablePamTests
     {
         _globalSettings = _factory.GetService<GlobalSettings>();
         _globalSettings.SelfHosted = false;
+        // The feature service substitute is shared across this class's tests, so a test that turns the flag off
+        // would otherwise leave it off for the next one.
+        _factory.GetService<IFeatureService>().IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true);
 
         _ownerEmail = $"bulk-enable-pam-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(_ownerEmail);
         (_organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory, plan: PlanType.EnterpriseAnnually,
             ownerEmail: _ownerEmail, passwordManagerSeats: 5, paymentMethod: PaymentMethodType.Card);
+        _organization.GatewaySubscriptionId = _subscriptionId;
+        await _factory.GetService<IOrganizationRepository>().ReplaceAsync(_organization);
+
+        var plan = await _factory.GetService<IPricingClient>().GetPlanOrThrow(PlanType.EnterpriseAnnually);
+        var subscription = BuildSubscriptionWithPrivilegedControlsSeats(plan.PrivilegedControls.StripeSeatPlanId);
+        _stripeAdapter = _factory.GetService<IStripeAdapter>();
+        _stripeAdapter.ClearReceivedCalls();
+        _stripeAdapter.GetSubscriptionAsync(_subscriptionId, Arg.Any<SubscriptionGetOptions>()).Returns(subscription);
+        _stripeAdapter.UpdateSubscriptionAsync(_subscriptionId, Arg.Any<SubscriptionUpdateOptions>()).Returns(subscription);
     }
 
     public Task DisposeAsync()
@@ -194,7 +225,7 @@ public class OrganizationUsersControllerBulkEnablePamTests
     }
 
     [Fact]
-    public async Task BulkEnablePam_WhenCloudAndSeatsInsufficient_Grants()
+    public async Task BulkEnablePam_WhenCloudAndSeatsInsufficient_AutoscalesAndGrants()
     {
         await SetPamSeatsAsync(1);
         await SetUsePamAsync(true);
@@ -211,6 +242,35 @@ public class OrganizationUsersControllerBulkEnablePamTests
 
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         await AssertAccessPamAsync(member, true);
+        var reloadedOrganization = await _factory.GetService<IOrganizationRepository>().GetByIdAsync(_organization.Id);
+        Assert.Equal(2, reloadedOrganization!.PamSeats);
+        await _stripeAdapter.Received(1).UpdateSubscriptionAsync(_subscriptionId,
+            Arg.Is<SubscriptionUpdateOptions>(options => options.Items.Any(item =>
+                item.Id == _privilegedControlsSeatItemId && item.Quantity == 2)));
+    }
+
+    [Fact]
+    public async Task BulkEnablePam_WhenCloudFlagOffAndSeatsInsufficient_DoesNotGrant()
+    {
+        await SetPamSeatsAsync(1);
+        await SetUsePamAsync(true);
+        await _loginHelper.LoginAsync(_ownerEmail);
+
+        var seatHolder = await CreateMemberAsync();
+        await GrantPamAsync(seatHolder);
+        var member = await CreateMemberAsync();
+
+        _globalSettings.SelfHosted = false;
+        _factory.GetService<IFeatureService>().IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
+
+        var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/enable-pam",
+            new OrganizationUserBulkRequestModel { Ids = [member.Id] });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Contains("Your organization has no Privileged Controls seats available. Contact sales for more seats.",
+            await response.Content.ReadAsStringAsync());
+        await AssertAccessPamAsync(member, false);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().UpdateSubscriptionAsync(default!, default!);
     }
 
     [Theory]
@@ -232,6 +292,39 @@ public class OrganizationUsersControllerBulkEnablePamTests
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
         await AssertAccessPamAsync(member, false);
     }
+
+    /// <summary>
+    /// An active, paid subscription that bills one Privileged Controls seat.
+    /// </summary>
+    private static Subscription BuildSubscriptionWithPrivilegedControlsSeats(string privilegedControlsSeatPriceId) =>
+        new()
+        {
+            Id = _subscriptionId,
+            Status = StripeConstants.SubscriptionStatus.Active,
+            CollectionMethod = StripeConstants.CollectionMethod.ChargeAutomatically,
+            Customer = new Customer { Id = "cus_integration_test" },
+            Items = new StripeList<SubscriptionItem>
+            {
+                Data =
+                [
+                    new SubscriptionItem
+                    {
+                        Id = _privilegedControlsSeatItemId,
+                        Quantity = 1,
+                        Price = new Price
+                        {
+                            Id = privilegedControlsSeatPriceId,
+                            Recurring = new PriceRecurring { Interval = StripeConstants.Intervals.Year },
+                            Metadata = new Dictionary<string, string>
+                            {
+                                [StripeConstants.MetadataKeys.PurchasableReference] =
+                                    StripeConstants.PurchasableReferences.PrivilegedControlsSeat
+                            }
+                        }
+                    }
+                ]
+            }
+        };
 
     private async Task<OrganizationUser> CreateMemberAsync(Guid? organizationId = null,
         OrganizationUserStatusType status = OrganizationUserStatusType.Confirmed)
