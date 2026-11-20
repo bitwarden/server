@@ -117,7 +117,8 @@ public sealed class MailDeliveryOptions
         public bool SslOverride { get; set; }
 
         /// <summary>
-        /// SMTP username. The client authenticates only when both this and <see cref="Password"/> are set.
+        /// SMTP username. For <see cref="SmtpAuthType.Password"/>, the client authenticates only when both this
+        /// and <see cref="Password"/> are set. OAuth clients do not use this value.
         /// </summary>
         public string? Username { get; set; }
 
