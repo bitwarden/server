@@ -7,6 +7,7 @@ using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
+using Duende.IdentityServer;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
 
@@ -102,13 +103,20 @@ public class ProfileService : IProfileService
             return;
         }
 
+        var user = await _userService.GetUserByPrincipalAsync(context.Subject);
+
+        // A refresh token's subject comes from a long-lived stored grant, which can outlive its user.
+        if (user == null && context.Caller == IdentityServerConstants.ProfileIsActiveCallers.RefreshTokenValidation)
+        {
+            context.IsActive = false;
+            return;
+        }
+
         // We add the security stamp claim to the persisted grant when we issue the refresh token.
         // IdentityServer will add this claim to the subject, and here we evaluate whether the security stamp that
         // was persisted matches the current security stamp of the user. If it does not match, then the user has performed
         // an operation that we want to invalidate the refresh token.
         var securityTokenClaim = context.Subject?.Claims.FirstOrDefault(c => c.Type == Claims.SecurityStamp);
-        var user = await _userService.GetUserByPrincipalAsync(context.Subject);
-
         if (user != null && securityTokenClaim != null)
         {
             context.IsActive = string.Equals(user.SecurityStamp, securityTokenClaim.Value,

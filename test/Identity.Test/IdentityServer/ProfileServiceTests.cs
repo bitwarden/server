@@ -11,6 +11,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Identity.IdentityServer;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Duende.IdentityServer;
 using Duende.IdentityServer.Models;
 using NSubstitute;
 using Xunit;
@@ -648,6 +649,52 @@ public class ProfileServiceTests
         ]));
 
         _userService.GetUserByPrincipalAsync(context.Subject).Returns(user);
+
+        await _sut.IsActiveAsync(context);
+
+        Assert.True(context.IsActive);
+    }
+
+    /// <summary>
+    /// Refresh tokens belong only to users, so a refresh token whose user is not found is inactive.
+    /// </summary>
+    [Theory]
+    [BitAutoData(BitwardenClient.Web)]
+    [BitAutoData(BitwardenClient.Browser)]
+    [BitAutoData(BitwardenClient.Cli)]
+    [BitAutoData(BitwardenClient.Desktop)]
+    [BitAutoData(BitwardenClient.Mobile)]
+    [BitAutoData(BitwardenClient.DirectoryConnector)]
+    public async Task IsActiveAsync_RefreshTokenValidation_UserNotFound_ReturnsFalse(
+        string client,
+        [AuthFixtures.IsActiveContext] IsActiveContext context)
+    {
+        context.Client.ClientId = client;
+        context.Caller = IdentityServerConstants.ProfileIsActiveCallers.RefreshTokenValidation;
+        context.IsActive = true;
+        _userService.GetUserByPrincipalAsync(context.Subject).Returns((User)null);
+
+        await _sut.IsActiveAsync(context);
+
+        Assert.False(context.IsActive);
+    }
+
+    /// <summary>
+    /// Only refresh token validation ends the session when the user is not found. Other callers keep treating a
+    /// subject with no user as active.
+    /// </summary>
+    [Theory]
+    [BitAutoData(IdentityServerConstants.ProfileIsActiveCallers.AccessTokenValidation)]
+    [BitAutoData(IdentityServerConstants.ProfileIsActiveCallers.UserInfoRequestValidation)]
+    [BitAutoData(IdentityServerConstants.ProfileIsActiveCallers.ExtensionGrantValidation)]
+    [BitAutoData(IdentityServerConstants.ProfileIsActiveCallers.ResourceOwnerValidation)]
+    [BitAutoData(IdentityServerConstants.ProfileIsActiveCallers.AuthorizationCodeValidation)]
+    public async Task IsActiveAsync_OtherCaller_UserNotFound_ReturnsTrue(
+        string caller,
+        [AuthFixtures.IsActiveContext] IsActiveContext context)
+    {
+        context.Caller = caller;
+        _userService.GetUserByPrincipalAsync(context.Subject).Returns((User)null);
 
         await _sut.IsActiveAsync(context);
 
