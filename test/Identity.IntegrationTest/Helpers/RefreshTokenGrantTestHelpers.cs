@@ -1,4 +1,5 @@
-﻿using Bit.Infrastructure.EntityFramework.Auth.Models;
+﻿using Bit.Core.Enums;
+using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Bit.IntegrationTestCommon.Factories;
 using Microsoft.EntityFrameworkCore;
 
@@ -12,7 +13,7 @@ namespace Bit.Identity.IntegrationTest.Helpers;
 public static class RefreshTokenGrantTestHelpers
 {
     public static async Task<HttpContext> PostRefreshTokenAsync(
-        IdentityApplicationFactory factory, string refreshToken, string clientId = "web")
+        IdentityApplicationFactory factory, string refreshToken, string clientId = BitwardenClient.Web)
     {
         return await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {

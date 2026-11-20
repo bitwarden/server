@@ -44,7 +44,7 @@ public static class PasswordGrantTestHelpers
     /// Registers the default user and logs in with the password grant on the given client.
     /// </summary>
     public static async Task<(User User, string AccessToken, string RefreshToken)> RegisterAndLoginWithPasswordAsync(
-        IdentityApplicationFactory factory, string clientId = "web")
+        IdentityApplicationFactory factory, string clientId = BitwardenClient.Web)
     {
         await RegisterUserAsync(factory);
         var (accessToken, refreshToken) = await factory.TokenFromPasswordAsync(
