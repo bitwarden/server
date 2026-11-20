@@ -253,7 +253,7 @@ jobs:
           ACR_TAG="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
           TAGS="${ACR_TAG}"
 
-          # Immutable per-build tag for publish builds: <branch>-<version>-<short sha>, e.g. rc-2026.11.0-abc1234
+          # Unique per-build tag for publish builds: <branch>-<version>-<short sha>, e.g. rc-2026.11.0-abc1234
           # Uses the raw branch name (main, not dev) so deploy tooling can select builds by branch prefix
           if [[ "${IS_PUBLISH_BUILD}" == "true" ]]; then
             VERSION=$(grep -oPm1 '<Version>\K[^<]+' Directory.Build.props)
@@ -261,9 +261,9 @@ jobs:
               echo "::error::Could not read <Version> from Directory.Build.props"
               exit 1
             fi
-            IMMUTABLE_TAG="${BRANCH_NAME}-${VERSION}-${SHA::7}"
-            TAGS=$TAGS",${_AZ_REGISTRY}/${PROJECT_NAME}:${IMMUTABLE_TAG}"
-            echo "immutable_tag=$IMMUTABLE_TAG" >> "$GITHUB_OUTPUT"
+            BUILD_TAG="${BRANCH_NAME}-${VERSION}-${SHA::7}"
+            TAGS=$TAGS",${_AZ_REGISTRY}/${PROJECT_NAME}:${BUILD_TAG}"
+            echo "build_tag=$BUILD_TAG" >> "$GITHUB_OUTPUT"
           fi
 
           # Additionally push rc and hotfix-rc tags to GHCR
@@ -350,7 +350,7 @@ jobs:
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           DIGEST: ${{ steps.build-artifacts.outputs.digest }}
           TAGS: ${{ steps.image-tags.outputs.tags }}
-          IMMUTABLE_TAG: ${{ steps.image-tags.outputs.immutable_tag }}
+          BUILD_TAG: ${{ steps.image-tags.outputs.build_tag }}
         run: |
           fragment='{}'
           IFS=',' read -r -a tags_array <<< "$TAGS"
@@ -366,12 +366,12 @@ jobs:
               '. + {($k): {type: "container_image", image: $image, tag: $tag, digest: $digest}}')
           done
 
-          # The immutable tag is only pushed to ACR
-          if [[ -n "${IMMUTABLE_TAG}" ]]; then
+          # The build tag is only pushed to ACR
+          if [[ -n "${BUILD_TAG}" ]]; then
             fragment=$(echo "$fragment" | jq \
               --arg k "${PROJECT_NAME}-azurecr.io" \
-              --arg immutable_tag "$IMMUTABLE_TAG" \
-              '.[$k].immutable_tag = $immutable_tag')
+              --arg build_tag "$BUILD_TAG" \
+              '.[$k].build_tag = $build_tag')
           fi
 
           mkdir -p image-manifest-fragments
