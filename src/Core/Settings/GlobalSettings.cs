@@ -44,6 +44,19 @@ public class GlobalSettings : IGlobalSettings
     public string LicenseCertificatePath { get; set; }
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
+    /// <summary>
+    /// The secret of the internal job trigger retirement's clients (<c>retire.{service}</c>): internal clients that
+    /// delete the rows that start this server's recurring jobs for the users and organizations they name. Unset, the
+    /// clients don't exist and the retirement answers <c>404</c>. Never logged.
+    /// </summary>
+    public virtual string JobTriggerRetirementClientSecret { get; set; }
+    /// <summary>
+    /// The local port of the internal listener the job trigger retirement answers on, and on no other. It must be an
+    /// additional Kestrel endpoint (an <c>ASPNETCORE_URLS</c> entry or <c>Kestrel:Endpoints</c>), different from
+    /// the public port, that only the install's own network reaches and the proxy never forwards to. Unset, the
+    /// job trigger retirement answers <c>404</c>.
+    /// </summary>
+    public virtual int? JobTriggerRetirementPort { get; set; }
     public virtual string OidcIdentityClientKey { get; set; }
     public virtual string HibpApiKey { get; set; }
     public virtual bool DisableUserRegistration { get; set; }
