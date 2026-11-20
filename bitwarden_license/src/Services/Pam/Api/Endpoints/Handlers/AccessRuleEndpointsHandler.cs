@@ -6,7 +6,6 @@ using Bit.Pam.Repositories;
 using Bit.Services.Pam.Api.Models.Request;
 using Bit.Services.Pam.Api.Models.Response;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
-using Bit.Services.Pam.OrganizationFeatures.Queries.Interfaces;
 
 namespace Bit.Services.Pam.Api.Endpoints.Handlers;
 
@@ -20,8 +19,7 @@ public class AccessRuleEndpointsHandler(
     IAccessRuleRepository repository,
     ICreateAccessRuleCommand createCommand,
     IUpdateAccessRuleCommand updateCommand,
-    IDeleteAccessRuleCommand deleteCommand,
-    IListRuleBypassableCiphersQuery bypassableCiphersQuery)
+    IDeleteAccessRuleCommand deleteCommand)
 {
     public async Task<ListResponseModel<AccessRuleResponseModel>> GetAll(Guid orgId)
     {
@@ -60,15 +58,5 @@ public class AccessRuleEndpointsHandler(
     public async Task Delete(ClaimsPrincipal user, Guid orgId, Guid id)
     {
         await deleteCommand.DeleteAsync(orgId, id, userService.GetProperUserId(user)!.Value);
-    }
-
-    /// <summary>Where this rule fails to gate: the collections letting its ciphers through without a lease.</summary>
-    /// <remarks>
-    /// Unlike <see cref="Get"/>, a rule belonging to another organization returns an empty list, not 404.
-    /// </remarks>
-    public async Task<RuleBypassableCiphersResponseModel> GetBypassableCiphers(Guid orgId, Guid id)
-    {
-        var ungatedCollectionIds = await bypassableCiphersQuery.GetUngatedCollectionIdsAsync(orgId, id);
-        return new RuleBypassableCiphersResponseModel(id, ungatedCollectionIds);
     }
 }
