@@ -52,7 +52,7 @@ public class PasswordGrantResponseTests
         Assert.Equal((int)KdfType.PBKDF2_SHA256, kdf);
         var kdfIterations = AssertHelper.AssertJsonProperty(root, "KdfIterations", JsonValueKind.Number).GetInt32();
         Assert.Equal(KdfConstants.PBKDF2_ITERATIONS.Default, kdfIterations);
-        AssertUserDecryptionOptions(root,
+        AssertMasterPasswordDecryptionOptions(root,
             expectedKdfType: KdfType.PBKDF2_SHA256,
             expectedKdfIterations: KdfConstants.PBKDF2_ITERATIONS.Default,
             expectedMasterKeyEncryptedUserKey: requestModel.UserSymmetricKey!,
@@ -265,29 +265,5 @@ public class PasswordGrantResponseTests
 
         using var secondBody = await AssertDefaultTokenBodyAsync(secondContext);
         Assert.Equal(device.Id, Assert.Single(await deviceRepository.GetManyByUserIdAsync(user.Id)).Id);
-    }
-
-    private static void AssertUserDecryptionOptions(JsonElement tokenResponse, KdfType expectedKdfType,
-        int expectedKdfIterations, string expectedMasterKeyEncryptedUserKey, string expectedSalt)
-    {
-        var userDecryptionOptions =
-            AssertHelper.AssertJsonProperty(tokenResponse, "UserDecryptionOptions", JsonValueKind.Object);
-
-        AssertHelper.AssertJsonProperty(userDecryptionOptions, "HasMasterPassword", JsonValueKind.True);
-        var objectString = AssertHelper.AssertJsonProperty(userDecryptionOptions, "Object", JsonValueKind.String).ToString();
-        Assert.Equal("userDecryptionOptions", objectString);
-        var masterPasswordUnlock = AssertHelper.AssertJsonProperty(userDecryptionOptions, "MasterPasswordUnlock", JsonValueKind.Object);
-        // MasterPasswordUnlock.Kdf
-        var kdf = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "Kdf", JsonValueKind.Object);
-        var kdfType = AssertHelper.AssertJsonProperty(kdf, "KdfType", JsonValueKind.Number).GetInt32();
-        Assert.Equal((int)expectedKdfType, kdfType);
-        var kdfIterations = AssertHelper.AssertJsonProperty(kdf, "Iterations", JsonValueKind.Number).GetInt32();
-        Assert.Equal(expectedKdfIterations, kdfIterations);
-        // MasterPasswordUnlock.MasterKeyEncryptedUserKey
-        var masterKeyEncryptedUserKey = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "MasterKeyEncryptedUserKey", JsonValueKind.String).ToString();
-        Assert.Equal(expectedMasterKeyEncryptedUserKey, masterKeyEncryptedUserKey);
-        // MasterPasswordUnlock.Salt
-        var salt = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "Salt", JsonValueKind.String).ToString();
-        Assert.Equal(expectedSalt, salt);
     }
 }
