@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Entities;
+using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.IntegrationTestCommon.Factories;
+using Microsoft.EntityFrameworkCore;
 
 namespace Bit.Identity.IntegrationTest.Helpers;
 
@@ -37,5 +39,13 @@ public static class UserTestHelpers
         var user = await userRepository.GetByIdAsync(userId);
         change(user!);
         await userRepository.ReplaceAsync(user!);
+    }
+
+    /// <summary>
+    /// Counts the events of the given type that were logged for the user.
+    /// </summary>
+    public static async Task<int> CountUserEventsAsync(IdentityApplicationFactory factory, Guid userId, EventType type)
+    {
+        return await factory.GetDatabaseContext().Events.CountAsync(e => e.UserId == userId && e.Type == type);
     }
 }

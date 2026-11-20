@@ -131,12 +131,12 @@ public class RefreshTokenGrantResponseTests
         using var factory = new IdentityApplicationFactory();
         var (user, _, refreshToken) = await RegisterAndLoginWithPasswordAsync(factory);
         // The login's own event shows that the count finds login events.
-        Assert.Equal(1, await CountLoginEventsAsync(factory, user.Id));
+        Assert.Equal(1, await CountUserEventsAsync(factory, user.Id, EventType.User_LoggedIn));
 
         var context = await PostRefreshTokenAsync(factory, refreshToken);
 
         using var body = await AssertDefaultTokenBodyAsync(context);
-        Assert.Equal(1, await CountLoginEventsAsync(factory, user.Id));
+        Assert.Equal(1, await CountUserEventsAsync(factory, user.Id, EventType.User_LoggedIn));
     }
 
     /// <summary>
@@ -156,11 +156,5 @@ public class RefreshTokenGrantResponseTests
         using var body = await AssertDefaultTokenBodyAsync(context);
         var userAfter = await factory.GetDatabaseContext().Users.AsNoTracking().SingleAsync(u => u.Id == user.Id);
         Assert.Equal(2, userAfter.FailedLoginCount);
-    }
-
-    private static async Task<int> CountLoginEventsAsync(IdentityApplicationFactory factory, Guid userId)
-    {
-        return await factory.GetDatabaseContext().Events
-            .CountAsync(e => e.UserId == userId && e.Type == EventType.User_LoggedIn);
     }
 }
