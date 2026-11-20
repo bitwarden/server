@@ -111,4 +111,7 @@ public enum PushType : byte
 
     [NotificationInfo("@bitwarden/team-pam-dev", typeof(Models.UserPushNotification))]
     RefreshAccessRequest = 29,
+
+    [NotificationInfo("@bitwarden/team-vault-dev", typeof(Vault.Models.SyncCipherUserFieldsPushNotification))]
+    SyncCipherUserFields = 30,
 }

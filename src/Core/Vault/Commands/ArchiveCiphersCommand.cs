@@ -1,23 +1,23 @@
 ﻿using Bit.Core.Exceptions;
-using Bit.Core.Platform.Push;
 using Bit.Core.Vault.Commands.Interfaces;
 using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Repositories;
+using Bit.Core.Vault.Services;
 
 namespace Bit.Core.Vault.Commands;
 
 public class ArchiveCiphersCommand : IArchiveCiphersCommand
 {
     private readonly ICipherRepository _cipherRepository;
-    private readonly IPushNotificationService _pushService;
+    private readonly ICipherSyncPushService _cipherSyncPushService;
 
     public ArchiveCiphersCommand(
         ICipherRepository cipherRepository,
-        IPushNotificationService pushService
+        ICipherSyncPushService cipherSyncPushService
     )
     {
         _cipherRepository = cipherRepository;
-        _pushService = pushService;
+        _cipherSyncPushService = cipherSyncPushService;
     }
 
     public async Task<ICollection<CipherDetails>> ArchiveManyAsync(IEnumerable<Guid> cipherIds,
@@ -55,7 +55,7 @@ public class ArchiveCiphersCommand : IArchiveCiphersCommand
 
         // ExcludeCurrentContext to avoid double syncing when archiving a cipher
 
-        await _pushService.PushSyncCiphersAsync(archivingUserId, true);
+        await _cipherSyncPushService.PushSyncCipherUserFieldsAsync(archivingUserId, archivingCiphers, true);
 
         return archivingCiphers;
     }

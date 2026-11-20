@@ -57,6 +57,7 @@ public class CiphersController : Controller
     private readonly IArchiveCiphersCommand _archiveCiphersCommand;
     private readonly IUnarchiveCiphersCommand _unarchiveCiphersCommand;
     private readonly ICipherLeaseGate _cipherLeaseGate;
+    private readonly ICipherSyncPushService _cipherSyncPushService;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IAuthorizationService _authorizationService;
 
@@ -75,6 +76,7 @@ public class CiphersController : Controller
         IArchiveCiphersCommand archiveCiphersCommand,
         IUnarchiveCiphersCommand unarchiveCiphersCommand,
         ICipherLeaseGate cipherLeaseGate,
+        ICipherSyncPushService cipherSyncPushService,
         IAuthorizationService authorizationService,
         Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
@@ -92,6 +94,7 @@ public class CiphersController : Controller
         _archiveCiphersCommand = archiveCiphersCommand;
         _unarchiveCiphersCommand = unarchiveCiphersCommand;
         _cipherLeaseGate = cipherLeaseGate;
+        _cipherSyncPushService = cipherSyncPushService;
         _authorizationService = authorizationService;
         _featureService = featureService;
     }
@@ -916,6 +919,7 @@ public class CiphersController : Controller
         await _cipherRepository.UpdatePartialAsync(id, user.Id, folderId, model.Favorite);
 
         var updatedCipher = await GetByIdAsync(id, user.Id);
+        await _cipherSyncPushService.PushSyncCipherUserFieldsAsync(user.Id, [updatedCipher], true);
         return await BuildWriteReturnResponseAsync(updatedCipher, user);
     }
 
