@@ -2885,6 +2885,8 @@ namespace Bit.PostgresMigrations.Migrations
 
                     b.HasIndex("RotationConfigId", "Action");
 
+                    b.HasIndex("RotationConfigId", "CreationDate", "Id");
+
                     b.ToTable("PamRotationJob", (string)null);
                 });
 
