@@ -66,17 +66,18 @@ public static class TokenResponseAssertions
         AssertErrorAsync(httpContext, "invalid_grant");
 
     /// <summary>
-    /// Asserts a 400 <c>invalid_grant</c> response whose <c>ErrorModel</c> holds the given message for the client to
-    /// show.
+    /// Asserts a 400 response with the given OAuth error code, <c>invalid_grant</c> by default, whose
+    /// <c>ErrorModel</c> holds the given message for the client to show.
     /// </summary>
-    public static async Task AssertErrorModelAsync(HttpContext httpContext, string expectedMessage)
+    public static async Task AssertErrorModelAsync(HttpContext httpContext, string expectedMessage,
+        string expectedError = "invalid_grant")
     {
         Assert.Equal(StatusCodes.Status400BadRequest, httpContext.Response.StatusCode);
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(httpContext);
         var root = body.RootElement;
         Assert.Equal(new[] { "ErrorModel", "error", "error_description" },
             root.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal).ToArray());
-        Assert.Equal("invalid_grant", AssertHelper.AssertJsonProperty(root, "error", JsonValueKind.String).GetString());
+        Assert.Equal(expectedError, AssertHelper.AssertJsonProperty(root, "error", JsonValueKind.String).GetString());
         var errorModel = AssertHelper.AssertJsonProperty(root, "ErrorModel", JsonValueKind.Object);
         Assert.Equal(expectedMessage,
             AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString());
