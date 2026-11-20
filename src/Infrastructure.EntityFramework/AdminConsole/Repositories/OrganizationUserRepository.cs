@@ -352,6 +352,22 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
         }
     }
 
+    public async Task<ICollection<OrganizationUserEmail>> GetManyEmailsByOrganizationIdAsync(
+        Guid organizationId, IEnumerable<Guid> ids)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        return await (from ou in dbContext.OrganizationUsers
+                      join user in dbContext.Users on ou.UserId equals user.Id into users
+                      from user in users.DefaultIfEmpty()
+                      where ou.OrganizationId == organizationId && ids.Contains(ou.Id)
+                      select new OrganizationUserEmail
+                      {
+                          Id = ou.Id,
+                          Email = ou.Email ?? user.Email
+                      }).ToListAsync();
+    }
+
     public async Task<ICollection<Core.Entities.OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
@@ -673,6 +689,25 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                               (onlyRegisteredUsers && uEmails.Contains(e))
                               select e;
             return knownEmails.ToList();
+        }
+    }
+
+    public async Task<ICollection<Guid>> GetManyGroupIdsByUserIdAsync(Guid organizationUserId, bool useReadOnlyReplica = false)
+    {
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            IQueryable<GroupUser> query = dbContext.GroupUsers;
+
+            if (useReadOnlyReplica)
+            {
+                query = query.AsNoTracking();
+            }
+
+            return await query
+                .Where(gu => gu.OrganizationUserId == organizationUserId)
+                .Select(gu => gu.GroupId)
+                .ToListAsync();
         }
     }
 

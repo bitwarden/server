@@ -8,6 +8,70 @@ namespace Bit.Infrastructure.IntegrationTest.AdminConsole.Repositories;
 
 public class GroupRepositoryTests
 {
+    [Theory, DatabaseData]
+    public async Task GetManyGroupUsersByGroupIdsAsync_ReturnsOnlyRequestedMembershipsInOrganization(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var otherOrganization = await organizationRepository.CreateTestOrganizationAsync();
+        var member = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+        var otherMember = await organizationUserRepository.CreateTestOrganizationUserAsync(otherOrganization, user);
+        var group = await groupRepository.CreateTestGroupAsync(organization);
+        var secondGroup = await groupRepository.CreateTestGroupAsync(organization);
+        var emptyGroup = await groupRepository.CreateTestGroupAsync(organization);
+        var unrequestedGroup = await groupRepository.CreateTestGroupAsync(organization);
+        var otherGroup = await groupRepository.CreateTestGroupAsync(otherOrganization);
+        foreach (var id in new[] { group.Id, secondGroup.Id, unrequestedGroup.Id })
+        {
+            await groupRepository.UpdateUsersAsync(id, [member.Id], DateTime.UtcNow);
+        }
+        await groupRepository.UpdateUsersAsync(otherGroup.Id, [otherMember.Id], DateTime.UtcNow);
+
+        var memberships = await groupRepository.GetManyGroupUsersByGroupIdsAsync(
+            organization.Id, [group.Id, secondGroup.Id, emptyGroup.Id, otherGroup.Id, Guid.NewGuid()]);
+
+        Assert.Equal(
+            new[] { (group.Id, member.Id), (secondGroup.Id, member.Id) }.OrderBy(pair => pair.Item1),
+            memberships.Select(membership => (membership.GroupId, membership.OrganizationUserId)).OrderBy(pair => pair.GroupId));
+        Assert.Empty(await groupRepository.GetManyGroupUsersByGroupIdsAsync(organization.Id, []));
+    }
+
+    [Theory, DatabaseData]
+    public async Task GetManyGroupUsersByOrganizationUserIdsAsync_ReturnsOnlyRequestedMembershipsInOrganization(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
+    {
+        var user = await userRepository.CreateTestUserAsync();
+        var secondUser = await userRepository.CreateTestUserAsync();
+        var emptyUser = await userRepository.CreateTestUserAsync();
+        var unrequestedUser = await userRepository.CreateTestUserAsync();
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var otherOrganization = await organizationRepository.CreateTestOrganizationAsync();
+        var member = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+        var secondMember = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, secondUser);
+        var emptyMember = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, emptyUser);
+        var unrequestedMember = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, unrequestedUser);
+        var otherMember = await organizationUserRepository.CreateTestOrganizationUserAsync(otherOrganization, user);
+        var group = await groupRepository.CreateTestGroupAsync(organization);
+        var otherGroup = await groupRepository.CreateTestGroupAsync(otherOrganization);
+        await groupRepository.UpdateUsersAsync(group.Id, [member.Id, secondMember.Id, unrequestedMember.Id], DateTime.UtcNow);
+        await groupRepository.UpdateUsersAsync(otherGroup.Id, [otherMember.Id], DateTime.UtcNow);
+
+        var memberships = await groupRepository.GetManyGroupUsersByOrganizationUserIdsAsync(
+            organization.Id, [member.Id, secondMember.Id, emptyMember.Id, otherMember.Id, Guid.NewGuid()]);
+
+        Assert.Equal(
+            new[] { (group.Id, member.Id), (group.Id, secondMember.Id) }.OrderBy(pair => pair.Item2),
+            memberships.Select(membership => (membership.GroupId, membership.OrganizationUserId)).OrderBy(pair => pair.OrganizationUserId));
+        Assert.Empty(await groupRepository.GetManyGroupUsersByOrganizationUserIdsAsync(organization.Id, []));
+    }
+
     [DatabaseTheory, DatabaseData]
     public async Task CreateAsync_WithCollections_CreatesGroupAccessAndBumpsCollectionRevisionDate(
         IGroupRepository groupRepository,

@@ -4,6 +4,7 @@ using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.Groups.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.AdminConsole.Services;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
@@ -31,6 +32,7 @@ public class PatchGroupCommandTests
     {
         var sutProvider = SetupSutProvider();
         group.OrganizationId = organization.Id;
+        SetupValidOrganizationUsers(sutProvider, organization.Id, userIds);
 
         var scimPatchModel = new ScimPatchModel
         {
@@ -177,6 +179,7 @@ public class PatchGroupCommandTests
     {
         var sutProvider = SetupSutProvider();
         group.OrganizationId = organization.Id;
+        SetupValidOrganizationUsers(sutProvider, organization.Id, [userId]);
 
         sutProvider.GetDependency<IGroupRepository>()
             .GetManyUserIdsByIdAsync(group.Id, true)
@@ -214,6 +217,7 @@ public class PatchGroupCommandTests
         // User being added is already in group
         var userId = existingMembers.First();
         group.OrganizationId = organization.Id;
+        SetupValidOrganizationUsers(sutProvider, organization.Id, [userId]);
 
         sutProvider.GetDependency<IGroupRepository>()
             .GetManyUserIdsByIdAsync(group.Id, true)
@@ -245,6 +249,7 @@ public class PatchGroupCommandTests
     {
         var sutProvider = SetupSutProvider();
         group.OrganizationId = organization.Id;
+        SetupValidOrganizationUsers(sutProvider, organization.Id, userIds);
 
         sutProvider.GetDependency<IGroupRepository>()
             .GetManyUserIdsByIdAsync(group.Id, true)
@@ -291,6 +296,7 @@ public class PatchGroupCommandTests
         Assert.Equal(4, userIdsWithDuplicate.Count);
 
         group.OrganizationId = organization.Id;
+        SetupValidOrganizationUsers(sutProvider, organization.Id, userIds);
 
         sutProvider.GetDependency<IGroupRepository>()
             .GetManyUserIdsByIdAsync(group.Id, true)
@@ -336,6 +342,7 @@ public class PatchGroupCommandTests
         userIds.Add(existingMembers.First());
 
         group.OrganizationId = organization.Id;
+        SetupValidOrganizationUsers(sutProvider, organization.Id, userIds);
 
         sutProvider.GetDependency<IGroupRepository>()
             .GetManyUserIdsByIdAsync(group.Id, true)
@@ -373,7 +380,7 @@ public class PatchGroupCommandTests
     {
         group.OrganizationId = organization.Id;
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
@@ -404,7 +411,7 @@ public class PatchGroupCommandTests
             .GetManyUserIdsByIdAsync(group.Id)
             .Returns(existingMembers);
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>
             {
@@ -438,6 +445,7 @@ public class PatchGroupCommandTests
     {
         var sutProvider = SetupSutProvider();
         group.OrganizationId = organization.Id;
+        SetupValidOrganizationUsers(sutProvider, organization.Id, [userId]);
 
         var scimPatchModel = new ScimPatchModel
         {
@@ -862,7 +870,7 @@ public class PatchGroupCommandTests
     {
         group.OrganizationId = organization.Id;
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = [new ScimPatchModel.OperationModel { Op = "invalid operation" }],
             Schemas = [ScimConstants.Scim2SchemaUser]
@@ -887,7 +895,7 @@ public class PatchGroupCommandTests
     {
         group.OrganizationId = organization.Id;
 
-        var scimPatchModel = new Models.ScimPatchModel
+        var scimPatchModel = new ScimPatchModel
         {
             Operations = new List<ScimPatchModel.OperationModel>(),
             Schemas = new List<string> { ScimConstants.Scim2SchemaUser }
@@ -908,5 +916,20 @@ public class PatchGroupCommandTests
             .Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_expectedRevisionDate);
         return sutProvider;
+    }
+
+    private static void SetupValidOrganizationUsers(
+        SutProvider<PatchGroupCommand> sutProvider,
+        Guid organizationId,
+        IEnumerable<Guid> organizationUserIds)
+    {
+        var organizationUsers = organizationUserIds
+            .Distinct()
+            .Select(id => new OrganizationUser { Id = id, OrganizationId = organizationId })
+            .ToArray();
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(organizationUsers);
     }
 }
