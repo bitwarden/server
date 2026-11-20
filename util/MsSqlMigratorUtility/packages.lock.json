@@ -4,9 +4,12 @@
     "net10.0": {
       "CommandDotNet": {
         "type": "Direct",
-        "requested": "[7.0.5, 7.0.5]",
-        "resolved": "7.0.5",
-        "contentHash": "ylfToPNWZLw29qe1NCI6Rc7ixWp3MzKNqmMwERBnfB2iS8U4QI9mgV3Zrj3/ZbIWBhJAZlOwDIR66nGFPggAvg=="
+        "requested": "[8.1.1, 8.1.1]",
+        "resolved": "8.1.1",
+        "contentHash": "9zdaVX7yKK6yFCP/9/hLBPv0KYuI4wy2wcFLtSAmBJNnqae8Pg5qWSm1XXtHp8Y/2+omC7OqDlZc26Jnntam4g==",
+        "dependencies": {
+          "JetBrains.Annotations": "2024.3.0"
+        }
       },
       "Microsoft.Extensions.Logging": {
         "type": "Direct",
@@ -314,6 +317,11 @@
         "type": "Transitive",
         "resolved": "2.1.6",
         "contentHash": "WsYWCEXsIM6hEOSOSRHtIYLjC8BnbT5MVmqhNKRqUI7qiv0t8x3nJiBTEv0ZZfvUAMAFnadGIzSsS/U2anVG1Q=="
+      },
+      "JetBrains.Annotations": {
+        "type": "Transitive",
+        "resolved": "2024.3.0",
+        "contentHash": "ox5pkeLQXjvJdyAB4b2sBYAlqZGLh3PjSnP1bQNVx72ONuTJ9+34/+Rq91Fc0dG29XG9RgZur9+NcP4riihTug=="
       },
       "LaunchDarkly.Cache": {
         "type": "Transitive",
