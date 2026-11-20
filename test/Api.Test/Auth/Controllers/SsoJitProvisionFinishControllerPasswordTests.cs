@@ -43,29 +43,6 @@ public class SsoJitProvisionFinishControllerPasswordTests
     [BitAutoData(true, false)]
     [BitAutoData(false, true)]
     [BitAutoData(true, true)]
-    public async Task FinishJitProvisionForPasswordAsync_AccountKeysAlreadyInitialized_ThrowsBadRequestException(
-        bool hasPublicKey, bool hasPrivateKey,
-        SutProvider<SsoJitProvisionFinishController> sutProvider, User user)
-    {
-        // Arrange
-        var model = CreateV2Model(user, acceptOrganizationInvite: false);
-        ArrangeUser(sutProvider, user);
-        user.PublicKey = hasPublicKey ? "existingPublicKey" : null;
-        user.PrivateKey = hasPrivateKey ? "existingPrivateKey" : null;
-
-        // Act
-        var exception = await Assert.ThrowsAsync<BadRequestException>(
-            () => sutProvider.Sut.FinishJitProvisionForPasswordAsync(model));
-
-        // Assert
-        Assert.Equal("User account keys are already initialized.", exception.Message);
-        await AssertNoCommandCalledAsync(sutProvider);
-    }
-
-    [Theory]
-    [BitAutoData(true, false)]
-    [BitAutoData(false, true)]
-    [BitAutoData(true, true)]
     public async Task FinishJitProvisionForPasswordAsync_V1_AccountKeysAlreadyInitialized_ThrowsBadRequestException(
         bool hasPublicKey, bool hasPrivateKey,
         SutProvider<SsoJitProvisionFinishController> sutProvider, User user)

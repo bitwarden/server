@@ -49,9 +49,6 @@ public class SsoJitProvisionFinishController(
     {
         var user = await _userService.GetUserByPrincipalAsync(User) ?? throw new UnauthorizedAccessException();
 
-        // TODO: eventually move this into the FinishSsoJitProvisionMasterPasswordCommand
-        ThrowIfAccountKeysInitialized(user);
-
         // AccountKeys selects V2; legacy Keys route to V1.
         if (model.AccountKeys != null)
         {
@@ -79,6 +76,8 @@ public class SsoJitProvisionFinishController(
         User user,
         SsoJitProvisionFinishPasswordRequestModel model)
     {
+        ThrowIfAccountKeysInitialized(user);
+
         try
         {
             // Stage 1 (PM-27044) compatibility: see AccountsController.SetInitialPasswordV1Async.

@@ -695,6 +695,59 @@ public class SetInitialPasswordTests : IClassFixture<ApiApplicationFactory>, IAs
         Assert.Equal(OrganizationUserStatusType.Confirmed, orgUser.Status);
     }
 
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V2_ExistingKeypairWithAccountKeys_ReturnsBadRequest(
+        string organizationSsoIdentifier)
+    {
+        // Arrange - TDE user (keypair set, no master password) sending V2 MP JIT AccountKeys.
+        var ownerEmail = $"owner-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(ownerEmail);
+
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            ownerEmail: ownerEmail,
+            name: "Test Org TDE");
+        organization.UseSso = true;
+        organization.Identifier = organizationSsoIdentifier;
+        await _organizationRepository.ReplaceAsync(organization);
+
+        var userEmail = $"user-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(userEmail);
+        await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, userEmail,
+            OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Confirmed);
+        await _loginHelper.LoginAsync(userEmail);
+
+        var user = await _userRepository.GetByEmailAsync(userEmail);
+        Assert.NotNull(user);
+        user.MasterPassword = null;
+        user.Key = null;
+        user.PublicKey = "tde-publicKey";
+        user.PrivateKey = _mockEncryptedType7String;
+        user.SignedPublicKey = "tde-signedPublicKey";
+        user.SecurityVersion = 2;
+        user.SecurityState = "v2-tde";
+        await _userRepository.ReplaceAsync(user);
+
+        var jsonRequest = CreateV2SetPasswordRequestJson(userEmail, organization.Identifier, "hint",
+            includeAccountKeys: true);
+
+        // Act
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/set-password");
+        message.Content = new StringContent(jsonRequest, System.Text.Encoding.UTF8, "application/json");
+        var response = await _client.SendAsync(message);
+
+        // Assert - rejected before any write; existing keypair kept.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var updatedUser = await _userRepository.GetByEmailAsync(userEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Null(updatedUser.MasterPassword);
+        Assert.Null(updatedUser.Key);
+        Assert.Equal("tde-publicKey", updatedUser.PublicKey);
+        Assert.Equal(_mockEncryptedType7String, updatedUser.PrivateKey);
+        Assert.Equal("tde-signedPublicKey", updatedUser.SignedPublicKey);
+        Assert.Equal("v2-tde", updatedUser.SecurityState);
+    }
+
     [Fact]
     public async Task PostSetPasswordAsync_V2_Unauthorized_ReturnsUnauthorized()
     {
