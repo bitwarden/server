@@ -23,6 +23,8 @@
     <PackageReference Include="Aspire.Hosting.AppHost" Version="[13.6.5]" />
     <PackageReference Include="Aspire.Hosting.Azure.Storage" Version="[13.6.5]" />
     <PackageReference Include="Aspire.Hosting.JavaScript" Version="[13.6.5]" />
+    <PackageReference Include="Aspire.Hosting.MySql" Version="[13.6.5]" />
+    <PackageReference Include="Aspire.Hosting.PostgreSQL" Version="[13.6.5]" />
     <PackageReference Include="Aspire.Hosting.SqlServer" Version="[13.6.5]" />
   </ItemGroup>
 
