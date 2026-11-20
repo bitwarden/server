@@ -37,14 +37,7 @@ public class Startup
         services.AddHtmlParsing();
 
         // Cache
-        services.AddMemoryCache(options =>
-        {
-            options.SizeLimit = iconsSettings.CacheSizeLimit;
-        });
-        services.AddMemoryCache(options =>
-        {
-            options.SizeLimit = changePasswordUriSettings.CacheSizeLimit;
-        });
+        services.AddCaches(iconsSettings, changePasswordUriSettings);
 
         // Services
         services.AddServices();
