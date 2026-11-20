@@ -5,10 +5,13 @@ using System.Data;
 using System.Reflection;
 using System.Text;
 using Bit.Core;
+using Bit.Core.Utilities;
 using DbUp;
+using DbUp.Engine;
 using DbUp.Helpers;
 using Microsoft.Data.SqlClient;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace Bit.Migrator;
 
@@ -37,10 +40,12 @@ public class DbMigrator
         }
     }
 
+    /// <param name="onDataMigration">See <see cref="DataMigrationMarkers.Interleave"/>.</param>
     public bool MigrateMsSqlDatabaseWithRetries(bool enableLogging = true,
         bool repeatable = false,
         string folderName = MigratorConstants.DefaultMigrationsFolderName,
         bool dryRun = false,
+        Func<string, bool> onDataMigration = null,
         CancellationToken cancellationToken = default)
     {
         var attempt = 1;
@@ -54,7 +59,8 @@ public class DbMigrator
                     PrepareDatabase(cancellationToken);
                 }
 
-                var success = MigrateDatabase(enableLogging, repeatable, folderName, dryRun, cancellationToken);
+                var success = MigrateDatabase(enableLogging, repeatable, folderName, dryRun, onDataMigration,
+                    cancellationToken);
                 return success;
             }
             catch (SqlException ex)
@@ -124,6 +130,7 @@ public class DbMigrator
     bool repeatable = false,
     string folderName = MigratorConstants.DefaultMigrationsFolderName,
     bool dryRun = false,
+    Func<string, bool> onDataMigration = null,
     CancellationToken cancellationToken = default)
     {
         if (enableLogging)
@@ -133,39 +140,43 @@ public class DbMigrator
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        var builder = DeployChanges.To
-            .SqlDatabase(_connectionString)
-            .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(),
-                s => s.Contains($".{folderName}.") && !s.Contains(".Archive."))
-            .WithExecutionTimeout(ResolveExecutionTimeout(_executionTimeoutSeconds,
-                MigratorConstants.DefaultExecutionTimeoutMinutes));
-
-        if (_noTransactionMigration)
+        UpgradeEngine Build(Func<string, bool> filter)
         {
-            builder = builder.WithoutTransaction()
+            var builder = DeployChanges.To
+                .SqlDatabase(_connectionString)
+                .WithScriptsAndCodeEmbeddedInAssembly(Assembly.GetExecutingAssembly(), filter)
                 .WithExecutionTimeout(ResolveExecutionTimeout(_executionTimeoutSeconds,
-                    MigratorConstants.NoTransactionExecutionTimeoutMinutes));
-        }
-        else
-        {
-            builder = builder.WithTransaction();
+                    MigratorConstants.DefaultExecutionTimeoutMinutes));
+
+            if (_noTransactionMigration)
+            {
+                builder = builder.WithoutTransaction()
+                    .WithExecutionTimeout(ResolveExecutionTimeout(_executionTimeoutSeconds,
+                        MigratorConstants.NoTransactionExecutionTimeoutMinutes));
+            }
+            else
+            {
+                builder = builder.WithTransaction();
+            }
+
+            if (repeatable)
+            {
+                builder.JournalTo(new NullJournal());
+            }
+            else
+            {
+                builder.JournalToSqlTable("dbo", MigratorConstants.SqlTableJournalName);
+            }
+
+            if (enableLogging)
+            {
+                builder.LogTo(new DbUpLogger(_logger));
+            }
+
+            return builder.Build();
         }
 
-        if (repeatable)
-        {
-            builder.JournalTo(new NullJournal());
-        }
-        else
-        {
-            builder.JournalToSqlTable("dbo", MigratorConstants.SqlTableJournalName);
-        }
-
-        if (enableLogging)
-        {
-            builder.LogTo(new DbUpLogger(_logger));
-        }
-
-        var upgrader = builder.Build();
+        var upgrader = Build(s => s.Contains($".{folderName}.") && !s.Contains(".Archive."));
 
         if (dryRun)
         {
@@ -180,23 +191,29 @@ public class DbMigrator
             return true;
         }
 
-        var result = upgrader.PerformUpgrade();
-
-        if (enableLogging)
+        var pending = upgrader.GetScriptsToExecute().Select(s => s.Name).ToList();
+        var success = DataMigrationMarkers.Interleave(pending, segment =>
         {
-            if (result.Successful)
+            var result = Build(segment.ToHashSet().Contains).PerformUpgrade();
+
+            if (enableLogging)
             {
-                _logger.LogInformation(Constants.BypassFiltersEventId, "Migration successful.");
+                if (result.Successful)
+                {
+                    _logger.LogInformation(Constants.BypassFiltersEventId, "Migration successful.");
+                }
+                else
+                {
+                    _logger.LogError(Constants.BypassFiltersEventId, result.Error, "Migration failed.");
+                }
             }
-            else
-            {
-                _logger.LogError(Constants.BypassFiltersEventId, result.Error, "Migration failed.");
-            }
-        }
+
+            return result.Successful;
+        }, onDataMigration, enableLogging ? _logger : NullLogger.Instance);
 
         cancellationToken.ThrowIfCancellationRequested();
 
-        return result.Successful;
+        return success;
     }
 
     // zero is passed through as a command timeout of zero, which means no limit
