@@ -139,7 +139,7 @@ public class AdminRecoverAccountCommand(
     }
 
     /// <summary>
-    /// Removes the user from every organization, following the same exceptions as
+    /// Removes the user from every organization, following the same exemptions as
     /// <see cref="IHasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync"/>.
     /// </summary>
     private async Task RemoveFromOtherOrganizationsAsync(Guid userId, Guid recoveringOrganizationId)
