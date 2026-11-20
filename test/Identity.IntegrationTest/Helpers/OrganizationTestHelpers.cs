@@ -31,6 +31,7 @@ public static class OrganizationTestHelpers
             Name = $"Org Name | {organizationId}",
             Enabled = true,
             Plan = "Enterprise",
+            UsePolicies = true,
             BillingEmail = $"billing-email+{organizationId}@example.com",
             UseSecretsManager = accessSecretsManager,
         });

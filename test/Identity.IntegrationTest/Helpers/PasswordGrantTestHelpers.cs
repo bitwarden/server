@@ -18,13 +18,13 @@ public static class PasswordGrantTestHelpers
     public const DeviceType DefaultDeviceType = DeviceType.FirefoxBrowser;
     public const string DefaultDeviceName = "firefox";
 
-    public static async Task RegisterUserAsync(
+    public static async Task<User> RegisterUserAsync(
         IdentityApplicationFactory factory,
         string username = DefaultUsername,
         string password = DefaultPassword
 )
     {
-        await factory.RegisterNewIdentityFactoryUserAsync(
+        return await factory.RegisterNewIdentityFactoryUserAsync(
             new RegisterFinishRequestModel
             {
                 Email = username,
