@@ -49,8 +49,8 @@ public class Startup
         // Services
         services.AddServices();
 
-        // Mvc
-        services.AddMvc();
+        // Controllers
+        services.AddControllers();
     }
 
     public void Configure(
