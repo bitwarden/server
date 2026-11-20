@@ -32,6 +32,8 @@ using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
+using Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Requests;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
@@ -1022,5 +1024,90 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), Arg.Any<object>(), Arg.Any<IEnumerable<IAuthorizationRequirement>>())
             .Returns(AuthorizationResult.Success());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetReportDetails_RequestsGroupsWithoutCollections(
+        Guid orgId, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        var query = sutProvider.GetDependency<IOrganizationUserUserDetailsQuery>();
+        query.Get(Arg.Any<OrganizationUserUserDetailsQueryRequest>())
+            .Returns(Enumerable.Empty<(OrganizationUserUserDetails, bool, bool)>());
+
+        await sutProvider.Sut.GetReportDetails(orgId);
+
+        await query.Received(1).Get(Arg.Is<OrganizationUserUserDetailsQueryRequest>(r =>
+            r.OrganizationId == orgId && r.IncludeGroups && !r.IncludeCollections));
+        await query.DidNotReceiveWithAnyArgs().GetAccountRecoveryEnrolledUsers(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetReportDetails_ReturnsEveryMemberWithReportFields(
+        Guid orgId, List<OrganizationUserUserDetails> organizationUsers,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        foreach (var orgUser in organizationUsers)
+        {
+            orgUser.UsesKeyConnector = false;
+            orgUser.ResetPasswordKey = "reset-password-key";
+        }
+        sutProvider.GetDependency<IOrganizationUserUserDetailsQuery>()
+            .Get(Arg.Any<OrganizationUserUserDetailsQueryRequest>())
+            .Returns(organizationUsers.Select(ou => (ou, true, false)));
+
+        var response = await sutProvider.Sut.GetReportDetails(orgId);
+
+        var results = response.Data.ToList();
+        Assert.Equal(organizationUsers.Count, results.Count);
+        for (var i = 0; i < organizationUsers.Count; i++)
+        {
+            var expected = organizationUsers[i];
+            var actual = results[i];
+            Assert.Equal(expected.Id, actual.Id);
+            Assert.Equal(expected.UserId, actual.UserId);
+            Assert.Equal(expected.Name, actual.Name);
+            Assert.Equal(expected.Email, actual.Email);
+            Assert.Equal(expected.AvatarColor, actual.AvatarColor);
+            Assert.True(actual.TwoFactorEnabled);
+            Assert.False(actual.UsesKeyConnector);
+            Assert.True(actual.ResetPasswordEnrolled);
+            Assert.Equal(expected.Groups, actual.Groups);
+        }
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetReportDetails_KeyConnectorMember_IsNotResetPasswordEnrolled(
+        Guid orgId, OrganizationUserUserDetails orgUser, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        orgUser.UsesKeyConnector = true;
+        orgUser.ResetPasswordKey = "reset-password-key";
+        sutProvider.GetDependency<IOrganizationUserUserDetailsQuery>()
+            .Get(Arg.Any<OrganizationUserUserDetailsQueryRequest>())
+            .Returns(new[] { (orgUser, false, false) });
+
+        var response = await sutProvider.Sut.GetReportDetails(orgId);
+
+        var result = Assert.Single(response.Data);
+        Assert.True(result.UsesKeyConnector);
+        Assert.False(result.ResetPasswordEnrolled);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetReportDetails_MemberWithoutResetPasswordKey_IsNotResetPasswordEnrolled(
+        Guid orgId, OrganizationUserUserDetails orgUser, SutProvider<OrganizationUsersController> sutProvider)
+    {
+        orgUser.UsesKeyConnector = false;
+        orgUser.ResetPasswordKey = null;
+        sutProvider.GetDependency<IOrganizationUserUserDetailsQuery>()
+            .Get(Arg.Any<OrganizationUserUserDetailsQueryRequest>())
+            .Returns(new[] { (orgUser, false, false) });
+
+        var response = await sutProvider.Sut.GetReportDetails(orgId);
+
+        Assert.False(Assert.Single(response.Data).ResetPasswordEnrolled);
     }
 }
