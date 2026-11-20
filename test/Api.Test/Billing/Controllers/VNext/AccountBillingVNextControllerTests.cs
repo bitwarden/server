@@ -1,6 +1,7 @@
 ﻿using Bit.Api.Billing.Controllers.VNext;
 using Bit.Api.Billing.Models.Requests.Premium;
 using Bit.Api.Billing.Models.Requests.Storage;
+using Bit.Api.Billing.Models.Responses.Premium;
 using Bit.Core.Billing.Commands;
 using Bit.Core.Billing.Licenses.Queries;
 using Bit.Core.Billing.Models.Api.Response;
@@ -548,5 +549,46 @@ public class AccountBillingVNextControllerTests
         // Assert
         Assert.IsType<NotFound>(result);
         await _createBillingPortalSessionCommand.DidNotReceiveWithAnyArgs().Run(Arg.Any<User>(), Arg.Any<string>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpgradePremiumToOrganizationAsync_Success_ReturnsOkWithOrganizationId(
+        User user,
+        UpgradePremiumToOrganizationRequest request,
+        Guid organizationId)
+    {
+        // Arrange
+        request.TargetProductTierType = Core.Billing.Enums.ProductTierType.Families;
+        var (organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress) = request.ToDomain();
+        _upgradePremiumToOrganizationCommand
+            .Run(user, organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress)
+            .Returns(new BillingCommandResult<Guid>(organizationId));
+
+        // Act
+        var result = await _sut.UpgradePremiumToOrganizationAsync(user, request);
+
+        // Assert
+        var okResult = Assert.IsType<Ok<UpgradePremiumToOrganizationResponseModel>>(result);
+        Assert.Equal(organizationId, okResult.Value!.OrganizationId);
+        await _upgradePremiumToOrganizationCommand.Received(1)
+            .Run(user, organizationName, key, publicKey, encryptedPrivateKey, collectionName, planType, billingAddress);
+    }
+
+    [Theory, BitAutoData]
+    public async Task UpgradePremiumToOrganizationAsync_BadRequest_ReturnsBadRequest(
+        User user,
+        UpgradePremiumToOrganizationRequest request)
+    {
+        // Arrange
+        request.TargetProductTierType = Core.Billing.Enums.ProductTierType.Families;
+        _upgradePremiumToOrganizationCommand
+            .Run(user, Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<string?>(), Arg.Any<Core.Billing.Enums.PlanType>(), Arg.Any<Core.Billing.Payment.Models.BillingAddress>())
+            .Returns(new BillingCommandResult<Guid>(new BadRequest("User is not a premium subscriber.")));
+
+        // Act
+        var result = await _sut.UpgradePremiumToOrganizationAsync(user, request);
+
+        // Assert
+        Assert.IsType<BadRequest<Core.Models.Api.ErrorResponseModel>>(result);
     }
 }
