@@ -4,6 +4,7 @@ using Azure;
 using Azure.Storage.Blobs;
 using Bit.Core.Settings;
 using Bit.SharedWeb.Utilities;
+using Bit.Test.Common.Helpers;
 using DotNet.Testcontainers.Builders;
 using DotNet.Testcontainers.Containers;
 using Microsoft.AspNetCore.DataProtection;
@@ -16,9 +17,6 @@ namespace Bit.SharedWeb.Test.DataProtectionServicesTests;
 
 public class DataProtectionServicesTests
 {
-    private const string AzuriteImage =
-        "mcr.microsoft.com/azure-storage/azurite:3.37.0@sha256:830430c1da1a2d537e08f3e6764dd1f5ae00cf0346bcaf625b968ec3f0971fd5";
-
     // Created using:
     // using var rsa = RSA.Create(2048);
     // var now = DateTimeOffset.UtcNow;
@@ -855,7 +853,7 @@ PZBRQ4YxBFDFaGycVn8CAgfQ");
     }
 
     private static IContainer CreateAzuriteContainer() =>
-        new ContainerBuilder(AzuriteImage)
+        new ContainerBuilder(TestContainerImages.Azurite)
             .WithPortBinding(10000, true)
             .Build();
 

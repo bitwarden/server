@@ -13,9 +13,9 @@
   customManagers: [
     {
       customType: "regex",
-      description: "Azurite test container image pinned in DataProtectionServicesTests.cs",
+      description: "Azurite test container image pinned in TestContainerImages.cs",
       managerFilePatterns: [
-        "/^test/SharedWeb\\.Test/DataProtectionServicesTests\\.cs$/",
+        "/^test/Common/Helpers/TestContainerImages\\.cs$/",
       ],
       // currentDigest is captured so Renovate rewrites the digest alongside the
       // tag. Bumping the tag alone would leave a digest that no longer resolves.

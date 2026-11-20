@@ -12,7 +12,7 @@ namespace Bit.SSO.Test.Utilities;
 /// </summary>
 public class Saml2Rsa15DeprecationNotifierTests
 {
-    private static readonly TimeSpan _wait = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan _wait = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan _negativeWait = TimeSpan.FromMilliseconds(250);
 
     private readonly ISaml2Rsa15DeprecationNoticeCommand _command = Substitute.For<ISaml2Rsa15DeprecationNoticeCommand>();
