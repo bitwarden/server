@@ -406,7 +406,27 @@ public abstract class CipherDetailsResponseModel : CipherResponseModel
             ? new FullCipherDetailsResponseModel(access, cipher, user, organizationAbility, globalSettings, obj)
             : new PartialCipherDetailsResponseModel(cipher, user, organizationAbility, obj);
 
-    public IEnumerable<Guid> CollectionIds { get; set; }
+    /// <summary>Legacy term. Omitted from the payload when <see cref="SharedFolderIds"/> is in use.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IEnumerable<Guid>? CollectionIds { get; set; }
+
+    /// <summary>Shared-folder term for <see cref="CollectionIds"/>. Only populated by <see cref="UseSharedFolderTerms"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IEnumerable<Guid>? SharedFolderIds { get; set; }
+
+    /// <summary>Moves the collection ids to <see cref="SharedFolderIds"/> so the payload uses shared-folder terms.</summary>
+    public void UseSharedFolderTerms()
+    {
+        SharedFolderIds ??= CollectionIds;
+        CollectionIds = null;
+    }
+
+    /// <summary>Reverses <see cref="UseSharedFolderTerms"/> for legacy (collections) endpoints.</summary>
+    public void UseCollectionTerms()
+    {
+        CollectionIds ??= SharedFolderIds;
+        SharedFolderIds = null;
+    }
 }
 
 /// <summary>The reduced-data counterpart of <see cref="CipherDetailsResponseModel"/>.</summary>
@@ -520,7 +540,27 @@ public abstract class CipherMiniDetailsResponseModel : CipherMiniResponseModel
         string obj = "cipherMiniDetails") =>
         From(access, cipher, globalSettings, cipher.OrganizationUseTotp, obj);
 
-    public IEnumerable<Guid> CollectionIds { get; set; }
+    /// <summary>Legacy term. Omitted from the payload when <see cref="SharedFolderIds"/> is in use.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IEnumerable<Guid>? CollectionIds { get; set; }
+
+    /// <summary>Shared-folder term for <see cref="CollectionIds"/>. Only populated by <see cref="UseSharedFolderTerms"/>.</summary>
+    [JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    public IEnumerable<Guid>? SharedFolderIds { get; set; }
+
+    /// <summary>Moves the collection ids to <see cref="SharedFolderIds"/> so the payload uses shared-folder terms.</summary>
+    public void UseSharedFolderTerms()
+    {
+        SharedFolderIds ??= CollectionIds;
+        CollectionIds = null;
+    }
+
+    /// <summary>Reverses <see cref="UseSharedFolderTerms"/> for legacy (collections) endpoints.</summary>
+    public void UseCollectionTerms()
+    {
+        CollectionIds ??= SharedFolderIds;
+        SharedFolderIds = null;
+    }
 }
 
 /// <summary>The reduced-data counterpart of <see cref="CipherMiniDetailsResponseModel"/>.</summary>
