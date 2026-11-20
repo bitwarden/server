@@ -222,6 +222,22 @@ public class OrganizationUsersController : BaseAdminConsoleController
             organizationUserUserDetails.Select(ou => new OrganizationUserUserMiniDetailsResponseModel(ou)));
     }
 
+    [HttpGet("report-details")]
+    [Authorize<AccessReportsRequirement>]
+    public async Task<ListResponseModel<OrganizationUserReportDetailsResponseModel>> GetReportDetails([FromRoute] Guid orgId)
+    {
+        var request = new OrganizationUserUserDetailsQueryRequest
+        {
+            OrganizationId = orgId,
+            IncludeGroups = true,
+            IncludeCollections = false
+        };
+
+        var results = await _organizationUserUserDetailsQuery.Get(request);
+        return new ListResponseModel<OrganizationUserReportDetailsResponseModel>(
+            results.Select(result => new OrganizationUserReportDetailsResponseModel(result)));
+    }
+
     [HttpGet("")]
     public async Task<ListResponseModel<OrganizationUserUserDetailsResponseModel>> GetAll([FromRoute] Guid orgId, bool includeGroups = false, bool includeCollections = false)
     {
