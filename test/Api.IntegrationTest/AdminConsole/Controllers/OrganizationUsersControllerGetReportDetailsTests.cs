@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
@@ -114,6 +115,34 @@ public class OrganizationUsersControllerGetReportDetailsTests : IClassFixture<Ap
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
+    [Fact]
+    public async Task GetReportDetails_AsProviderUser_ReturnsEveryMember()
+    {
+        var (memberEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+        var providerUserEmail = await CreateProviderUserForOrganizationAsync();
+        await _loginHelper.LoginAsync(providerUserEmail);
+
+        var response = await _client.GetAsync(ReportDetailsUrl);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var emails = await ReadEmailsAsync(response);
+        Assert.Contains(_ownerEmail, emails);
+        Assert.Contains(memberEmail, emails);
+    }
+
+    [Fact]
+    public async Task GetReportDetails_NotAMember_ReturnsForbidden()
+    {
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(email);
+        await _loginHelper.LoginAsync(email);
+
+        var response = await _client.GetAsync(ReportDetailsUrl);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
     private string ReportDetailsUrl => $"/organizations/{_organization.Id}/users/report-details";
 
     private static async Task<List<string>> ReadEmailsAsync(HttpResponseMessage response)
@@ -122,6 +151,23 @@ public class OrganizationUsersControllerGetReportDetailsTests : IClassFixture<Ap
             new JsonSerializerOptions(JsonSerializerDefaults.Web));
         Assert.NotNull(body);
         return body.Data.Select(member => member.Email).ToList();
+    }
+
+    /// <summary>
+    /// Creates a provider linked to the test organization and returns a provider user's credentials.
+    /// </summary>
+    private async Task<string> CreateProviderUserForOrganizationAsync()
+    {
+        var email = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(email);
+
+        var provider = await ProviderTestHelpers.CreateProviderAndLinkToOrganizationAsync(
+            _factory, _organization.Id, ProviderType.Msp);
+
+        await ProviderTestHelpers.CreateProviderUserAsync(
+            _factory, provider.Id, email, ProviderUserType.ServiceUser);
+
+        return email;
     }
 
     private record ReportDetailsList(List<ReportDetailsMember> Data);
