@@ -350,6 +350,28 @@ public class CustomTokenRequestValidatorTests
     }
 
     [Fact]
+    public async Task ValidateAsync_StaffSearchClientCredentials_SkipsUserValidation()
+    {
+        var validatedRequest = new ValidatedTokenRequest
+        {
+            GrantType = "client_credentials",
+            ClientId = "search.other-service",
+            Client = new Client { AllowedScopes = new HashSet<string> { ApiScopes.InternalStaffSearch } },
+            ClientClaims = []
+        };
+        var context = new CustomTokenRequestValidationContext
+        {
+            Result = new TokenRequestValidationResult(validatedRequest)
+        };
+
+        await _sut.ValidateAsync(context);
+
+        // A service, not a person: no user to validate, and nothing added to the answer.
+        Assert.False(context.Result.IsError);
+        Assert.Null(context.Result.CustomResponse);
+    }
+
+    [Fact]
     public async Task SetSuccessResult_WithSubject_AddsClaimsToSubject()
     {
         // Arrange
