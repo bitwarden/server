@@ -90,7 +90,7 @@ public interface ICipherLeaseGate
     /// <summary>
     /// Administrative counterpart of <see cref="AuthorizeIgnoringLeaseAsync"/>, resolving leasing status from
     /// the organization's collections rather than the caller's, as the other "/admin" decisions do. The
-    /// Owner/Admin exemption is not a lease, so it still applies.
+    /// Owner/Admin exemption is not a lease, so it still applies to a client that can hold the partial shape.
     /// </summary>
     Task<FullCipherAccess?> AuthorizeAdminIgnoringLeaseAsync(Guid userId, Guid organizationId, Cipher cipher);
 
