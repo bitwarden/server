@@ -97,4 +97,13 @@ public interface ISendRepository : IRepository<Send, Guid>
     /// <param name="ids">The IDs of the <see cref="Send"/>ss to load</param>
     /// <returns></returns>
     Task<ICollection<Send>> GetManyByIdsAsync(IEnumerable<Guid> ids);
+
+    /// <summary>
+    /// Loads item-type <see cref="Send"/>s whose <see cref="Send.CipherId"/> references a cipher that no longer exists.
+    /// </summary>
+    /// <returns>
+    /// A task that completes once the <see cref="Send"/>s have been loaded. The <see cref="Send"/>s are not decrypted,
+    /// because the caller only deletes them.
+    /// </returns>
+    Task<ICollection<Send>> GetManyItemSendsWithDeletedCipherAsync();
 }

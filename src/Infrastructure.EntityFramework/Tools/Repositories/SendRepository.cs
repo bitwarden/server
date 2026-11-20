@@ -215,6 +215,18 @@ public class SendRepository : Repository<Core.Tools.Entities.Send, Send, Guid>, 
         return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
     }
 
+    /// <inheritdoc />
+    public async Task<ICollection<Core.Tools.Entities.Send>> GetManyItemSendsWithDeletedCipherAsync()
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        var results = await dbContext.Sends
+            .Where(s => s.Type == SendType.Item && s.CipherId != null && !dbContext.Ciphers.Any(c => c.Id == s.CipherId))
+            .ToListAsync();
+        // Not decrypted here, matching the Dapper implementation: the caller only deletes these Sends.
+        return Mapper.Map<List<Core.Tools.Entities.Send>>(results);
+    }
+
     private void ProtectData(Core.Tools.Entities.Send send)
     {
         if (string.IsNullOrWhiteSpace(send.Emails) ||

@@ -24,6 +24,10 @@ public class SendEntityTypeConfiguration : IEntityTypeConfiguration<Send>
             .HasIndex(s => s.DeletionDate)
             .IsClustered(false);
 
+        builder
+            .HasIndex(s => s.CipherId)
+            .IsClustered(false);
+
         builder.ToTable(nameof(Send));
     }
 }

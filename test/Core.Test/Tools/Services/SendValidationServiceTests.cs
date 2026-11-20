@@ -2,12 +2,12 @@
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Pricing.Premium;
 using Bit.Core.Entities;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
@@ -40,7 +40,7 @@ public class SendValidationServiceTests
 
         sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>().SelfHosted = false;
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
-        sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
+        sutProvider.GetDependency<IHasPremiumAccessQuery>().HasPremiumFromOrganizationAsync(user.Id).Returns(true);
 
         var premiumPlan = new Plan
         {
@@ -70,7 +70,7 @@ public class SendValidationServiceTests
         user.MaxStorageGb = 10;
 
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
-        sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
+        sutProvider.GetDependency<IHasPremiumAccessQuery>().HasPremiumFromOrganizationAsync(user.Id).Returns(true);
 
         // Act
         var result = await sutProvider.Sut.StorageRemainingForSendAsync(send);
@@ -95,7 +95,7 @@ public class SendValidationServiceTests
         user.EmailVerified = false;
 
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
-        sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
+        sutProvider.GetDependency<IHasPremiumAccessQuery>().HasPremiumFromOrganizationAsync(user.Id).Returns(true);
 
         // Act
         var result = await sutProvider.Sut.StorageRemainingForSendAsync(send);
@@ -118,7 +118,7 @@ public class SendValidationServiceTests
 
         sutProvider.GetDependency<Bit.Core.Settings.GlobalSettings>().SelfHosted = true;
         sutProvider.GetDependency<IUserRepository>().GetByIdAsync(user.Id).Returns(user);
-        sutProvider.GetDependency<IUserService>().CanAccessPremium(user).Returns(true);
+        sutProvider.GetDependency<IHasPremiumAccessQuery>().HasPremiumFromOrganizationAsync(user.Id).Returns(true);
 
         // Act
         var result = await sutProvider.Sut.StorageRemainingForSendAsync(send);
@@ -396,6 +396,37 @@ public class SendValidationServiceTests
 
         // No exception implies success
         await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
+
+        Assert.Equal(cipherDetails.Id, send.CipherId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_ItemIdUnchanged_KeepsStoredCipherId(
+        SutProvider<SendValidationService> sutProvider, Send send, Send stored, Guid userId, Guid itemId)
+    {
+        SetItemMetadata(send, itemId);
+        SetItemMetadata(stored, itemId);
+        stored.CipherId = itemId;
+        send.CipherId = itemId;
+        sutProvider.GetDependency<ISendRepository>().GetByIdAsync(send.Id).Returns(stored);
+        StubPolicies(sutProvider, userId);
+
+        await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
+
+        Assert.Equal(itemId, send.CipherId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task ValidateUserCanSaveAsync_NonItemSend_ClearsCipherId(
+        SutProvider<SendValidationService> sutProvider, Send send, Guid userId)
+    {
+        send.Type = SendType.Text;
+        send.CipherId = Guid.NewGuid();
+        StubPolicies(sutProvider, userId);
+
+        await sutProvider.Sut.ValidateUserCanSaveAsync(userId, send);
+
+        Assert.Null(send.CipherId);
     }
 
     [Theory, BitAutoData]

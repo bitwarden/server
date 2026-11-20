@@ -18,6 +18,7 @@ public interface ICipherService
     Task DeleteManyAsync(IEnumerable<Guid> cipherIds, Guid deletingUserId, Guid? organizationId = null, bool orgAdmin = false);
     Task<DeleteAttachmentResponseData> DeleteAttachmentAsync(CipherDetails cipherDetails, string attachmentId, Guid deletingUserId, bool orgAdmin = false);
     Task PurgeAsync(Guid organizationId);
+    Task PurgeUserVaultAsync(Guid userId);
     Task MoveManyAsync(IEnumerable<Guid> cipherIds, Guid? destinationFolderId, Guid movingUserId);
     Task SaveFolderAsync(Folder folder);
     Task DeleteFolderAsync(Folder folder);

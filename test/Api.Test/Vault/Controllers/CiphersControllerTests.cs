@@ -1953,9 +1953,9 @@ public class CiphersControllerTests
 
         await sutProvider.Sut.PostPurge(model);
 
-        await sutProvider.GetDependency<ICipherRepository>()
+        await sutProvider.GetDependency<ICipherService>()
             .Received(1)
-            .DeleteByUserIdAsync(user.Id);
+            .PurgeUserVaultAsync(user.Id);
     }
 
     /// <summary>

@@ -919,13 +919,7 @@ public class UserService : UserManager<User>, IUserService
 
     public async Task<bool> CanAccessPremium(User user)
     {
-        var userId = user.GetUserId();
-        if (!userId.HasValue)
-        {
-            return false;
-        }
-
-        return user.Premium || await _hasPremiumAccessQuery.HasPremiumFromOrganizationAsync(userId.Value);
+        return await PremiumAccessHelper.CanAccessPremiumAsync(user, _hasPremiumAccessQuery);
     }
 
     public async Task<bool> HasPremiumFromOrganization(User user)

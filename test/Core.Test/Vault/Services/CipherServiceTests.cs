@@ -19,6 +19,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Test.AutoFixture.CipherFixtures;
+using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Models.Data;
@@ -1313,8 +1314,6 @@ public class CipherServiceTests
         await sutProvider.GetDependency<ICipherSyncPushService>().Received(1)
             .PushSyncCipherDeleteAsync(cipherDetails, null);
     }
-
-
 
     [Theory]
     [BitAutoData]
