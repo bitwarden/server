@@ -3343,6 +3343,9 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<DateTime?>("DeletedDate")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<string>("Exclusions")
+                        .HasColumnType("text");
+
                     b.Property<string>("Favorites")
                         .HasColumnType("text");
 
