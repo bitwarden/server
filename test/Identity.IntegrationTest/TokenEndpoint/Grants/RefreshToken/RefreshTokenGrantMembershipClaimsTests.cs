@@ -15,16 +15,14 @@ using static Bit.Identity.IntegrationTest.Helpers.TokenResponseAssertions;
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.Grants.RefreshToken;
 
 /// <summary>
-/// Integration tests for the membership claims on a refreshed access token. On the <c>refresh_token</c> grant,
-/// IdentityServer re-invokes the Profile Service, which rebuilds the user's membership claims from the database, so
-/// a refreshed token always reflects the member's current state.
+/// Integration tests for the membership claims on a refreshed access token. A refresh rebuilds these claims from the
+/// database, so a change made after the login appears in the new access token.
 /// </summary>
 public class RefreshTokenGrantMembershipClaimsTests
 {
     /// <summary>
-    /// Membership claims are rebuilt from the database on every token issuance, so a refreshed access token
-    /// reflects the member's current organization membership. When a user is removed from an organization, the
-    /// organization claim present on the earlier token is not re-issued on refresh.
+    /// A member who is removed from the organization after the login gets no organization claim on a refreshed access
+    /// token.
     /// </summary>
     [Fact]
     public async Task RefreshToken_ReflectsCurrentOrganizationMembership()
@@ -45,9 +43,8 @@ public class RefreshTokenGrantMembershipClaimsTests
     }
 
     /// <summary>
-    /// Membership claims are rebuilt from the database on every token issuance. A Custom-role member's granted
-    /// permissions are carried as individual claims; when a permission is removed, the corresponding claim must
-    /// not be re-issued on refresh.
+    /// A Custom member whose permission is removed after the login gets no claim for that permission on a refreshed
+    /// access token.
     /// </summary>
     [Fact]
     public async Task RefreshToken_ReflectsRemovedCustomPermission()
@@ -69,8 +66,8 @@ public class RefreshTokenGrantMembershipClaimsTests
     }
 
     /// <summary>
-    /// Membership claims are rebuilt from the database on every token issuance. Secrets Manager access is granted
-    /// per-organization; when access is removed, the corresponding claim must not be re-issued on refresh.
+    /// A member whose Secrets Manager access is removed after the login gets no Secrets Manager claim on a refreshed
+    /// access token.
     /// </summary>
     [Fact]
     public async Task RefreshToken_ReflectsRemovedSecretsManagerAccess()
