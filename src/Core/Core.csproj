@@ -27,6 +27,7 @@
   <ItemGroup>
     <PackageReference Include="AspNetCoreRateLimit.Redis" Version="[2.0.0]" />
     <PackageReference Include="AWSSDK.SQS" Version="[4.0.2.5]" />
+    <PackageReference Include="Bitwarden.Server.Sdk.Crypto" Version="[0.1.0-beta.1]" />
     <PackageReference Include="Azure.Data.Tables" Version="[12.11.0]" />
     <PackageReference Include="Azure.Extensions.AspNetCore.DataProtection.Blobs" Version="[1.5.3]" />
     <PackageReference Include="Microsoft.AspNetCore.DataProtection" Version="[10.0.14]" />
