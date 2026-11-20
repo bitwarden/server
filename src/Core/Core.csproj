@@ -55,7 +55,7 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.UserSecrets" Version="[10.0.14]" />
     <PackageReference Include="Microsoft.Extensions.Identity.Stores" Version="[10.0.14]" />
     <PackageReference Include="OneOf" Version="[3.0.271]" />
-    <PackageReference Include="Duende.IdentityServer" Version="[7.4.6]" />
+    <PackageReference Include="Duende.IdentityServer" Version="[8.0.10]" />
     <PackageReference Include="Newtonsoft.Json" Version="[13.0.3]" />
     <PackageReference Include="AspNetCoreRateLimit" Version="[5.0.0]" />
     <PackageReference Include="Braintree" Version="[5.36.0]" />
