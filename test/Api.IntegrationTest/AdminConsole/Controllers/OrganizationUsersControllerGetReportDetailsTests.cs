@@ -1,5 +1,5 @@
 ﻿using System.Net;
-using System.Text.Json;
+using Bit.Api.AdminConsole.Models.Response.Organizations;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
@@ -7,6 +7,7 @@ using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
+using Bit.HttpExtensions;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
@@ -147,8 +148,8 @@ public class OrganizationUsersControllerGetReportDetailsTests : IClassFixture<Ap
 
     private static async Task<List<string>> ReadEmailsAsync(HttpResponseMessage response)
     {
-        var body = await response.Content.ReadFromJsonAsync<ReportDetailsList>(
-            new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var body = await response.Content
+            .ReadFromJsonAsync<ListResponseModel<OrganizationUserReportDetailsResponseModel>>();
         Assert.NotNull(body);
         return body.Data.Select(member => member.Email).ToList();
     }
@@ -169,8 +170,4 @@ public class OrganizationUsersControllerGetReportDetailsTests : IClassFixture<Ap
 
         return email;
     }
-
-    private record ReportDetailsList(List<ReportDetailsMember> Data);
-
-    private record ReportDetailsMember(string Email);
 }

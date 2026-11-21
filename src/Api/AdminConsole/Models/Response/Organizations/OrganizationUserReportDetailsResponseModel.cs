@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using System.Text.Json.Serialization;
+using Bit.Core.Entities;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.HttpExtensions;
 
@@ -27,6 +28,23 @@ public class OrganizationUserReportDetailsResponseModel : ResponseModel
         ResetPasswordEnrolled = OrganizationUser.IsValidResetPasswordKey(data.OrgUser.ResetPasswordKey)
             && !data.OrgUser.UsesKeyConnector;
         Groups = data.OrgUser.Groups;
+    }
+
+    [JsonConstructor]
+    public OrganizationUserReportDetailsResponseModel(Guid id, Guid? userId, string? name, string email,
+        string? avatarColor, bool twoFactorEnabled, bool usesKeyConnector, bool resetPasswordEnrolled,
+        IEnumerable<Guid> groups)
+        : base("organizationUserReportDetails")
+    {
+        Id = id;
+        UserId = userId;
+        Name = name;
+        Email = email;
+        AvatarColor = avatarColor;
+        TwoFactorEnabled = twoFactorEnabled;
+        UsesKeyConnector = usesKeyConnector;
+        ResetPasswordEnrolled = resetPasswordEnrolled;
+        Groups = groups;
     }
 
     public Guid Id { get; }
