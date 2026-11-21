@@ -47,12 +47,17 @@ public class OrganizationUsersControllerGetReportDetailsTests : IClassFixture<Ap
         return Task.CompletedTask;
     }
 
-    [Fact]
-    public async Task GetReportDetails_AsOwner_ReturnsEveryMember()
+    [Theory]
+    [InlineData(OrganizationUserType.Owner)]
+    [InlineData(OrganizationUserType.Custom)]
+    public async Task GetReportDetails_AsMemberWhoCanAccessReports_ReturnsEveryMember(OrganizationUserType type)
     {
         var (memberEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
             _factory, _organization.Id, OrganizationUserType.User);
-        await _loginHelper.LoginAsync(_ownerEmail);
+        var (callerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, type,
+            type == OrganizationUserType.Custom ? new Permissions { AccessReports = true } : null);
+        await _loginHelper.LoginAsync(callerEmail);
 
         var response = await _client.GetAsync(ReportDetailsUrl);
 
@@ -60,55 +65,21 @@ public class OrganizationUsersControllerGetReportDetailsTests : IClassFixture<Ap
         var emails = await ReadEmailsAsync(response);
         Assert.Contains(_ownerEmail, emails);
         Assert.Contains(memberEmail, emails);
+        Assert.Contains(callerEmail, emails);
     }
 
-    [Fact]
-    public async Task GetReportDetails_AsCustomWithAccessReports_ReturnsEveryMember()
-    {
-        var (memberEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
-            _factory, _organization.Id, OrganizationUserType.User);
-        var (reporterEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
-            _factory, _organization.Id, OrganizationUserType.Custom, new Permissions { AccessReports = true });
-        await _loginHelper.LoginAsync(reporterEmail);
-
-        var response = await _client.GetAsync(ReportDetailsUrl);
-
-        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        var emails = await ReadEmailsAsync(response);
-        Assert.Contains(_ownerEmail, emails);
-        Assert.Contains(memberEmail, emails);
-        Assert.Contains(reporterEmail, emails);
-    }
-
-    [Fact]
-    public async Task GetReportDetails_AsCustomWithManageUsersOnly_ReturnsForbidden()
+    [Theory]
+    [InlineData(OrganizationUserType.User, false, false)]
+    [InlineData(OrganizationUserType.Custom, true, false)]
+    [InlineData(OrganizationUserType.Custom, false, true)]
+    public async Task GetReportDetails_AsMemberWithoutAccessReports_ReturnsForbidden(
+        OrganizationUserType type, bool manageUsers, bool manageResetPassword)
     {
         var (email, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
-            _factory, _organization.Id, OrganizationUserType.Custom, new Permissions { ManageUsers = true });
-        await _loginHelper.LoginAsync(email);
-
-        var response = await _client.GetAsync(ReportDetailsUrl);
-
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetReportDetails_AsCustomWithManageResetPasswordOnly_ReturnsForbidden()
-    {
-        var (email, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
-            _factory, _organization.Id, OrganizationUserType.Custom, new Permissions { ManageResetPassword = true });
-        await _loginHelper.LoginAsync(email);
-
-        var response = await _client.GetAsync(ReportDetailsUrl);
-
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task GetReportDetails_AsUser_ReturnsForbidden()
-    {
-        var (email, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
-            _factory, _organization.Id, OrganizationUserType.User);
+            _factory, _organization.Id, type,
+            type == OrganizationUserType.Custom
+                ? new Permissions { ManageUsers = manageUsers, ManageResetPassword = manageResetPassword }
+                : null);
         await _loginHelper.LoginAsync(email);
 
         var response = await _client.GetAsync(ReportDetailsUrl);
