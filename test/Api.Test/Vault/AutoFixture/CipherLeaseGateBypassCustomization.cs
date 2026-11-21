@@ -13,7 +13,7 @@ namespace Bit.Api.Test.Vault.AutoFixture;
 /// Injects an <see cref="ICipherLeaseGate"/> substitute pre-configured to authorize full data for every
 /// cipher — the flag-off / not-gated behaviour. This lets leasing-agnostic controller tests assert their
 /// existing full-data expectations without each one having to stub the gate. Tests that exercise gating
-/// re-stub the dependency (e.g. make <c>AuthorizeReadAsync</c> or <c>AuthorizeWriteReturnAsync</c> return
+/// re-stub the dependency (e.g. make <c>AuthorizeReadAsync</c> or <c>AuthorizeIgnoringLeaseAsync</c> return
 /// null) after building the SUT.
 /// It also authorizes every mutation.
 /// </summary>
@@ -28,14 +28,17 @@ public class CipherLeaseGateBypassCustomization : ICustomization
         gate.AuthorizeReadAsync(Arg.Any<Guid>(), Arg.Any<Cipher>()).Returns(unrestricted);
         gate.AuthorizeReadManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>()).Returns(unrestricted);
         gate.AuthorizeReadManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>(),
+                Arg.Any<IDictionary<Guid, IGrouping<Guid, CollectionCipher>>>())
+            .Returns(unrestricted);
+        gate.AuthorizeReadManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>(),
                 Arg.Any<IEnumerable<CollectionDetails>>(),
                 Arg.Any<IDictionary<Guid, IGrouping<Guid, CollectionCipher>>>())
             .Returns(unrestricted);
         gate.AuthorizeAdminReadAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Cipher>()).Returns(unrestricted);
         gate.AuthorizeAdminReadManyAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>())
             .Returns(unrestricted);
-        gate.AuthorizeWriteReturnAsync(Arg.Any<Guid>(), Arg.Any<Cipher>()).Returns(unrestricted);
-        gate.AuthorizeAdminWriteReturnAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Cipher>())
+        gate.AuthorizeIgnoringLeaseAsync(Arg.Any<Guid>(), Arg.Any<Cipher>()).Returns(unrestricted);
+        gate.AuthorizeAdminIgnoringLeaseAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<Cipher>())
             .Returns(unrestricted);
         gate.EnsureCanMutateAsync(Arg.Any<Guid>(), Arg.Any<Cipher>()).Returns(unrestricted);
         gate.EnsureCanMutateManyAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Cipher>>()).Returns(unrestricted);

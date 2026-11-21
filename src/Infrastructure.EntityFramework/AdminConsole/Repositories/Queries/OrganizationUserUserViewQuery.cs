@@ -25,6 +25,7 @@ public class OrganizationUserUserDetailsViewQuery : IQuery<OrganizationUserUserD
             Status = x.ou.Status,
             Type = x.ou.Type,
             ExternalId = x.ou.ExternalId,
+            ExternalName = x.ou.ExternalName,
             SsoExternalId = x.su.ExternalId,
             Permissions = x.ou.Permissions,
             ResetPasswordKey = x.ou.ResetPasswordKey,

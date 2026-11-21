@@ -173,7 +173,101 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
             .ToList();
     }
 
-    public async Task<ICollection<AccessRequestDetails>> GetManyInboxHistoryByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since, DateTime now)
+    public async Task<AccessRequestHistoryPage> GetHistoryPageAsync(AccessRequestHistoryFilter filter)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var manageable = filter.ManageableCollectionIds.ToList();
+        var userId = filter.UserId;
+        var since = filter.Since;
+        var now = filter.Now;
+
+        // Mirrors AccessRequest_ReadHistoryPage: how each request ended, from the request and its lease.
+        var ended =
+            from r in dbContext.AccessRequests
+            where (manageable.Contains(r.CollectionId) || r.RequesterId == userId) && r.CreationDate >= since
+            join l in dbContext.AccessLeases on r.Id equals l.AccessRequestId into leases
+            from l in leases.DefaultIfEmpty()
+            let status =
+                r.ExtensionOfLeaseId != null && r.Action != AccessRequestAction.Denied
+                    ? (AccessRequestHistoryStatus?)null
+                : r.Action == AccessRequestAction.Denied ? AccessRequestHistoryStatus.Denied
+                : r.Action == AccessRequestAction.Cancelled ? AccessRequestHistoryStatus.Canceled
+                : r.Action == AccessRequestAction.None && r.NotAfter <= now ? AccessRequestHistoryStatus.Expired
+                : r.Action != AccessRequestAction.Approved ? null
+                : l == null && r.NotAfter <= now ? AccessRequestHistoryStatus.Expired
+                : l == null ? null
+                : l.Action == AccessLeaseAction.Revoked ? AccessRequestHistoryStatus.Revoked
+                : l.Action == AccessLeaseAction.Cancelled || l.NotAfter <= now
+                    ? AccessRequestHistoryStatus.SessionEnded
+                : null
+            where status != null
+            select new
+            {
+                r.Id,
+                r.CollectionId,
+                r.RequesterId,
+                r.CreationDate,
+                Status = status!.Value,
+            };
+
+        // The filter options cover every ended row, so a filter never hides its own options.
+        var requesterIds = await ended.Select(e => e.RequesterId).Distinct().ToListAsync();
+        var usersById = await GetUsersByIdAsync(dbContext, requesterIds);
+        var collectionIds = await ended.Select(e => e.CollectionId).Distinct().ToListAsync();
+
+        var filtered = ended;
+        if (filter.Statuses.Count > 0)
+        {
+            var statuses = filter.Statuses.ToList();
+            filtered = filtered.Where(e => statuses.Contains(e.Status));
+        }
+
+        if (filter.CollectionIds.Count > 0)
+        {
+            var collections = filter.CollectionIds.ToList();
+            filtered = filtered.Where(e => collections.Contains(e.CollectionId));
+        }
+
+        if (filter.RequesterIds.Count > 0)
+        {
+            var requesters = filter.RequesterIds.ToList();
+            filtered = filtered.Where(e => requesters.Contains(e.RequesterId));
+        }
+
+        var total = await filtered.CountAsync();
+        var pageIds = await filtered
+            .OrderByDescending(e => e.CreationDate)
+            .ThenByDescending(e => e.Id)
+            .Skip(filter.Skip)
+            .Take(filter.Take)
+            .Select(e => e.Id)
+            .ToListAsync();
+        var requestsById = await dbContext.AccessRequests
+            .Where(r => pageIds.Contains(r.Id))
+            .AsNoTracking()
+            .ToDictionaryAsync(r => r.Id);
+
+        return new AccessRequestHistoryPage
+        {
+            Requests = (await ProjectInboxDetailsAsync(
+                dbContext, pageIds.Select(id => requestsById[id]).ToList(), now)).ToList(),
+            Total = total,
+            Requesters = requesterIds
+                .Select(id => new AccessRequestHistoryRequester
+                {
+                    Id = id,
+                    Name = usersById.GetValueOrDefault(id).Name,
+                    Email = usersById.GetValueOrDefault(id).Email,
+                })
+                .ToList(),
+            CollectionIds = collectionIds,
+        };
+    }
+
+    public async Task<ICollection<AccessRequestDetails>> GetManyInboxApprovedByCollectionIdsAsync(
+        IEnumerable<Guid> collectionIds, DateTime now)
     {
         var ids = collectionIds.ToList();
         if (ids.Count == 0)
@@ -186,11 +280,45 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
 
         var requests = await dbContext.AccessRequests
             .Where(r => ids.Contains(r.CollectionId)
-                && (r.Action != AccessRequestAction.None || r.NotAfter <= now)
-                && r.CreationDate >= since)
+                && r.Action == AccessRequestAction.Approved
+                && r.NotAfter > now)
             .AsNoTracking()
             .ToListAsync();
 
+        // A lease ends at its request's NotAfter or, once extended, at its one extension's. So an extended lease that
+        // outlived its request's window is reached through the extension read above.
+        var extendedLeaseIds = requests
+            .Where(r => r.ExtensionOfLeaseId != null)
+            .Select(r => r.ExtensionOfLeaseId!.Value)
+            .ToList();
+        if (extendedLeaseIds.Count > 0)
+        {
+            var readIds = requests.Select(r => r.Id).ToHashSet();
+            var parentIds = (await dbContext.AccessLeases
+                    .Where(l => extendedLeaseIds.Contains(l.Id)
+                        && l.Action == AccessLeaseAction.None
+                        && l.NotAfter > now)
+                    .Select(l => l.AccessRequestId)
+                    .ToListAsync())
+                .Where(parentId => !readIds.Contains(parentId))
+                .Distinct()
+                .ToList();
+            if (parentIds.Count > 0)
+            {
+                requests.AddRange(await dbContext.AccessRequests
+                    .Where(r => parentIds.Contains(r.Id))
+                    .AsNoTracking()
+                    .ToListAsync());
+            }
+        }
+
+        return await ProjectInboxDetailsAsync(dbContext, requests, now);
+    }
+
+    /// <summary>Adds the requester, the produced lease and the decisions to inbox rows, keeping their order.</summary>
+    private async Task<ICollection<AccessRequestDetails>> ProjectInboxDetailsAsync(
+        DatabaseContext dbContext, List<EfModel> requests, DateTime now)
+    {
         if (requests.Count == 0)
         {
             return new List<AccessRequestDetails>();

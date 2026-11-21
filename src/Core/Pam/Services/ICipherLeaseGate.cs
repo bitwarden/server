@@ -14,6 +14,10 @@ namespace Bit.Core.Pam.Services;
 /// Members resolve leasing from their own collections; administrators resolve it from the organization's.
 /// The "/admin" decisions need no lease from an Owner or Admin when the organization lets admins access all
 /// collection items.
+///
+/// Neither a lease nor that exemption releases a gated cipher to a client that cannot hold the partial shape
+/// (see <see cref="PartialCipherSupport"/>): such a client keeps whatever it is sent, so every decision treats
+/// it as holding no lease and no exemption.
 /// </remarks>
 public interface ICipherLeaseGate
 {
@@ -45,18 +49,32 @@ public interface ICipherLeaseGate
 
     /// <summary>
     /// Self-loading variant of the bulk member decision, for callers that have not already loaded the
-    /// caller's collections and mappings. Loads them once — but only when the flag is on, so the flag-off
-    /// path stays query-free.
+    /// caller's collections and mappings. Loads them once, and only when the flag is on and one of
+    /// <paramref name="ciphers"/> belongs to an organization in which an access rule can gate.
     /// </summary>
     Task<FullCipherAccess> AuthorizeReadManyAsync(Guid userId, IEnumerable<Cipher> ciphers);
 
     /// <summary>
-    /// Read decision for a <em>write-return</em>: the response echoing back a cipher the caller has just
-    /// mutated. Returns a witness authorizing full data only when <paramref name="cipher"/> is not gated; a
-    /// gated cipher yields <c>null</c> whatever lease the caller holds.
+    /// Variant of the self-loading bulk member decision for callers that have already loaded the caller's
+    /// cipher-to-collection mappings, so only the caller's collections are loaded, and under the same
+    /// conditions.
+    /// </summary>
+    /// <param name="collectionCiphersByCipher">
+    /// The caller's cipher-to-collection mappings, or <c>null</c> when the caller has not loaded them, in which
+    /// case the gate loads them itself, under the same conditions.
+    /// </param>
+    Task<FullCipherAccess> AuthorizeReadManyAsync(
+        Guid userId,
+        IEnumerable<Cipher> ciphers,
+        IDictionary<Guid, IGrouping<Guid, CollectionCipher>>? collectionCiphersByCipher);
+
+    /// <summary>
+    /// Per-cipher decision that ignores leases. Returns a witness authorizing full data only when
+    /// <paramref name="cipher"/> is not gated; a gated cipher yields <c>null</c> whatever lease the caller holds.
     /// </summary>
     /// <remarks>
-    /// Stricter than <see cref="AuthorizeReadAsync"/>, for the same reason the bulk read is strict: a client
+    /// The read decision for a <em>write-return</em>: the response echoing back a cipher the caller has just
+    /// mutated. Stricter than <see cref="AuthorizeReadAsync"/>, for the same reason the bulk read is strict: a client
     /// persists a write-return into its local store, so the copy outlives the lease that justified it. The
     /// caller submitted the mutation and therefore already holds what it sent, which makes the echo a
     /// round-trip saving rather than something correctness rests on. Full secrets for a gated cipher are
@@ -67,13 +85,14 @@ public interface ICipherLeaseGate
     /// entirely rather than reduced, which for a write-return means reporting not-found for a mutation that
     /// was applied (see <see cref="Vault.Authorization.PartialCipherSupport"/>).
     /// </remarks>
-    Task<FullCipherAccess?> AuthorizeWriteReturnAsync(Guid userId, Cipher cipher);
+    Task<FullCipherAccess?> AuthorizeIgnoringLeaseAsync(Guid userId, Cipher cipher);
 
     /// <summary>
-    /// Administrative counterpart of <see cref="AuthorizeWriteReturnAsync"/>, resolving leasing status from
-    /// the organization's collections rather than the caller's, as the other "/admin" decisions do.
+    /// Administrative counterpart of <see cref="AuthorizeIgnoringLeaseAsync"/>, resolving leasing status from
+    /// the organization's collections rather than the caller's, as the other "/admin" decisions do. The
+    /// Owner/Admin exemption is not a lease, so it still applies to a client that can hold the partial shape.
     /// </summary>
-    Task<FullCipherAccess?> AuthorizeAdminWriteReturnAsync(Guid userId, Guid organizationId, Cipher cipher);
+    Task<FullCipherAccess?> AuthorizeAdminIgnoringLeaseAsync(Guid userId, Guid organizationId, Cipher cipher);
 
     /// <summary>
     /// Per-cipher write decision; throws <see cref="NotFoundException"/> when mutation is refused
@@ -90,7 +109,7 @@ public interface ICipherLeaseGate
     /// </summary>
     /// <remarks>
     /// A held lease widens this beyond the strict bulk read, since a write copies no secret anywhere.
-    /// What a write <em>returns</em> stays strict — see <see cref="AuthorizeWriteReturnAsync"/>.
+    /// What a write <em>returns</em> stays strict — see <see cref="AuthorizeIgnoringLeaseAsync"/>.
     /// </remarks>
     Task<FullCipherAccess> EnsureCanMutateManyAsync(Guid userId, IEnumerable<Cipher> ciphers);
 

@@ -421,85 +421,6 @@ public class LeaseRepositoryTests
     }
 
     [DatabaseTheory, DatabaseData]
-    public async Task GetManyEndedByCollectionIdsAsync_ReturnsRecentlyEndedLeasesOnGivenCollections(
-        IOrganizationRepository organizationRepository,
-        IAccessRequestRepository accessRequestRepository,
-        IAccessLeaseRepository accessLeaseRepository)
-    {
-        var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var now = DateTime.UtcNow;
-        var since = now.AddDays(-90);
-
-        var (activeReq, activeDec, activeLease) = BuildAutoApproved(
-            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
-        await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, activeReq, activeDec, activeLease, now);
-
-        var (revReq, revDec, revLease) = BuildAutoApproved(
-            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
-        await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, revReq, revDec, revLease, now);
-        await accessLeaseRepository.RevokeAsync(revLease, AccessLeaseAction.Revoked, BuildAuditDecision(revLease, now), now);
-
-        var (oldReq, oldDec, oldLease) = BuildAutoApproved(
-            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddDays(-200), now.AddDays(-100));
-        await SeedActiveLeaseAsync(
-            accessRequestRepository, accessLeaseRepository, oldReq, oldDec, oldLease, now.AddDays(-200));
-        await accessLeaseRepository.RevokeAsync(oldLease, AccessLeaseAction.Revoked, BuildAuditDecision(oldLease, now.AddDays(-150)), now.AddDays(-150));
-
-        var result = await accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
-            new[] { activeLease.CollectionId, revLease.CollectionId, oldLease.CollectionId }, since, now);
-
-        Assert.Single(result);
-        Assert.Equal(revLease.Id, result.First().Id);
-        Assert.Equal(AccessLeaseAction.Revoked, result.First().Action);
-    }
-
-    [DatabaseTheory, DatabaseData]
-    public async Task GetManyEndedByCollectionIdsAsync_LapsedLease_IsProjectedExpiredAndIncluded(
-        IOrganizationRepository organizationRepository,
-        IAccessRequestRepository accessRequestRepository,
-        IAccessLeaseRepository accessLeaseRepository)
-    {
-        // A naturally closed lease records no early end; ended-ness here is derived against `now`.
-        var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var now = DateTime.UtcNow;
-
-        var (lapsedReq, lapsedDec, lapsedLease) = BuildAutoApproved(
-            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddHours(-3), now.AddHours(-1));
-        await SeedActiveLeaseAsync(
-            accessRequestRepository, accessLeaseRepository, lapsedReq, lapsedDec, lapsedLease, now.AddHours(-3));
-
-        var (staleReq, staleDec, staleLease) = BuildAutoApproved(
-            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddDays(-200), now.AddDays(-190));
-        await SeedActiveLeaseAsync(
-            accessRequestRepository, accessLeaseRepository, staleReq, staleDec, staleLease, now.AddDays(-200));
-
-        var (liveReq, liveDec, liveLease) = BuildAutoApproved(
-            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddMinutes(-5), now.AddHours(1));
-        await SeedActiveLeaseAsync(accessRequestRepository, accessLeaseRepository, liveReq, liveDec, liveLease, now);
-
-        foreach (var id in new[] { lapsedLease.Id, staleLease.Id, liveLease.Id })
-        {
-            Assert.Equal(AccessLeaseAction.None, (await accessLeaseRepository.GetByIdAsync(id))!.Action);
-        }
-
-        var collectionIds = new[] { lapsedLease.CollectionId, staleLease.CollectionId, liveLease.CollectionId };
-        var ended = await accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
-            collectionIds, now.AddDays(-90), now);
-
-        var row = Assert.Single(ended);
-        Assert.Equal(lapsedLease.Id, row.Id);
-        Assert.Equal(AccessLeaseAction.None, row.Action);
-        Assert.Equal(AccessLeaseStatus.Expired, AccessStatusDerivation.ComputeLeaseStatus(row.Action, row.NotAfter, now));
-        Assert.Null(row.RevokedDate);
-
-        Assert.Empty(await accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
-            collectionIds, now.AddDays(-90), now.AddHours(-2)));
-        Assert.Contains(
-            await accessLeaseRepository.GetManyActiveByCollectionIdsAsync(collectionIds, now.AddHours(-2)),
-            l => l.Id == lapsedLease.Id);
-    }
-
-    [DatabaseTheory, DatabaseData]
     public async Task RevokeAsync_AlreadyEndedLease_EndsNothingAndAppendsNoDecision(
         IOrganizationRepository organizationRepository,
         IAccessRequestRepository accessRequestRepository,
@@ -635,60 +556,14 @@ public class LeaseRepositoryTests
 
         Assert.Null(await accessLeaseRepository.GetActiveByRequesterIdCipherIdAsync(requesterId, cipherId, now));
         Assert.Empty(await accessLeaseRepository.GetManyActiveByRequesterIdAsync(requesterId, now));
-
-        var ended = await accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
-            new[] { lease.CollectionId }, now.AddDays(-1), now);
-        Assert.Equal(AccessLeaseAction.Cancelled, Assert.Single(ended).Action);
-    }
-
-    [DatabaseTheory, DatabaseData]
-    public async Task GetManyEndedByCollectionIdsAsync_OrdersByEndDateMostRecentFirst(
-        IOrganizationRepository organizationRepository,
-        IAccessRequestRepository accessRequestRepository,
-        IAccessLeaseRepository accessLeaseRepository)
-    {
-        // An early-ended lease's end is its revoked date, not its creation or window.
-        var organization = await organizationRepository.CreateTestOrganizationAsync();
-        var now = DateTime.UtcNow;
-        var collectionId = Guid.NewGuid();
-
-        // Seeded oldest-first, but ended in the reverse order, so creation order cannot stand in for end order.
-        var (firstReq, firstDec, firstLease) = BuildAutoApproved(
-            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddHours(-3), now.AddHours(1));
-        firstLease.CollectionId = collectionId;
-        firstReq.CollectionId = collectionId;
-        await SeedActiveLeaseAsync(
-            accessRequestRepository, accessLeaseRepository, firstReq, firstDec, firstLease, now.AddHours(-3));
-
-        var (secondReq, secondDec, secondLease) = BuildAutoApproved(
-            organization.Id, Guid.NewGuid(), Guid.NewGuid(), now.AddHours(-2), now.AddHours(1));
-        secondLease.CollectionId = collectionId;
-        secondReq.CollectionId = collectionId;
-        await SeedActiveLeaseAsync(
-            accessRequestRepository, accessLeaseRepository, secondReq, secondDec, secondLease, now.AddHours(-2));
-
-        await accessLeaseRepository.RevokeAsync(
-            secondLease, AccessLeaseAction.Cancelled, BuildAuditDecision(secondLease, now.AddHours(-1)), now.AddHours(-1));
-        await accessLeaseRepository.RevokeAsync(
-            firstLease, AccessLeaseAction.Revoked, BuildAuditDecision(firstLease, now), now);
-
-        var ended = await accessLeaseRepository.GetManyEndedByCollectionIdsAsync(
-            new[] { collectionId }, now.AddDays(-1), now);
-
-        Assert.Equal(2, ended.Count);
-        Assert.Equal(firstLease.Id, ended.First().Id);
-        Assert.Equal(secondLease.Id, ended.Last().Id);
     }
 
     [DatabaseTheory, DatabaseData]
     public async Task GetManyByCollectionIdsAsync_NoCollectionIds_ReturnsEmpty(
         IAccessLeaseRepository accessLeaseRepository)
     {
-        // Both reads short-circuit on an empty set instead of querying with an empty TVP (Dapper) or Contains (EF).
-        var now = DateTime.UtcNow;
-
-        Assert.Empty(await accessLeaseRepository.GetManyActiveByCollectionIdsAsync([], now));
-        Assert.Empty(await accessLeaseRepository.GetManyEndedByCollectionIdsAsync([], now.AddDays(-1), now));
+        // The read short-circuits on an empty set instead of querying with an empty TVP (Dapper) or Contains (EF).
+        Assert.Empty(await accessLeaseRepository.GetManyActiveByCollectionIdsAsync([], DateTime.UtcNow));
     }
 
     [DatabaseTheory, DatabaseData]

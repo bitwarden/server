@@ -490,7 +490,7 @@ public class SyncControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Get_GatedCiphers_FilteredForWebVaultBelowMinimumVersion(
+    public async Task Get_GatedCiphers_DeliveredPartialForWebVaultBelowMinimumVersion(
         User user, SutProvider<SyncController> sutProvider)
     {
         var (gated, visible) = SetupLeasingSync(user, sutProvider);
@@ -499,8 +499,10 @@ public class SyncControllerTests
 
         var result = await sutProvider.Sut.Get();
 
-        Assert.DoesNotContain(result.Ciphers, c => c.Id == gated.Id);
-        Assert.Contains(result.Ciphers, c => c.Id == visible.Id);
+        var gatedResponse = Assert.Single(result.Ciphers, c => c.Id == gated.Id);
+        Assert.Null(gatedResponse.Data);
+        Assert.NotNull(gatedResponse.PartialData);
+        Assert.NotNull(Assert.Single(result.Ciphers, c => c.Id == visible.Id).Data);
     }
 
     [Theory]
@@ -543,7 +545,7 @@ public class SyncControllerTests
 
     [Theory]
     [BitAutoData]
-    public async Task Get_GatedCiphers_FilteredForBrowserExtensionsBelowMinimumVersion(
+    public async Task Get_GatedCiphers_DeliveredPartialForBrowserExtensionsBelowMinimumVersion(
         User user, SutProvider<SyncController> sutProvider)
     {
         var (gated, visible) = SetupLeasingSync(user, sutProvider);
@@ -554,8 +556,10 @@ public class SyncControllerTests
 
         var result = await sutProvider.Sut.Get();
 
-        Assert.DoesNotContain(result.Ciphers, c => c.Id == gated.Id);
-        Assert.Contains(result.Ciphers, c => c.Id == visible.Id);
+        var gatedResponse = Assert.Single(result.Ciphers, c => c.Id == gated.Id);
+        Assert.Null(gatedResponse.Data);
+        Assert.NotNull(gatedResponse.PartialData);
+        Assert.NotNull(Assert.Single(result.Ciphers, c => c.Id == visible.Id).Data);
     }
 
     [Theory]

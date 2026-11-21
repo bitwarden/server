@@ -1,15 +1,9 @@
 ﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AcceptMembership;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.AutoConfirmUser;
-using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.OrganizationUserAction;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
-using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements.Errors;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PreAccess;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.AdminConsole.Utilities.v2;
-using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -24,17 +18,6 @@ namespace Bit.Core.Test.AdminConsole.OrganizationFeatures.InviteLinks;
 [SutProviderCustomize]
 public class ConfirmOrganizationInviteLinkValidatorTests
 {
-    public static IEnumerable<object[]> JoinRequirementsErrors() =>
-    [
-        [new CannotBeAdminOfMultipleFreeOrganizations(), typeof(ConfirmOnlyOneFreeOrganizationAdminAllowed)],
-        [new OtherOrganizationDoesNotAllowOtherMembership("user@example.com"), typeof(ConfirmOtherOrganizationDoesNotAllowOtherMembership)],
-        [new UserCannotBelongToAnotherOrganization("user@example.com"), typeof(ConfirmUserCannotBelongToAnotherOrganization)],
-        [new ProviderUsersCannotJoin(), typeof(ConfirmProviderUsersCannotAcceptInviteLink)],
-        [new UserIsAMemberOfAnotherOrganization(), typeof(ConfirmUserIsAMemberOfAnotherOrganization)],
-        [new UserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy(), typeof(ConfirmUserIsAMemberOfAnOrganizationThatHasSingleOrgPolicy)],
-        [new TwoFactorRequiredForMembership(), typeof(ConfirmTwoFactorRequiredForMembership)],
-    ];
-
     [Theory, BitAutoData]
     public async Task ValidateAsync_WithLinkThatDoesNotSupportConfirmation_ReturnsConfirmationNotSupported(
         Organization organization,
@@ -51,8 +34,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        var error = Assert.IsType<ConfirmInviteLinkConfirmationNotSupported>(result.AsError);
-        Assert.IsAssignableFrom<IValidationError>(error);
+        Assert.IsType<InviteLinkConfirmationNotSupportedError>(result.AsError);
 
         // The check must short-circuit before the membership is resolved so no membership can be mutated.
         await sutProvider.GetDependency<IOrganizationUserRepository>()
@@ -64,7 +46,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WhenEligibilityRuleFails_ReturnsMappedValidationError(
+    public async Task ValidateAsync_WhenEligibilityRuleFails_ReturnsError(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -78,15 +60,14 @@ public class ConfirmOrganizationInviteLinkValidatorTests
                 Guid.Parse(inviteLink.Code),
                 organization,
                 user)
-            .Returns(new InviteLinkNotAvailable());
+            .Returns(new InviteLinkNotAvailableError());
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
 
         // Assert
         Assert.True(result.IsError);
-        var error = Assert.IsType<ConfirmInviteLinkNotAvailable>(result.AsError);
-        Assert.IsAssignableFrom<IValidationError>(error);
+        Assert.IsType<InviteLinkNotAvailableError>(result.AsError);
 
         await sutProvider.GetDependency<IOrganizationUserRepository>()
             .DidNotReceiveWithAnyArgs()
@@ -97,7 +78,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WhenEmailInviteFailsMembershipStatusRule_ReturnsMappedValidationError(
+    public async Task ValidateAsync_WhenEmailInviteFailsMembershipStatusRule_ReturnsError(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -119,14 +100,11 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<ConfirmOrganizationAccessRevoked>(result.AsError);
+        Assert.IsType<OrganizationAccessRevokedError>(result.AsError);
     }
 
-    [Theory]
-    [BitMemberAutoData(nameof(JoinRequirementsErrors))]
-    public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsMappedValidationError(
-        Error joinRequirementsError,
-        Type expectedErrorType,
+    [Theory, BitAutoData]
+    public async Task ValidateAsync_WhenJoinRequirementsFail_ReturnsError(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -134,6 +112,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
     {
         // Arrange
         SetupHappyPath(organization, inviteLink, user, sutProvider);
+        var joinRequirementsError = new TwoFactorRequiredForMembershipError();
 
         sutProvider.GetDependency<IInviteLinkValidationService>()
             .ValidateJoinRequirementsAsync(
@@ -148,12 +127,11 @@ public class ConfirmOrganizationInviteLinkValidatorTests
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType(expectedErrorType, result.AsError);
-        Assert.IsAssignableFrom<IValidationError>(result.AsError);
+        Assert.Equal(joinRequirementsError, result.AsError);
     }
 
     [Theory, BitAutoData]
-    public async Task ValidateAsync_WhenAccountRecoveryPolicyFails_ReturnsMappedValidationError(
+    public async Task ValidateAsync_WhenAccountRecoveryPolicyFails_ReturnsError(
         Organization organization,
         OrganizationInviteLink inviteLink,
         User user,
@@ -169,14 +147,14 @@ public class ConfirmOrganizationInviteLinkValidatorTests
                 Arg.Any<OrganizationUserType>(),
                 Arg.Any<IPreAccessPolicyEnforcer>(),
                 Arg.Any<string?>())
-            .Returns(new AccountRecoveryPolicyValidationResult(new ResetPasswordKeyRequired(), AutoEnrollEnabled: true));
+            .Returns(new AccountRecoveryPolicyValidationResult(ResetPasswordKeyMissing: true, AutoEnrollEnabled: true));
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
 
         // Assert
         Assert.True(result.IsError);
-        Assert.IsType<ConfirmResetPasswordKeyRequired>(result.AsError);
+        Assert.IsType<ResetPasswordKeyRequiredError>(result.AsError);
     }
 
     [Theory, BitAutoData]
@@ -245,7 +223,7 @@ public class ConfirmOrganizationInviteLinkValidatorTests
                 Arg.Any<OrganizationUserType>(),
                 Arg.Any<IPreAccessPolicyEnforcer>(),
                 Arg.Any<string?>())
-            .Returns(new AccountRecoveryPolicyValidationResult(null, AutoEnrollEnabled: true));
+            .Returns(new AccountRecoveryPolicyValidationResult(ResetPasswordKeyMissing: false, AutoEnrollEnabled: true));
 
         // Act
         var result = await sutProvider.Sut.ValidateAsync(BuildRequest(inviteLink, user));
@@ -320,6 +298,6 @@ public class ConfirmOrganizationInviteLinkValidatorTests
                 Arg.Any<OrganizationUserType>(),
                 Arg.Any<IPreAccessPolicyEnforcer>(),
                 Arg.Any<string?>())
-            .Returns(new AccountRecoveryPolicyValidationResult(null, AutoEnrollEnabled: false));
+            .Returns(new AccountRecoveryPolicyValidationResult(ResetPasswordKeyMissing: false, AutoEnrollEnabled: false));
     }
 }

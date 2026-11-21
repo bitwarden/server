@@ -61,6 +61,7 @@ public interface IJoinOrganizationPolicyValidationService
 
     /// <summary>
     /// Checks the Account Recovery policy of the organization being joined.
+    /// Reports whether a reset password key is missing; the caller decides which error to return.
     /// </summary>
     /// <inheritdoc cref="ValidateSingleOrganizationPolicyAsync(Guid, User, OrganizationUserType)" path="/param|/exception"/>
     /// <param name="resetPasswordKey">The user's reset password key, if any.</param>

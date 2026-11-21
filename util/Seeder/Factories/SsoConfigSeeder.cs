@@ -1,6 +1,7 @@
 ﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
+using Bit.Seeder.Data.Static;
 using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 
 namespace Bit.Seeder.Factories;
@@ -73,4 +74,11 @@ internal static class SsoConfigSeeder
 
         return ssoConfig;
     }
+
+    internal static SsoConfig CreateLocalSaml(
+        Guid organizationId,
+        string idpX509PublicCert,
+        MemberDecryptionType memberDecryptionType = MemberDecryptionType.MasterPassword) =>
+        Create(organizationId, LocalSamlIdp.EntityId, LocalSamlIdp.SingleSignOnServiceUrl, idpX509PublicCert,
+            memberDecryptionType);
 }

@@ -3,7 +3,6 @@ using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUserResetPasswordEnrollment;
 using Bit.Core.AdminConsole.Utilities;
-using Bit.Core.AdminConsole.Utilities.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Results;
 using Bit.Core.Auth.UserFeatures.EmergencyAccess.Interfaces;
 using Bit.Core.Billing.Organizations;
@@ -26,8 +25,7 @@ public class AcceptOrganizationInviteLinkCommand(
     IOrganizationService organizationService,
     IStripePaymentService stripePaymentService,
     IUpdateUserResetPasswordEnrollmentCommand updateUserResetPasswordEnrollmentCommand,
-    IMailService mailService,
-    IPushAutoConfirmNotificationCommand pushAutoConfirmNotificationCommand,
+    INotifyAdminsOfAcceptedUserCommand notifyAdminsOfAcceptedUserCommand,
     IDeleteEmergencyAccessCommand deleteEmergencyAccessCommand,
     IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
     ISendPrivilegedControlsSeatNeededEmailCommand sendPrivilegedControlsSeatNeededEmailCommand,
@@ -35,7 +33,7 @@ public class AcceptOrganizationInviteLinkCommand(
     IEventService eventService)
     : IAcceptOrganizationInviteLinkCommand
 {
-    public async Task<CommandResult<OrganizationUser>> AcceptAsync(AcceptOrganizationInviteLinkRequest request)
+    public async Task<Result<OrganizationUser, InviteLinkValidationError>> AcceptAsync(AcceptOrganizationInviteLinkRequest request)
     {
         var user = request.User;
 
@@ -68,7 +66,7 @@ public class AcceptOrganizationInviteLinkCommand(
         return acceptResult;
     }
 
-    private async Task<CommandResult<OrganizationUser>> AcceptExistingOrgUserAsync(
+    private async Task<Result<OrganizationUser, InviteLinkValidationError>> AcceptExistingOrgUserAsync(
         AcceptInviteLinkMembershipValidationResult validationResult,
         OrganizationUser existingOrganizationUser,
         User user)
@@ -115,7 +113,7 @@ public class AcceptOrganizationInviteLinkCommand(
         return existingOrganizationUser;
     }
 
-    private async Task<CommandResult<OrganizationUser>> CreateNewMembershipAsync(
+    private async Task<Result<OrganizationUser, InviteLinkValidationError>> CreateNewMembershipAsync(
         AcceptInviteLinkMembershipValidationResult validationResult, User user)
     {
         var organization = validationResult.Organization;
@@ -151,12 +149,12 @@ public class AcceptOrganizationInviteLinkCommand(
     /// Reserves capacity for one more seat-occupying member. Runs before the membership is written so that a
     /// billing or persistence failure leaves no orphaned seat.
     /// </summary>
-    private async Task<Error?> ReserveSeatAsync(Organization organization)
+    private async Task<InviteLinkValidationError?> ReserveSeatAsync(Organization organization)
     {
         var occupiedSeatCount = (await organizationRepository.GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)).Total;
         if (!OrganizationSeatAvailability.HasAvailableSeats(organization, occupiedSeatCount))
         {
-            return new OrganizationHasNoAvailableSeats(organization.DisplayName());
+            return new OrganizationHasNoAvailableSeatsError(organization.DisplayName());
         }
 
         return await TryExpandSeatsAsync(organization, occupiedSeatCount);
@@ -165,7 +163,7 @@ public class AcceptOrganizationInviteLinkCommand(
     /// <summary>
     /// Only auto-adds when the organization is already at capacity.
     /// </summary>
-    private async Task<Error?> TryExpandSeatsAsync(Organization organization, int occupiedSeatCount)
+    private async Task<InviteLinkValidationError?> TryExpandSeatsAsync(Organization organization, int occupiedSeatCount)
     {
         if (!organization.Seats.HasValue || occupiedSeatCount < organization.Seats.Value)
         {
@@ -182,7 +180,7 @@ public class AcceptOrganizationInviteLinkCommand(
             // Known business failures (no payment method, autoscale cap, etc.) map to a 400.
             // Infrastructure failures propagate so they surface as 5xx with a correlation id.
             logger.LogWarning(ex, "Could not auto-add seat while accepting invite link for organization {OrganizationId}", organization.Id);
-            return new SeatAddFailed();
+            return new SeatAddFailedError();
         }
     }
 
@@ -202,16 +200,6 @@ public class AcceptOrganizationInviteLinkCommand(
                 organization.Id, user.Id, request.ResetPasswordKey, user.Id);
         }
 
-        if (validationResult.AutoConfirmPolicyEnabled)
-        {
-            await pushAutoConfirmNotificationCommand.PushAsync(user.Id, organization.Id);
-        }
-
-        var admins = await organizationUserRepository.GetManyByMinimumRoleAsync(organization.Id, OrganizationUserType.Admin);
-        var adminEmails = admins.Select(a => a.Email).Distinct().ToList();
-        if (adminEmails.Count > 0)
-        {
-            await mailService.SendOrganizationAcceptedEmailAsync(organization, user.Email, adminEmails);
-        }
+        await notifyAdminsOfAcceptedUserCommand.NotifyAsync(organization, organizationUser, user);
     }
 }

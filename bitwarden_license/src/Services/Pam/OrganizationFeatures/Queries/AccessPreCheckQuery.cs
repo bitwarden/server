@@ -15,7 +15,6 @@ public class AccessPreCheckQuery : IAccessPreCheckQuery
     private readonly ICipherRepository _cipherRepository;
     private readonly IGoverningRuleResolver _resolver;
     private readonly IAccessLeaseRepository _accessLeaseRepository;
-    private readonly ISingleActiveLeaseEvaluator _singleActiveLeaseEvaluator;
     private readonly ICurrentContext _currentContext;
     private readonly TimeProvider _timeProvider;
 
@@ -23,14 +22,12 @@ public class AccessPreCheckQuery : IAccessPreCheckQuery
         ICipherRepository cipherRepository,
         IGoverningRuleResolver resolver,
         IAccessLeaseRepository accessLeaseRepository,
-        ISingleActiveLeaseEvaluator singleActiveLeaseEvaluator,
         ICurrentContext currentContext,
         TimeProvider timeProvider)
     {
         _cipherRepository = cipherRepository;
         _resolver = resolver;
         _accessLeaseRepository = accessLeaseRepository;
-        _singleActiveLeaseEvaluator = singleActiveLeaseEvaluator;
         _currentContext = currentContext;
         _timeProvider = timeProvider;
     }
@@ -64,7 +61,7 @@ public class AccessPreCheckQuery : IAccessPreCheckQuery
             LeaseDurationBounds.EffectiveDefault(governingRule?.DefaultLeaseDurationSeconds, maxDurationSeconds);
 
         // A hint only: the mint procedure's range lock re-checks this at start.
-        var blockingLease = await _singleActiveLeaseEvaluator.AppliesAsync(userId, cipherId)
+        var blockingLease = governingRule?.SingleActiveLease == true
             ? await _accessLeaseRepository.GetActiveByCipherIdAsync(cipherId, now)
             : null;
 
