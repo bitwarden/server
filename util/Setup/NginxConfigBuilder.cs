@@ -1,6 +1,9 @@
 ﻿// FIXME: Update this file to be null safe and then delete the line below
 #nullable disable
 
+using System.Globalization;
+using System.Text.RegularExpressions;
+
 namespace Bit.Setup;
 
 public class NginxConfigBuilder
@@ -87,7 +90,11 @@ public class NginxConfigBuilder
             {
                 csp = context.Config.NginxHeaderContentSecurityPolicy;
             }
-            ContentSecurityPolicy = string.Format(csp, Domain);
+            ContentSecurityPolicy = string.Format(CultureInfo.InvariantCulture, csp, Domain);
+            foreach (var blobOrigin in GetSendAndAttachmentBlobOrigins(context))
+            {
+                ContentSecurityPolicy = AppendConnectSrcOrigin(ContentSecurityPolicy, blobOrigin);
+            }
 
             if (Ssl)
             {
@@ -157,5 +164,183 @@ public class NginxConfigBuilder
         public string SslCurves { get; set; }
         public string ContentSecurityPolicy { get; set; }
         public List<string> RealIps { get; set; }
+    }
+
+    internal static bool TryGetSendBlobOrigin(Context context, out string origin)
+    {
+        origin = null;
+        var connectionStringKey = "globalSettings__send__connectionString";
+        var connectionString = GetConnectionString(context, connectionStringKey);
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            return false;
+        }
+
+        if (TryGetBlobOrigin(connectionString, out origin))
+        {
+            return true;
+        }
+
+        Helpers.WriteLine(context,
+            $"Invalid {connectionStringKey}: unable to determine a valid Azure Blob Storage endpoint.");
+        return false;
+    }
+
+    private static IEnumerable<string> GetSendAndAttachmentBlobOrigins(Context context)
+    {
+        var origins = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var connectionStringKey in new[]
+        {
+            "globalSettings__send__connectionString",
+            "globalSettings__attachment__connectionString",
+        })
+        {
+            var connectionString = GetConnectionString(context, connectionStringKey);
+            if (string.IsNullOrWhiteSpace(connectionString))
+            {
+                continue;
+            }
+
+            if (TryGetBlobOrigin(connectionString, out var origin) &&
+                origins.Add(origin))
+            {
+                yield return origin;
+            }
+            else if (string.IsNullOrEmpty(origin))
+            {
+                Helpers.WriteLine(context,
+                    $"Invalid {connectionStringKey}: unable to determine a valid Azure Blob Storage endpoint.");
+            }
+        }
+    }
+
+    private static string GetConnectionString(Context context, string connectionStringKey)
+    {
+        var connectionString = Environment.GetEnvironmentVariable(connectionStringKey);
+        return string.IsNullOrWhiteSpace(connectionString)
+            ? Helpers.GetValueFromEnvFile(context.App, "global", connectionStringKey)
+            : connectionString;
+    }
+
+    private static bool TryGetBlobOrigin(string connectionString, out string origin)
+    {
+        origin = null;
+        var values = ParseConnectionString(connectionString);
+        if (values.TryGetValue("BlobEndpoint", out var blobEndpoint))
+        {
+            return TryGetOrigin(blobEndpoint, out origin);
+        }
+
+        if (!values.TryGetValue("AccountName", out var accountName) ||
+            !TryGetAccountName(accountName, out accountName))
+        {
+            return false;
+        }
+
+        var protocol = "https";
+        if (values.TryGetValue("DefaultEndpointsProtocol", out var configuredProtocol) &&
+            !string.IsNullOrWhiteSpace(configuredProtocol))
+        {
+            protocol = configuredProtocol.Trim().ToLowerInvariant();
+        }
+
+        if ((protocol == "http" || protocol == "https") &&
+            values.TryGetValue("EndpointSuffix", out var endpointSuffix) &&
+            TryGetEndpointSuffix(endpointSuffix, out endpointSuffix))
+        {
+            return TryGetOrigin($"{protocol}://{accountName}.blob.{endpointSuffix}", out origin);
+        }
+
+        return false;
+    }
+
+    internal static string AppendConnectSrcOrigin(string contentSecurityPolicy, string origin)
+    {
+        var pattern = @"(?<prefix>(^|;\s*))(?<directive>connect-src)(?<separator>\s+)(?<sources>[^;]*)" +
+            @"(?<tail>(?=;|$))";
+        var match = Regex.Match(contentSecurityPolicy, pattern, RegexOptions.IgnoreCase);
+        if (!match.Success)
+        {
+            var prefix = contentSecurityPolicy.TrimEnd();
+            if (prefix.Length > 0 && !prefix.EndsWith(";"))
+            {
+                prefix += ";";
+            }
+            return prefix.Length == 0
+                ? $"connect-src {origin};"
+                : $"{prefix} connect-src {origin};";
+        }
+
+        var sources = match.Groups["sources"].Value;
+        var sourceList = sources.Split([' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries);
+        if (sourceList.Any(source => string.Equals(source, origin, StringComparison.OrdinalIgnoreCase)))
+        {
+            return contentSecurityPolicy;
+        }
+
+        var suffix = sources.Length == 0 ? origin : $"{sources.TrimEnd()} {origin}";
+        return contentSecurityPolicy.Remove(match.Groups["sources"].Index, match.Groups["sources"].Length)
+            .Insert(match.Groups["sources"].Index, suffix);
+    }
+
+    private static Dictionary<string, string> ParseConnectionString(string connectionString)
+    {
+        var values = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach (var segment in connectionString.Split(';'))
+        {
+            var separatorIndex = segment.IndexOf('=');
+            if (separatorIndex <= 0)
+            {
+                continue;
+            }
+
+            var key = segment.Substring(0, separatorIndex).Trim();
+            var value = segment.Substring(separatorIndex + 1).Trim().Trim('"');
+            if (key.Length > 0)
+            {
+                values[key] = value;
+            }
+        }
+        return values;
+    }
+
+    private static bool TryGetAccountName(string accountName, out string validatedAccountName)
+    {
+        validatedAccountName = accountName?.Trim();
+        return !string.IsNullOrEmpty(validatedAccountName) &&
+            validatedAccountName.All(character =>
+                character is >= 'a' and <= 'z' or >= 'A' and <= 'Z' or >= '0' and <= '9');
+    }
+
+    private static bool TryGetEndpointSuffix(string endpointSuffix, out string validatedEndpointSuffix)
+    {
+        validatedEndpointSuffix = endpointSuffix?.Trim().Trim('/');
+        if (string.IsNullOrEmpty(validatedEndpointSuffix))
+        {
+            return false;
+        }
+        if (validatedEndpointSuffix.IndexOfAny(['/', '\\', '?', '#', '@']) >= 0 ||
+            validatedEndpointSuffix.Any(char.IsWhiteSpace))
+        {
+            return false;
+        }
+
+        return Uri.TryCreate($"https://account.blob.{validatedEndpointSuffix}", UriKind.Absolute,
+            out var uri) && uri.Scheme is "https" or "http";
+    }
+
+    private static bool TryGetOrigin(string endpoint, out string origin)
+    {
+        origin = null;
+        if (!Uri.TryCreate(endpoint?.Trim(), UriKind.Absolute, out var uri) ||
+            (uri.Scheme != Uri.UriSchemeHttp && uri.Scheme != Uri.UriSchemeHttps) ||
+            string.IsNullOrWhiteSpace(uri.Host) ||
+            !string.IsNullOrEmpty(uri.UserInfo))
+        {
+            return false;
+        }
+
+        origin = uri.GetLeftPart(UriPartial.Authority);
+        return true;
     }
 }
