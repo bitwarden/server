@@ -244,14 +244,19 @@ public class NginxConfigBuilder
             protocol = configuredProtocol.Trim().ToLowerInvariant();
         }
 
-        if ((protocol == "http" || protocol == "https") &&
-            values.TryGetValue("EndpointSuffix", out var endpointSuffix) &&
-            TryGetEndpointSuffix(endpointSuffix, out endpointSuffix))
+        if (protocol != "http" && protocol != "https")
         {
-            return TryGetOrigin($"{protocol}://{accountName}.blob.{endpointSuffix}", out origin);
+            return false;
         }
 
-        return false;
+        if (!values.TryGetValue("EndpointSuffix", out var endpointSuffix) ||
+            !TryGetEndpointSuffix(endpointSuffix, out endpointSuffix))
+        {
+            return false;
+        }
+
+        return TryGetOrigin($"{protocol}://{accountName}.blob.{endpointSuffix}", out origin);
+
     }
 
     internal static string AppendConnectSrcOrigin(string contentSecurityPolicy, string origin)
