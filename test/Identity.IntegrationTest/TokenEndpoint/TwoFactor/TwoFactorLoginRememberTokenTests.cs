@@ -48,11 +48,8 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
                                 email, TestPassword, twoFactorProviderType: "Remember");
 
         // Assert
-        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
-
-        var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
-        Assert.Equal("Two factor required.", error);
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        AssertTwoFactorRequired(context, body.RootElement);
     }
 
     /// <summary>
@@ -211,11 +208,7 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
             twoFactorRemember: "0");
 
         using var replayBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(replay);
-        var root = replayBody.RootElement;
-
-        Assert.False(root.TryGetProperty("access_token", out _));
-        var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
-        Assert.Equal("Two factor required.", error);
+        AssertTwoFactorRequired(replay, replayBody.RootElement);
     }
 
     /// <summary>
@@ -255,7 +248,18 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
             twoFactorRemember: "0");
         using (var wrongCodeBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(wrongCode))
         {
-            Assert.False(wrongCodeBody.RootElement.TryGetProperty("access_token", out _));
+            // The refusal has to be the recovery code being checked and found wrong, not any other failure.
+            // error_description is the generic login failure; ErrorModel.Message is the specific reason.
+            var wrongCodeRoot = wrongCodeBody.RootElement;
+            Assert.Equal(StatusCodes.Status400BadRequest, wrongCode.Response.StatusCode);
+            Assert.False(wrongCodeRoot.TryGetProperty("access_token", out _));
+            Assert.Equal("invalid_grant",
+                AssertHelper.AssertJsonProperty(wrongCodeRoot, "error", JsonValueKind.String).GetString());
+            Assert.Equal("invalid_username_or_password",
+                AssertHelper.AssertJsonProperty(wrongCodeRoot, "error_description", JsonValueKind.String).GetString());
+            var errorModel = AssertHelper.AssertJsonProperty(wrongCodeRoot, "ErrorModel", JsonValueKind.Object);
+            Assert.Equal("Two-step token is invalid. Try again.",
+                AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString());
         }
 
         // The row's stamp is untouched...
@@ -303,9 +307,20 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
 
         // A refused 2FA remember token falls back to a challenge rather than a generic auth failure:
         // the password was fine, the 2FA remember token is just no longer honored.
-        Assert.False(root.TryGetProperty("access_token", out _));
-        var error = AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString();
-        Assert.Equal("Two factor required.", error);
+        AssertTwoFactorRequired(context, root);
         AssertHelper.AssertJsonProperty(root, "TwoFactorProviders2", JsonValueKind.Object);
+    }
+
+    /// <summary>
+    /// The login was refused with a two-factor challenge: HTTP 400, <c>invalid_grant</c>, "Two factor required.",
+    /// and no access token.
+    /// </summary>
+    private static void AssertTwoFactorRequired(HttpContext context, JsonElement root)
+    {
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+        Assert.False(root.TryGetProperty("access_token", out _));
+        Assert.Equal("invalid_grant", AssertHelper.AssertJsonProperty(root, "error", JsonValueKind.String).GetString());
+        Assert.Equal("Two factor required.",
+            AssertHelper.AssertJsonProperty(root, "error_description", JsonValueKind.String).GetString());
     }
 }
