@@ -1,28 +1,24 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using Bitwarden.Server.Sdk.PasswordHashing;
 
 namespace Bit.Core.KeyManagement.Sends;
 
-internal class SendPasswordHasher(IPasswordHasher<SendPasswordHasherMarker> passwordHasher) : ISendPasswordHasher
+internal class SendPasswordHasher(IServerPasswordHasher passwordHasher) : ISendPasswordHasher
 {
-    private readonly IPasswordHasher<SendPasswordHasherMarker> _passwordHasher = passwordHasher;
+    private readonly IServerPasswordHasher _passwordHasher = passwordHasher;
 
     /// <summary>
     /// <inheritdoc cref="ISendPasswordHasher.PasswordHashMatches"/>
     /// </summary>
     public bool PasswordHashMatches(string sendPasswordHash, string inputPasswordHash)
     {
-        if (string.IsNullOrWhiteSpace(sendPasswordHash) || string.IsNullOrWhiteSpace(inputPasswordHash))
-        {
-            return false;
-        }
-
-        var passwordResult = _passwordHasher.VerifyHashedPassword(SendPasswordHasherMarker.Instance, sendPasswordHash, inputPasswordHash);
+        var passwordResult = _passwordHasher.VerifyStoredHash(
+            new ServerStorableHash(sendPasswordHash), new ClientCreatedHash(inputPasswordHash));
 
         /*
             In our use-case we input a high-entropy, pre-hashed secret sent by the client. Thus, we don't really care
             about if the hash needs to be rehashed. Sends also only live for 30 days max.
         */
-        return passwordResult is PasswordVerificationResult.Success or PasswordVerificationResult.SuccessRehashNeeded;
+        return passwordResult != PasswordHashVerification.Failed;
     }
 
     /// <summary>
@@ -30,6 +26,6 @@ internal class SendPasswordHasher(IPasswordHasher<SendPasswordHasherMarker> pass
     /// </summary>
     public string HashOfClientPasswordHash(string clientHashedPassword)
     {
-        return _passwordHasher.HashPassword(SendPasswordHasherMarker.Instance, clientHashedPassword);
+        return _passwordHasher.CreateStoredHash(new ClientCreatedHash(clientHashedPassword)).Value;
     }
 }

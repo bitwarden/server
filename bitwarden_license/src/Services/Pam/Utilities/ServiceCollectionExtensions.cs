@@ -60,7 +60,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IListInboxHistoryQuery, ListInboxHistoryQuery>();
         services.AddScoped<IListMyAccessRequestsQuery, ListMyAccessRequestsQuery>();
         services.AddScoped<IListActiveLeasesQuery, ListActiveLeasesQuery>();
-        services.AddScoped<IListLeaseHistoryQuery, ListLeaseHistoryQuery>();
         services.AddScoped<IListAccessAuditTrailQuery, ListAccessAuditTrailQuery>();
         services.AddScoped<IListAccessAuditItemsQuery, ListAccessAuditItemsQuery>();
 
@@ -72,7 +71,6 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRevokeAccessLeaseCommand, RevokeAccessLeaseCommand>();
 
         services.AddScoped<IApproverCollectionAccessQuery, ApproverCollectionAccessQuery>();
-        services.AddScoped<ISingleActiveLeaseEvaluator, SingleActiveLeaseEvaluator>();
 
         // Side channels the commands emit through.
         services.AddScoped<IApproverInboxNotifier, ApproverInboxNotifier>();

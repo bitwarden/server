@@ -2951,7 +2951,7 @@ public class CiphersControllerTests
                 AllowAdminAccessToAllCollectionItems = true
             });
         sutProvider.GetDependency<ICipherLeaseGate>()
-            .AuthorizeAdminWriteReturnAsync(userId, organization.Id, Arg.Any<Cipher>())
+            .AuthorizeAdminIgnoringLeaseAsync(userId, organization.Id, Arg.Any<Cipher>())
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
@@ -3590,7 +3590,7 @@ public class CiphersControllerTests
             .AuthorizeReadAsync(user.Id, Arg.Any<Cipher>())
             .Returns(FullCipherAccess.ForCipher(cipherId));
         sutProvider.GetDependency<ICipherLeaseGate>()
-            .AuthorizeWriteReturnAsync(user.Id, Arg.Any<Cipher>())
+            .AuthorizeIgnoringLeaseAsync(user.Id, Arg.Any<Cipher>())
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
@@ -3626,7 +3626,7 @@ public class CiphersControllerTests
             .GetByIdAsync(cipherId, user.Id)
             .Returns(Task.FromResult(cipherDetails));
         sutProvider.GetDependency<ICipherLeaseGate>()
-            .AuthorizeWriteReturnAsync(user.Id, Arg.Any<Cipher>())
+            .AuthorizeIgnoringLeaseAsync(user.Id, Arg.Any<Cipher>())
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.Android);
 
@@ -3662,7 +3662,7 @@ public class CiphersControllerTests
             .AuthorizeReadAsync(user.Id, Arg.Any<Cipher>())
             .Returns(FullCipherAccess.ForCipher(cipherId));
         sutProvider.GetDependency<ICipherLeaseGate>()
-            .AuthorizeWriteReturnAsync(user.Id, Arg.Any<Cipher>())
+            .AuthorizeIgnoringLeaseAsync(user.Id, Arg.Any<Cipher>())
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
@@ -3696,7 +3696,7 @@ public class CiphersControllerTests
             .AuthorizeReadAsync(user.Id, Arg.Any<Cipher>())
             .Returns(FullCipherAccess.ForCipher(cipherId));
         sutProvider.GetDependency<ICipherLeaseGate>()
-            .AuthorizeWriteReturnAsync(user.Id, Arg.Any<Cipher>())
+            .AuthorizeIgnoringLeaseAsync(user.Id, Arg.Any<Cipher>())
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
@@ -3742,7 +3742,7 @@ public class CiphersControllerTests
             .AuthorizeReadAsync(userId, Arg.Any<Cipher>())
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICipherLeaseGate>()
-            .AuthorizeWriteReturnAsync(userId, Arg.Any<Cipher>())
+            .AuthorizeIgnoringLeaseAsync(userId, Arg.Any<Cipher>())
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
