@@ -1,6 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
 using Bit.Core.Auth.Enums;
-using Bit.Core.Auth.Repositories;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.RustSDK;
