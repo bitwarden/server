@@ -5,6 +5,7 @@ using Bit.Api.Test.Vault.AutoFixture;
 using Bit.Api.Vault.Controllers;
 using Bit.Api.Vault.Models.Response;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.Provider;
@@ -18,6 +19,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Data;
 using Bit.Core.KeyManagement.Queries.Interfaces;
 using Bit.Core.Models.Data;
+using Bit.Core.Models.Data.Organizations;
 using Bit.Core.Models.Data.Organizations.OrganizationUsers;
 using Bit.Core.Pam.Services;
 using Bit.Core.Repositories;
@@ -575,6 +577,200 @@ public class SyncControllerTests
 
         Assert.DoesNotContain(result.Ciphers, c => c.Id == gated.Id);
         Assert.Contains(result.Ciphers, c => c.Id == visible.Id);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_GatedCollections_WithheldFromClientsThatCannotRenderThem(
+        User user, OrganizationUserOrganizationDetails organization, SutProvider<SyncController> sutProvider)
+    {
+        var fixture = SetupGatedCollectionSync(user, organization, sutProvider);
+        // Desktop cannot render partial ciphers, so it must not be offered a collection whose items it never receives.
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.MacOsDesktop);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.Contains(result.Collections, c => c.Id == fixture.PlainCollectionId);
+        Assert.DoesNotContain(result.Collections, c => c.Id == fixture.GatedCollectionId);
+        Assert.DoesNotContain(result.Ciphers, c => c.Id == fixture.GatedOnlyCipherId);
+        Assert.Contains(result.Ciphers, c => c.Id == fixture.PlainOnlyCipherId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_GatedCollections_MixedCipherKeepsBothCollectionIds(
+        User user, OrganizationUserOrganizationDetails organization, SutProvider<SyncController> sutProvider)
+    {
+        var fixture = SetupGatedCollectionSync(user, organization, sutProvider);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.Android);
+
+        var result = await sutProvider.Sut.Get();
+
+        // The gated collection object is withheld...
+        Assert.Contains(result.Collections, c => c.Id == fixture.PlainCollectionId);
+        Assert.DoesNotContain(result.Collections, c => c.Id == fixture.GatedCollectionId);
+        // ...but the mixed cipher still carries its id, so a save round-trip cannot drop the gated membership.
+        var mixed = Assert.Single(result.Ciphers, c => c.Id == fixture.MixedCipherId);
+        Assert.NotNull(mixed.CollectionIds);
+        Assert.Equal(
+            new[] { fixture.GatedCollectionId, fixture.PlainCollectionId }.Order(),
+            mixed.CollectionIds.Order());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_GatedCollections_DeliveredToTheWebVault(
+        User user, OrganizationUserOrganizationDetails organization, SutProvider<SyncController> sutProvider)
+    {
+        var fixture = SetupGatedCollectionSync(user, organization, sutProvider);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.Contains(result.Collections, c => c.Id == fixture.GatedCollectionId);
+        Assert.Contains(result.Collections, c => c.Id == fixture.PlainCollectionId);
+        Assert.Contains(result.Ciphers, c => c.Id == fixture.GatedOnlyCipherId);
+        // A client that holds partials needs no collection decision at all.
+        await sutProvider.GetDependency<ICipherLeaseGate>()
+            .DidNotReceiveWithAnyArgs().GetLeasingCollectionIdsAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData(true)]
+    [BitAutoData(false)]
+    public async Task Get_GatedCollections_BrowserExtensionFollowsPartialCipherFlag(
+        bool browserPartialCiphersEnabled,
+        User user, OrganizationUserOrganizationDetails organization, SutProvider<SyncController> sutProvider)
+    {
+        var fixture = SetupGatedCollectionSync(user, organization, sutProvider);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeExtension);
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers).Returns(browserPartialCiphersEnabled);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.Contains(result.Collections, c => c.Id == fixture.PlainCollectionId);
+        Assert.Equal(browserPartialCiphersEnabled,
+            result.Collections.Any(c => c.Id == fixture.GatedCollectionId));
+        Assert.Equal(browserPartialCiphersEnabled,
+            result.Ciphers.Any(c => c.Id == fixture.GatedOnlyCipherId));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_NoDeviceType_WithholdsGatedCollections(
+        User user, OrganizationUserOrganizationDetails organization, SutProvider<SyncController> sutProvider)
+    {
+        var fixture = SetupGatedCollectionSync(user, organization, sutProvider);
+        // Fails closed, like the cipher filter.
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns((DeviceType?)null);
+        sutProvider.GetDependency<ICurrentContext>().ClientVersion.Returns((Version)null);
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.Contains(result.Collections, c => c.Id == fixture.PlainCollectionId);
+        Assert.DoesNotContain(result.Collections, c => c.Id == fixture.GatedCollectionId);
+        Assert.DoesNotContain(result.Ciphers, c => c.Id == fixture.GatedOnlyCipherId);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Get_NoLeasingCollections_CollectionsUnchangedForClientsThatCannotRenderPartials(
+        User user, OrganizationUserOrganizationDetails organization, SutProvider<SyncController> sutProvider)
+    {
+        var fixture = SetupGatedCollectionSync(user, organization, sutProvider);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.Android);
+        // Leasing off (or the organization does not use it): the gate reports no leasing collections.
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .GetLeasingCollectionIdsAsync(Arg.Any<IEnumerable<CollectionDetails>>())
+            .Returns(Task.FromResult<ISet<Guid>>(new HashSet<Guid>()));
+
+        var result = await sutProvider.Sut.Get();
+
+        Assert.Contains(result.Collections, c => c.Id == fixture.GatedCollectionId);
+        Assert.Contains(result.Collections, c => c.Id == fixture.PlainCollectionId);
+    }
+
+    private sealed record GatedCollectionSyncFixture(
+        Guid GatedCollectionId,
+        Guid PlainCollectionId,
+        Guid GatedOnlyCipherId,
+        Guid MixedCipherId,
+        Guid PlainOnlyCipherId);
+
+    /// <summary>
+    /// Arranges an organization sync with a leasing-enabled (gated) collection and a plain one, and three
+    /// organization ciphers: one only in the gated collection, one in both, and one only in the plain collection.
+    /// The gate reports the gated collection as leasing-enabled and authorizes full data for every cipher except
+    /// the gated-only one, as the real gate would.
+    /// </summary>
+    private static GatedCollectionSyncFixture SetupGatedCollectionSync(
+        User user, OrganizationUserOrganizationDetails organization, SutProvider<SyncController> sutProvider)
+    {
+        user.EquivalentDomains = null;
+        user.ExcludedGlobalEquivalentDomains = null;
+        organization.Enabled = true;
+        var organizationId = organization.OrganizationId;
+
+        var userService = sutProvider.GetDependency<IUserService>();
+        userService.GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>()).ReturnsForAnyArgs(user);
+        userService.HasPremiumFromOrganization(user).Returns(false);
+        sutProvider.GetDependency<IUserAccountKeysQuery>().Run(user).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = user.GetPublicKeyEncryptionKeyPair(),
+            SignatureKeyPairData = null,
+        });
+        sutProvider.GetDependency<ITwoFactorIsEnabledQuery>().TwoFactorIsEnabledAsync(user).Returns(false);
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyDetailsByUserAsync(user.Id, OrganizationUserStatusType.Confirmed)
+            .Returns(new List<OrganizationUserOrganizationDetails> { organization });
+        sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .GetOrganizationAbilitiesAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(new Dictionary<Guid, OrganizationAbility>
+            {
+                [organizationId] = new() { Id = organizationId, UsePam = true },
+            });
+
+        var gatedCollection = new CollectionDetails { Id = Guid.NewGuid(), OrganizationId = organizationId, Name = "2.gated|name" };
+        var plainCollection = new CollectionDetails { Id = Guid.NewGuid(), OrganizationId = organizationId, Name = "2.plain|name" };
+        sutProvider.GetDependency<ICollectionRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(new List<CollectionDetails> { gatedCollection, plainCollection });
+
+        CipherDetails OrganizationCipher() => new()
+        {
+            Id = Guid.NewGuid(),
+            Type = CipherType.Login,
+            Data = """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""",
+            OrganizationId = organizationId,
+        };
+        var gatedOnly = OrganizationCipher();
+        var mixed = OrganizationCipher();
+        var plainOnly = OrganizationCipher();
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetManyByUserIdAsync(user.Id, Arg.Any<bool>())
+            .Returns(new List<CipherDetails> { gatedOnly, mixed, plainOnly });
+
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByUserIdAsync(user.Id)
+            .Returns(new List<CollectionCipher>
+            {
+                new() { CipherId = gatedOnly.Id, CollectionId = gatedCollection.Id },
+                new() { CipherId = mixed.Id, CollectionId = gatedCollection.Id },
+                new() { CipherId = mixed.Id, CollectionId = plainCollection.Id },
+                new() { CipherId = plainOnly.Id, CollectionId = plainCollection.Id },
+            });
+
+        var gate = sutProvider.GetDependency<ICipherLeaseGate>();
+        gate.AuthorizeReadManyAsync(user.Id, Arg.Any<IEnumerable<Cipher>>(),
+                Arg.Any<IEnumerable<CollectionDetails>>(),
+                Arg.Any<IDictionary<Guid, IGrouping<Guid, CollectionCipher>>>())
+            .Returns(FullCipherAccess.ForCiphers([mixed.Id, plainOnly.Id]));
+        gate.GetLeasingCollectionIdsAsync(Arg.Any<IEnumerable<CollectionDetails>>())
+            .Returns(Task.FromResult<ISet<Guid>>(new HashSet<Guid> { gatedCollection.Id }));
+
+        return new GatedCollectionSyncFixture(
+            gatedCollection.Id, plainCollection.Id, gatedOnly.Id, mixed.Id, plainOnly.Id);
     }
 
     /// <summary>

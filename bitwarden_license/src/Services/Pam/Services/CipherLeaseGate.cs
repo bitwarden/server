@@ -100,6 +100,21 @@ public class CipherLeaseGate : ICipherLeaseGate
         return FullCipherAccess.ForCiphers(ciphers.Select(c => c.Id).Where(id => !gated.Contains(id)));
     }
 
+    public async Task<ISet<Guid>> GetLeasingCollectionIdsAsync(IEnumerable<CollectionDetails>? collections)
+    {
+        if (!Enabled || collections == null)
+        {
+            return new HashSet<Guid>();
+        }
+
+        var ruledCollections = collections.Where(c => c.HasEnabledAccessRule).ToList();
+        var gatingOrganizationIds = await GetGatingOrganizationIdsAsync(ruledCollections.Select(c => c.OrganizationId));
+        return ruledCollections
+            .Where(c => gatingOrganizationIds.Contains(c.OrganizationId))
+            .Select(c => c.Id)
+            .ToHashSet();
+    }
+
     public async Task<FullCipherAccess> AuthorizeReadManyAsync(Guid userId, IEnumerable<Cipher> ciphers)
     {
         if (!Enabled)
@@ -412,7 +427,8 @@ public class CipherLeaseGate : ICipherLeaseGate
 
     /// <summary>
     /// The cipher ids reachable <em>only</em> through leasing-enabled collections, per
-    /// <see cref="CollectionDetails.HasEnabledAccessRule" />, in organizations where an access rule can gate.
+    /// <see cref="GetLeasingCollectionIdsAsync" />: collections with an enabled access rule, in organizations where an
+    /// access rule can gate.
     /// </summary>
     /// <remarks>
     /// A user-owned cipher is never gated. A collection read path that omits <c>HasEnabledAccessRule</c> silently
@@ -429,12 +445,7 @@ public class CipherLeaseGate : ICipherLeaseGate
             return gated;
         }
 
-        var ruledCollections = collections.Where(c => c.HasEnabledAccessRule).ToList();
-        var gatingOrganizationIds = await GetGatingOrganizationIdsAsync(ruledCollections.Select(c => c.OrganizationId));
-        var leasingCollectionIds = ruledCollections
-            .Where(c => gatingOrganizationIds.Contains(c.OrganizationId))
-            .Select(c => c.Id)
-            .ToHashSet();
+        var leasingCollectionIds = await GetLeasingCollectionIdsAsync(collections);
         if (leasingCollectionIds.Count == 0)
         {
             return gated;

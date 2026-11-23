@@ -1169,6 +1169,89 @@ public class CipherLeaseGateTests
     }
 
     [Fact]
+    public async Task GetLeasingCollectionIdsAsync_ReturnsOnlyEnabledRuleCollections()
+    {
+        var (sutProvider, _, _) = Setup();
+        var leasingCollectionId = Guid.NewGuid();
+        var disabledRuleCollectionId = Guid.NewGuid();
+        var plainCollectionId = Guid.NewGuid();
+
+        var leasing = await sutProvider.Sut.GetLeasingCollectionIdsAsync(
+        [
+            LeasingCollection(leasingCollectionId),
+            DisabledRuleCollection(disabledRuleCollectionId),
+            PlainCollection(plainCollectionId),
+        ]);
+
+        Assert.Equal(leasingCollectionId, Assert.Single(leasing));
+    }
+
+    [Fact]
+    public async Task GetLeasingCollectionIdsAsync_FlagOff_ReturnsNoneWithoutQuerying()
+    {
+        var (sutProvider, _, _) = Setup(enabled: false);
+
+        var leasing = await sutProvider.Sut.GetLeasingCollectionIdsAsync([LeasingCollection(Guid.NewGuid())]);
+
+        Assert.Empty(leasing);
+        await sutProvider.GetDependency<IOrganizationAbilityCacheService>()
+            .DidNotReceiveWithAnyArgs().GetOrganizationAbilitiesAsync(default!, default);
+    }
+
+    [Fact]
+    public async Task GetLeasingCollectionIdsAsync_NullCollections_ReturnsNone()
+    {
+        var (sutProvider, _, _) = Setup();
+
+        Assert.Empty(await sutProvider.Sut.GetLeasingCollectionIdsAsync(null));
+    }
+
+    [Fact]
+    public async Task GetLeasingCollectionIdsAsync_OrganizationWithoutPam_ExcludesItsCollections()
+    {
+        var (sutProvider, _, _) = Setup();
+        var otherOrganizationId = Guid.NewGuid();
+        var gatingCollectionId = Guid.NewGuid();
+        var openCollectionId = Guid.NewGuid();
+        OrganizationAbilitiesAre(sutProvider,
+            new OrganizationAbility { Id = _organizationId, UsePam = true },
+            new OrganizationAbility { Id = otherOrganizationId, UsePam = false });
+        var openCollection = LeasingCollection(openCollectionId);
+        openCollection.OrganizationId = otherOrganizationId;
+
+        var leasing = await sutProvider.Sut.GetLeasingCollectionIdsAsync(
+            [LeasingCollection(gatingCollectionId), openCollection]);
+
+        // A rule in an organization without Privileged Controls gates nothing, so its collection is not leasing.
+        Assert.Equal(gatingCollectionId, Assert.Single(leasing));
+    }
+
+    [Fact]
+    public async Task GetLeasingCollectionIdsAsync_AgreesWithTheBulkReadDecision()
+    {
+        var (sutProvider, userId, gatedCipherId) = Setup();
+        var mixedCipherId = Guid.NewGuid();
+        var leasingCollectionId = Guid.NewGuid();
+        var plainCollectionId = Guid.NewGuid();
+        CollectionDetails[] collections = [LeasingCollection(leasingCollectionId), PlainCollection(plainCollectionId)];
+
+        var leasing = await sutProvider.Sut.GetLeasingCollectionIdsAsync(collections);
+        var access = await sutProvider.Sut.AuthorizeReadManyAsync(
+            userId,
+            [new Cipher { Id = gatedCipherId, OrganizationId = _organizationId }, new Cipher { Id = mixedCipherId, OrganizationId = _organizationId }],
+            collections,
+            Group(
+                new CollectionCipher { CipherId = gatedCipherId, CollectionId = leasingCollectionId },
+                new CollectionCipher { CipherId = mixedCipherId, CollectionId = leasingCollectionId },
+                new CollectionCipher { CipherId = mixedCipherId, CollectionId = plainCollectionId }));
+
+        // The collection a caller hides is exactly the one whose exclusive members the bulk read withholds.
+        Assert.Equal(leasingCollectionId, Assert.Single(leasing));
+        Assert.False(access.Authorizes(gatedCipherId));
+        Assert.True(access.Authorizes(mixedCipherId));
+    }
+
+    [Fact]
     public async Task AuthorizeReadManyAsync_SelfLoading_OrganizationWithoutPam_LoadsNothing()
     {
         var (sutProvider, userId, cipherId) = Setup();

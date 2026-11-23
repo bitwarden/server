@@ -48,6 +48,21 @@ public interface ICipherLeaseGate
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>>? collectionCiphersByCipher);
 
     /// <summary>
+    /// The subset of <paramref name="collections"/> that is leasing-enabled: a cipher reachable
+    /// <em>only</em> through these is the one the bulk member decision withholds. Empty when leasing is off.
+    /// </summary>
+    /// <remarks>
+    /// The same rule the bulk member decision applies, exposed so a caller that withholds gated ciphers
+    /// from a client unable to hold the partial shape can withhold the matching collections too, without a
+    /// second rule that could drift from the first.
+    /// </remarks>
+    /// <param name="collections">
+    /// The caller's collections, loaded so <see cref="CollectionDetails.HasEnabledAccessRule"/> is
+    /// populated. <c>null</c> is equivalent to empty.
+    /// </param>
+    Task<ISet<Guid>> GetLeasingCollectionIdsAsync(IEnumerable<CollectionDetails>? collections);
+
+    /// <summary>
     /// Self-loading variant of the bulk member decision, for callers that have not already loaded the
     /// caller's collections and mappings. Loads them once, and only when the flag is on and one of
     /// <paramref name="ciphers"/> belongs to an organization in which an access rule can gate.

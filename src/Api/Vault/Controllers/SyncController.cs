@@ -133,7 +133,14 @@ public class SyncController : Controller
         // with reduced data during the passive sync. The active GET /ciphers/{id} path is unchanged. The
         // witness authorizes the non-gated subset; gated ciphers fall through to the partial shape.
         var fullCipherAccess = await _cipherLeaseGate.AuthorizeReadManyAsync(user.Id, allCiphers, collections, collectionCiphersGroupDict);
-        var ciphers = FilterCiphersUnsupportedByClient(allCiphers, fullCipherAccess);
+        // One decision drives both filters below, so a client never receives a gated collection whose
+        // items it is denied.
+        var clientHoldsPartials = PartialCipherSupport.IsSupportedBy(
+            _currentContext.DeviceType,
+            _currentContext.ClientVersion,
+            _featureService.IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers));
+        var ciphers = FilterCiphersUnsupportedByClient(allCiphers, fullCipherAccess, clientHoldsPartials);
+        collections = await FilterCollectionsUnsupportedByClientAsync(collections, clientHoldsPartials);
 
         var userTwoFactorEnabled = await _twoFactorIsEnabledQuery.TwoFactorIsEnabledAsync(user);
         var userHasPremiumFromOrganization = await _userService.HasPremiumFromOrganization(user);
@@ -189,7 +196,7 @@ public class SyncController : Controller
     /// request access.
     /// </remarks>
     private ICollection<CipherDetails> FilterCiphersUnsupportedByClient(
-        ICollection<CipherDetails> ciphers, FullCipherAccess fullCipherAccess)
+        ICollection<CipherDetails> ciphers, FullCipherAccess fullCipherAccess, bool clientHoldsPartials)
     {
         var unsupportedTypes = new List<Core.Vault.Enums.CipherType>();
 
@@ -208,18 +215,54 @@ public class SyncController : Controller
             unsupportedTypes.Add(Core.Vault.Enums.CipherType.Passport);
         }
 
-        var supportsPartial = PartialCipherSupport.IsSupportedBy(
-            _currentContext.DeviceType,
-            _currentContext.ClientVersion,
-            _featureService.IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers));
-        if (unsupportedTypes.Count == 0 && supportsPartial)
+        if (unsupportedTypes.Count == 0 && clientHoldsPartials)
         {
             return ciphers;
         }
 
         return ciphers
             .Where(c => !unsupportedTypes.Contains(c.Type))
-            .Where(c => supportsPartial || fullCipherAccess.Authorizes(c.Id))
+            .Where(c => clientHoldsPartials || fullCipherAccess.Authorizes(c.Id))
             .ToList();
+    }
+
+    /// <summary>
+    /// Withholds leasing-enabled collections from a client that cannot render the partial shape, matching
+    /// <see cref="FilterCiphersUnsupportedByClient"/>. Without this the client offers the collection in its
+    /// picker, and an item the user files there disappears at the next sync.
+    /// </summary>
+    /// <remarks>
+    /// Only the collection objects are withheld. Each delivered cipher keeps its full collection ids, because
+    /// the cipher-to-collection mapping goes to the response untouched. That includes the id of a hidden
+    /// gated collection:
+    /// <list type="bullet">
+    /// <item>An item reachable only through gated collections is gated, and the cipher filter already drops it.</item>
+    /// <item>An item also in a non-gated collection is not gated, so it is delivered exactly as before. It still
+    /// lists the gated collection's id, which the client cannot resolve to a name.</item>
+    /// </list>
+    /// Stripping that id would be worse. Clients send the collection ids they hold back on save. An organization
+    /// item whose ids were all stripped counts as "unassigned" and is saved through the admin collections
+    /// endpoint, which deletes every membership left out of the request. A stripped id could therefore silently
+    /// remove the item from the gated collection. Sending the unresolvable id keeps memberships intact.
+    ///
+    /// Fails closed like the cipher filter: an unknown device type cannot hold partials, so gated collections
+    /// are withheld.
+    /// </remarks>
+    private async Task<IEnumerable<CollectionDetails>> FilterCollectionsUnsupportedByClientAsync(
+        IEnumerable<CollectionDetails> collections, bool clientHoldsPartials)
+    {
+        if (clientHoldsPartials || collections == null)
+        {
+            return collections;
+        }
+
+        var collectionList = collections.ToList();
+        var leasingCollectionIds = await _cipherLeaseGate.GetLeasingCollectionIdsAsync(collectionList);
+        if (leasingCollectionIds.Count == 0)
+        {
+            return collectionList;
+        }
+
+        return collectionList.Where(c => !leasingCollectionIds.Contains(c.Id)).ToList();
     }
 }

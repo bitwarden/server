@@ -25,6 +25,9 @@ public class UnrestrictedCipherLeaseGate : ICipherLeaseGate
     public Task<FullCipherAccess> AuthorizeReadManyAsync(Guid userId, IEnumerable<Cipher> ciphers)
         => Task.FromResult(FullCipherAccess.Unrestricted());
 
+    public Task<ISet<Guid>> GetLeasingCollectionIdsAsync(IEnumerable<CollectionDetails>? collections)
+        => Task.FromResult<ISet<Guid>>(new HashSet<Guid>());
+
     public Task<FullCipherAccess> AuthorizeReadManyAsync(
         Guid userId,
         IEnumerable<Cipher> ciphers,

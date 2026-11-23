@@ -62,6 +62,9 @@ public class CipherLeaseGateRegistrationTests
         public Task<FullCipherAccess> AuthorizeReadManyAsync(Guid userId, IEnumerable<Cipher> ciphers) =>
             throw new NotSupportedException();
 
+        public Task<ISet<Guid>> GetLeasingCollectionIdsAsync(IEnumerable<CollectionDetails>? collections) =>
+            throw new NotSupportedException();
+
         public Task<FullCipherAccess> AuthorizeReadManyAsync(
             Guid userId,
             IEnumerable<Cipher> ciphers,
