@@ -18,16 +18,14 @@ public class CollectionAuthorizationService(
     private readonly Dictionary<Guid, CollectionAdminDetails?> _detailsByCollectionId = new();
 
     public async Task<bool> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId) =>
-        (await AuthorizeAsync(organizationId, [collectionId], CollectionRules.OrganizationRole.CanUpdate,
-            excludeDefaultCollections: false)).Contains(collectionId);
+        (await AuthorizeAsync(organizationId, [collectionId], CollectionRules.OrganizationRole.CanUpdate))
+        .Contains(collectionId);
 
     public Task<IReadOnlySet<Guid>> AuthorizeModifyUserAccessAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds) =>
-        AuthorizeAsync(organizationId, collectionIds, CollectionRules.OrganizationRole.CanModifyUserAccess,
-            excludeDefaultCollections: true);
+        AuthorizeAsync(organizationId, collectionIds, CollectionRules.OrganizationRole.CanModifyUserAccess);
 
     public Task<IReadOnlySet<Guid>> AuthorizeModifyGroupAccessAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds) =>
-        AuthorizeAsync(organizationId, collectionIds, CollectionRules.OrganizationRole.CanModifyGroupAccess,
-            excludeDefaultCollections: true);
+        AuthorizeAsync(organizationId, collectionIds, CollectionRules.OrganizationRole.CanModifyGroupAccess);
 
     /// <summary>
     /// Returns the subset of <paramref name="collectionIds"/> that the caller can operate on.
@@ -35,8 +33,7 @@ public class CollectionAuthorizationService(
     private async Task<IReadOnlySet<Guid>> AuthorizeAsync(
         Guid organizationId,
         IReadOnlyCollection<Guid> collectionIds,
-        Func<CurrentContextOrganization?, OrganizationAbility?, bool> organizationWideRule,
-        bool excludeDefaultCollections)
+        Func<CurrentContextOrganization?, OrganizationAbility?, bool> organizationWideRule)
     {
         if (collectionIds.Count == 0 || !currentContext.UserId.HasValue)
         {
@@ -45,10 +42,11 @@ public class CollectionAuthorizationService(
 
         await EnsureCollectionDetailsCachedAsync(collectionIds);
 
+        // No one can edit the settings of a default user collection.
         var requestedCollectionIds = collectionIds
             .Where(id => _detailsByCollectionId[id] is { } details
                          && details.OrganizationId == organizationId
-                         && (!excludeDefaultCollections || details.Type != CollectionType.DefaultUserCollection))
+                         && details.Type != CollectionType.DefaultUserCollection)
             .ToHashSet();
         if (requestedCollectionIds.Count == 0)
         {
@@ -74,6 +72,8 @@ public class CollectionAuthorizationService(
             .Where(id => CollectionRules.CollectionAssignment.CanManage(organization, _detailsByCollectionId[id]!))
             .ToHashSet();
 
+        // Check provider access last. It costs up to two database reads, and most callers are already
+        // authorized by their organization role or collection assignment.
         if (authorizedCollectionIds.Count < requestedCollectionIds.Count &&
             await IsManagingProviderUserAsync(organizationId))
         {

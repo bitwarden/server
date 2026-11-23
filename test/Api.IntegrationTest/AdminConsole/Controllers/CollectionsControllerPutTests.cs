@@ -23,8 +23,8 @@ using Xunit;
 namespace Bit.Api.IntegrationTest.AdminConsole.Controllers;
 
 /// <summary>
-/// Authorization tests for <c>PUT organizations/{orgId}/collections/{id}</c>. Most cases run with
-/// <see cref="FeatureFlagKeys.AuthorizationServices"/> on and off to show both paths agree.
+/// Authorization tests for <c>PUT organizations/{orgId}/collections/{id}</c>. Every case runs with
+/// <see cref="FeatureFlagKeys.AuthorizationServices"/> on and off. Where the two paths differ, a comment says why.
 /// </summary>
 public class CollectionsControllerPutTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
@@ -111,6 +111,27 @@ public class CollectionsControllerPutTests : IClassFixture<ApiApplicationFactory
             users: [new SelectionReadOnlyRequestModel { Id = organizationUser.Id, Manage = true }]);
 
         await AssertUpdatedAsync(response, collection.Id);
+    }
+
+    [Theory]
+    [InlineData(OrganizationUserType.Owner, true)]
+    [InlineData(OrganizationUserType.Owner, false)]
+    [InlineData(OrganizationUserType.Admin, true)]
+    [InlineData(OrganizationUserType.Admin, false)]
+    public async Task Put_AsOwnerOrAdmin_WhenOnlyManagerIsRevoked_ReturnsNotFound(
+        OrganizationUserType type, bool authorizationServicesEnabled)
+    {
+        await SetAllowAdminAccessToAllCollectionItemsAsync(false);
+        var (_, revokedMember) = await CreateMemberAsync(OrganizationUserType.User,
+            status: OrganizationUserStatusType.Revoked);
+        // A revoked member's Manage still counts, so the collection is not orphaned.
+        var collection = await CreateCollectionAsync(users:
+            [new CollectionAccessSelection { Id = revokedMember.Id, Manage = true }]);
+        var (email, _) = await CreateMemberAsync(type);
+
+        var response = await PutAsync(email, collection.Id, authorizationServicesEnabled);
+
+        await AssertNotUpdatedAsync(response, HttpStatusCode.NotFound, collection);
     }
 
     [Theory]
@@ -207,13 +228,15 @@ public class CollectionsControllerPutTests : IClassFixture<ApiApplicationFactory
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Put_WhenRevokedMemberCanManageCollection_ReturnsNotFound(bool authorizationServicesEnabled)
+    [InlineData(OrganizationUserStatusType.Accepted, true)]
+    [InlineData(OrganizationUserStatusType.Accepted, false)]
+    [InlineData(OrganizationUserStatusType.Revoked, true)]
+    [InlineData(OrganizationUserStatusType.Revoked, false)]
+    public async Task Put_WhenUnconfirmedMemberCanManageCollection_ReturnsNotFound(
+        OrganizationUserStatusType status, bool authorizationServicesEnabled)
     {
         await SetAllowAdminAccessToAllCollectionItemsAsync(false);
-        var (email, organizationUser) = await CreateMemberAsync(OrganizationUserType.User,
-            status: OrganizationUserStatusType.Revoked);
+        var (email, organizationUser) = await CreateMemberAsync(OrganizationUserType.User, status: status);
         var collection = await CreateCollectionAsync(users:
         [
             new CollectionAccessSelection { Id = _owner.Id, Manage = true },
@@ -239,6 +262,36 @@ public class CollectionsControllerPutTests : IClassFixture<ApiApplicationFactory
         var response = await PutAsync(email, collection.Id, authorizationServicesEnabled);
 
         await AssertNotUpdatedAsync(response, HttpStatusCode.NotFound, collection);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Put_WhenCollectionBelongsToAnotherOrganization_ReturnsNotFound(bool authorizationServicesEnabled)
+    {
+        await SetAllowAdminAccessToAllCollectionItemsAsync(true);
+        var (email, _) = await CreateMemberAsync(OrganizationUserType.Owner);
+        var (otherOrganization, otherOwner) = await SignUpOrganizationAsync();
+        var collection = await OrganizationTestHelpers.CreateCollectionAsync(_factory, otherOrganization.Id,
+            $"collection-{Guid.NewGuid()}", externalId: _originalExternalId,
+            users: [new CollectionAccessSelection { Id = otherOwner.Id, Manage = true }]);
+
+        var response = await PutAsync(email, collection.Id, authorizationServicesEnabled);
+
+        await AssertNotUpdatedAsync(response, HttpStatusCode.NotFound, collection);
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Put_WhenCollectionDoesNotExist_ReturnsNotFound(bool authorizationServicesEnabled)
+    {
+        await SetAllowAdminAccessToAllCollectionItemsAsync(true);
+        var (email, _) = await CreateMemberAsync(OrganizationUserType.Owner);
+
+        var response = await PutAsync(email, Guid.NewGuid(), authorizationServicesEnabled);
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
     [Theory]
@@ -371,17 +424,21 @@ public class CollectionsControllerPutTests : IClassFixture<ApiApplicationFactory
         await AssertUpdatedAsync(response, collection.Id);
     }
 
+    // The default user collection tests below expect a different status for each flag state. The authorization service
+    // rejects a default user collection (404). The legacy handler authorizes the request and the command rejects it (400).
+    // TODO: Remove the BadRequest cases with the AuthorizationServices flag.
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Put_DefaultCollection_AsAssignedMember_ReturnsBadRequest(bool authorizationServicesEnabled)
+    [InlineData(true, HttpStatusCode.NotFound)]
+    [InlineData(false, HttpStatusCode.BadRequest)]
+    public async Task Put_DefaultCollection_AsAssignedMember_IsRejected(
+        bool authorizationServicesEnabled, HttpStatusCode expectedStatusCode)
     {
         var (email, organizationUser) = await CreateMemberAsync(OrganizationUserType.User);
         var collection = await CreateDefaultCollectionAsync(organizationUser.Id);
 
         var response = await PutAsync(email, collection.Id, authorizationServicesEnabled);
 
-        await AssertNotUpdatedAsync(response, HttpStatusCode.BadRequest, collection);
+        await AssertNotUpdatedAsync(response, expectedStatusCode, collection);
     }
 
     [Theory]
@@ -399,12 +456,12 @@ public class CollectionsControllerPutTests : IClassFixture<ApiApplicationFactory
     }
 
     [Theory]
-    [InlineData(OrganizationUserType.Owner, true)]
-    [InlineData(OrganizationUserType.Owner, false)]
-    [InlineData(OrganizationUserType.Admin, true)]
-    [InlineData(OrganizationUserType.Admin, false)]
-    public async Task Put_DefaultCollection_AsOwnerOrAdminWithAdminAccessToAllCollections_ReturnsBadRequest(
-        OrganizationUserType type, bool authorizationServicesEnabled)
+    [InlineData(OrganizationUserType.Owner, true, HttpStatusCode.NotFound)]
+    [InlineData(OrganizationUserType.Owner, false, HttpStatusCode.BadRequest)]
+    [InlineData(OrganizationUserType.Admin, true, HttpStatusCode.NotFound)]
+    [InlineData(OrganizationUserType.Admin, false, HttpStatusCode.BadRequest)]
+    public async Task Put_DefaultCollection_AsOwnerOrAdminWithAdminAccessToAllCollections_IsRejected(
+        OrganizationUserType type, bool authorizationServicesEnabled, HttpStatusCode expectedStatusCode)
     {
         await SetAllowAdminAccessToAllCollectionItemsAsync(true);
         var (_, assignedMember) = await CreateMemberAsync(OrganizationUserType.User);
@@ -413,14 +470,14 @@ public class CollectionsControllerPutTests : IClassFixture<ApiApplicationFactory
 
         var response = await PutAsync(email, collection.Id, authorizationServicesEnabled);
 
-        await AssertNotUpdatedAsync(response, HttpStatusCode.BadRequest, collection);
+        await AssertNotUpdatedAsync(response, expectedStatusCode, collection);
     }
 
     [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Put_DefaultCollection_WithEditAnyCollectionPermission_ReturnsBadRequest(
-        bool authorizationServicesEnabled)
+    [InlineData(true, HttpStatusCode.NotFound)]
+    [InlineData(false, HttpStatusCode.BadRequest)]
+    public async Task Put_DefaultCollection_WithEditAnyCollectionPermission_IsRejected(
+        bool authorizationServicesEnabled, HttpStatusCode expectedStatusCode)
     {
         var (_, assignedMember) = await CreateMemberAsync(OrganizationUserType.User);
         var collection = await CreateDefaultCollectionAsync(assignedMember.Id);
@@ -429,16 +486,16 @@ public class CollectionsControllerPutTests : IClassFixture<ApiApplicationFactory
 
         var response = await PutAsync(email, collection.Id, authorizationServicesEnabled);
 
-        await AssertNotUpdatedAsync(response, HttpStatusCode.BadRequest, collection);
+        await AssertNotUpdatedAsync(response, expectedStatusCode, collection);
     }
 
     [Theory]
-    [InlineData(ProviderType.Msp, true)]
-    [InlineData(ProviderType.Msp, false)]
-    [InlineData(ProviderType.BusinessUnit, true)]
-    [InlineData(ProviderType.BusinessUnit, false)]
-    public async Task Put_DefaultCollection_AsProviderUser_ReturnsBadRequest(
-        ProviderType providerType, bool authorizationServicesEnabled)
+    [InlineData(ProviderType.Msp, true, HttpStatusCode.NotFound)]
+    [InlineData(ProviderType.Msp, false, HttpStatusCode.BadRequest)]
+    [InlineData(ProviderType.BusinessUnit, true, HttpStatusCode.NotFound)]
+    [InlineData(ProviderType.BusinessUnit, false, HttpStatusCode.BadRequest)]
+    public async Task Put_DefaultCollection_AsProviderUser_IsRejected(
+        ProviderType providerType, bool authorizationServicesEnabled, HttpStatusCode expectedStatusCode)
     {
         var (_, assignedMember) = await CreateMemberAsync(OrganizationUserType.User);
         var collection = await CreateDefaultCollectionAsync(assignedMember.Id);
@@ -446,7 +503,7 @@ public class CollectionsControllerPutTests : IClassFixture<ApiApplicationFactory
 
         var response = await PutAsync(email, collection.Id, authorizationServicesEnabled);
 
-        await AssertNotUpdatedAsync(response, HttpStatusCode.BadRequest, collection);
+        await AssertNotUpdatedAsync(response, expectedStatusCode, collection);
     }
 
     [Theory]

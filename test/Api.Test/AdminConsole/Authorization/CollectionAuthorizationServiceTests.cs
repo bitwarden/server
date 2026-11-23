@@ -361,7 +361,7 @@ public class CollectionAuthorizationServiceTests
     }
 
     [Theory, BitAutoData]
-    public async Task ModifyAccessOperations_WhenDefaultUserCollection_NoSuccess(
+    public async Task AllOperations_WhenDefaultUserCollection_NoSuccess(
         SutProvider<CollectionAuthorizationService> sutProvider,
         Guid organizationId,
         Guid collectionId,
@@ -375,9 +375,27 @@ public class CollectionAuthorizationServiceTests
         sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
         sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId).Returns(organization);
 
+        Assert.False(await sutProvider.Sut.AuthorizeUpdateAsync(organizationId, collectionId));
         Assert.Empty(await sutProvider.Sut.AuthorizeModifyUserAccessAsync(organizationId, [collectionId]));
         Assert.Empty(await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(organizationId, [collectionId]));
-        Assert.True(await sutProvider.Sut.AuthorizeUpdateAsync(organizationId, collectionId));
+    }
+
+    [Theory, BitAutoData]
+    public async Task AllOperations_WhenDefaultUserCollectionAndProviderUser_NoSuccess(
+        SutProvider<CollectionAuthorizationService> sutProvider,
+        Guid organizationId,
+        Guid collectionId,
+        Guid userId)
+    {
+        SetupCollections(sutProvider,
+            Details(organizationId, collectionId, type: CollectionType.DefaultUserCollection));
+        sutProvider.GetDependency<ICurrentContext>().UserId.Returns(userId);
+        sutProvider.GetDependency<ICurrentContext>().GetOrganization(organizationId).Returns((CurrentContextOrganization?)null);
+        SetupProviderUser(sutProvider, organizationId, ProviderType.Msp, enabled: true);
+
+        Assert.False(await sutProvider.Sut.AuthorizeUpdateAsync(organizationId, collectionId));
+        Assert.Empty(await sutProvider.Sut.AuthorizeModifyUserAccessAsync(organizationId, [collectionId]));
+        Assert.Empty(await sutProvider.Sut.AuthorizeModifyGroupAccessAsync(organizationId, [collectionId]));
     }
 
     [Theory, BitAutoData]

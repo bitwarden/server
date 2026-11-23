@@ -303,6 +303,35 @@ public class CollectionRepositoryGetManyByIdsWithPermissionsTests
         Assert.Empty(second.Users);
     }
 
+    [Theory, DatabaseData]
+    public async Task GetManyByIdsWithPermissionsAsync_WhenAnIdIsRepeated_ReturnsTheCollectionAndItsAccessOnce(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository,
+        ICollectionRepository collectionRepository)
+    {
+        // Arrange
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var user = await userRepository.CreateTestUserAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+        var group = await groupRepository.CreateTestGroupAsync(organization);
+
+        var collection = new Collection { Name = "Repeated", OrganizationId = organization.Id };
+        await collectionRepository.CreateAsync(collection,
+            groups: [new CollectionAccessSelection { Id = group.Id, Manage = true }],
+            users: [new CollectionAccessSelection { Id = orgUser.Id, Manage = true }]);
+
+        // Act
+        var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
+            [collection.Id, collection.Id], user.Id, includeAccessRelationships: true);
+
+        // Assert
+        var result = Single(results, collection.Id);
+        Assert.Equal(orgUser.Id, Assert.Single(result.Users).Id);
+        Assert.Equal(group.Id, Assert.Single(result.Groups).Id);
+    }
+
     private static CollectionAdminDetails Single(IEnumerable<CollectionAdminDetails> results, Guid collectionId)
         => Assert.Single(results, r => r.Id == collectionId);
 }

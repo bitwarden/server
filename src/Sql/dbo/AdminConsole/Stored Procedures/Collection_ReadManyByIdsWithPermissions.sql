@@ -6,6 +6,53 @@ AS
 BEGIN
     SET NOCOUNT ON
 
+    -- The caller's memberships that count: Confirmed, in an Enabled org. A handful of rows for anybody.
+    DECLARE @Memberships TABLE (
+        [OrganizationUserId] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
+        [OrganizationId] UNIQUEIDENTIFIER NOT NULL
+    )
+
+    INSERT INTO @Memberships ([OrganizationUserId], [OrganizationId])
+    SELECT
+        OU.[Id],
+        OU.[OrganizationId]
+    FROM
+        [dbo].[OrganizationUser] OU
+    INNER JOIN
+        [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
+    WHERE
+        OU.[UserId] = @UserId
+        AND OU.[Status] = 2 -- Confirmed
+        AND O.[Enabled] = 1
+
+    -- The groups the caller is in, through those memberships.
+    DECLARE @UserGroups TABLE (
+        [OrganizationUserId] UNIQUEIDENTIFIER NOT NULL,
+        [GroupId] UNIQUEIDENTIFIER NOT NULL,
+        PRIMARY KEY ([OrganizationUserId], [GroupId])
+    )
+
+    INSERT INTO @UserGroups ([OrganizationUserId], [GroupId])
+    SELECT
+        GU.[OrganizationUserId],
+        GU.[GroupId]
+    FROM
+        [dbo].[GroupUser] GU
+    INNER JOIN
+        @Memberships M ON M.[OrganizationUserId] = GU.[OrganizationUserId]
+
+    -- A #temp table (not the TVP) so the statements below are planned for the number of ids actually passed.
+    -- The unnamed inline primary key lets SQL Server cache the table between calls.
+    CREATE TABLE #CollectionIds (
+        [Id] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY
+    )
+
+    INSERT INTO #CollectionIds ([Id])
+    SELECT DISTINCT
+        [Id]
+    FROM
+        @Ids
+
     SELECT
         C.*,
         -- ReadOnly and HidePasswords are the Edit (2) and ViewPassword (1) parts of the highest rank, inverted; no rank means 3
@@ -47,21 +94,16 @@ BEGIN
     FROM
         [dbo].[CollectionView] C
     INNER JOIN
-        @Ids I ON I.[Id] = C.[Id]
-    LEFT JOIN
-        [dbo].[Organization] O ON O.[Id] = C.[OrganizationId]
+        #CollectionIds I ON I.[Id] = C.[Id]
     LEFT JOIN
         -- Only a Confirmed member of an Enabled org counts as Assigned or Manage.
-        [dbo].[OrganizationUser] OU ON C.[OrganizationId] = OU.[OrganizationId]
-            AND OU.[UserId] = @UserId
-            AND OU.[Status] = 2 -- Confirmed
-            AND O.[Enabled] = 1
+        @Memberships M ON M.[OrganizationId] = C.[OrganizationId]
     LEFT JOIN
-        [dbo].[CollectionUser] CU ON CU.[CollectionId] = C.[Id] AND CU.[OrganizationUserId] = OU.[Id]
+        [dbo].[CollectionUser] CU ON CU.[CollectionId] = C.[Id] AND CU.[OrganizationUserId] = M.[OrganizationUserId]
     LEFT JOIN
-        [dbo].[GroupUser] GU ON CU.[CollectionId] IS NULL AND GU.[OrganizationUserId] = OU.[Id]
+        @UserGroups UG ON CU.[CollectionId] IS NULL AND UG.[OrganizationUserId] = M.[OrganizationUserId]
     LEFT JOIN
-        [dbo].[CollectionGroup] CG ON CG.[CollectionId] = C.[Id] AND CG.[GroupId] = GU.[GroupId]
+        [dbo].[CollectionGroup] CG ON CG.[CollectionId] = C.[Id] AND CG.[GroupId] = UG.[GroupId]
     LEFT JOIN
         [dbo].[AccessRule] AR ON AR.[Id] = C.[AccessRuleId]
     -- Rank orders a grant by Manage, then Edit, then ViewPassword; a group with no grant on this collection has no rank
@@ -98,7 +140,7 @@ BEGIN
         FROM
             [dbo].[CollectionGroup] CG
         INNER JOIN
-            @Ids I ON I.[Id] = CG.[CollectionId]
+            #CollectionIds I ON I.[Id] = CG.[CollectionId]
 
         SELECT
             CU.[CollectionId],
@@ -109,6 +151,6 @@ BEGIN
         FROM
             [dbo].[CollectionUser] CU
         INNER JOIN
-            @Ids I ON I.[Id] = CU.[CollectionId]
+            #CollectionIds I ON I.[Id] = CU.[CollectionId]
     END
 END
