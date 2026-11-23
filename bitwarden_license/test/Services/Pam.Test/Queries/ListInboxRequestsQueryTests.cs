@@ -45,4 +45,33 @@ public class ListInboxRequestsQueryTests
         await sutProvider.GetDependency<IAccessRequestRepository>().Received(1)
             .GetManyInboxPendingByCollectionIdsAsync(manageable, _now);
     }
+
+    [Theory, BitAutoData]
+    public async Task GetApprovedAsync_NoManageableCollections_ReturnsEmptyWithoutQuerying(
+        SutProvider<ListInboxRequestsQuery> sutProvider, Guid userId)
+    {
+        sutProvider.GetDependency<IApproverCollectionAccessQuery>()
+            .GetManageableCollectionIdsAsync(userId).Returns([]);
+
+        var result = await sutProvider.Sut.GetApprovedAsync(userId, _now);
+
+        Assert.Empty(result);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyInboxApprovedByCollectionIdsAsync(default!, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task GetApprovedAsync_ManageableCollections_FiltersByThatSet(
+        SutProvider<ListInboxRequestsQuery> sutProvider, Guid userId, Guid collectionId, AccessRequestDetails row)
+    {
+        var manageable = new HashSet<Guid> { collectionId };
+        sutProvider.GetDependency<IApproverCollectionAccessQuery>()
+            .GetManageableCollectionIdsAsync(userId).Returns(manageable);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .GetManyInboxApprovedByCollectionIdsAsync(manageable, _now).Returns([row]);
+
+        var result = await sutProvider.Sut.GetApprovedAsync(userId, _now);
+
+        Assert.Same(row, Assert.Single(result));
+    }
 }

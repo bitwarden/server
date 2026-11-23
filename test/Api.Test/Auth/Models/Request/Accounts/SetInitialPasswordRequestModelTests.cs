@@ -637,6 +637,37 @@ public class SetInitialPasswordRequestModelTests
             r.ErrorMessage.Contains("Cannot mix modern"));
     }
 
+    // AccountKeys are only consumed by the V2 path, which requires MPAD + MPUD. A legacy-shape
+    // request with AccountKeys would reach V1 and silently drop the keypair, so it is rejected.
+    [Theory]
+    [BitAutoData]
+    public void Validate_WithLegacyFieldsAndAccountKeys_ReturnsValidationError(string orgIdentifier)
+    {
+        // Arrange
+        var model = new SetInitialPasswordRequestModel
+        {
+            OrgIdentifier = orgIdentifier,
+            MasterPasswordHash = "hash",
+            Key = "key",
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = 600000,
+            AccountKeys = new AccountKeysRequestModel
+            {
+                UserKeyEncryptedAccountPrivateKey = "privateKey",
+                AccountPublicKey = "publicKey"
+            }
+        };
+
+        // Act
+        var results = model.Validate(new ValidationContext(model)).ToList();
+
+        // Assert
+        Assert.Contains(results, r =>
+            r.ErrorMessage != null &&
+            r.ErrorMessage.Contains("AccountKeys requires") &&
+            r.MemberNames.Contains(nameof(SetInitialPasswordRequestModel.AccountKeys)));
+    }
+
     #endregion
 
     #region HasAuthAndUnlockData Tests

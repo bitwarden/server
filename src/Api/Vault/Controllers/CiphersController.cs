@@ -160,7 +160,7 @@ public class CiphersController : Controller
     /// </remarks>
     private async Task<FullCipherAccess> AuthorizeWriteReturnOrThrowAsync(Guid userId, Cipher cipher)
     {
-        var access = await _cipherLeaseGate.AuthorizeWriteReturnAsync(userId, cipher);
+        var access = await _cipherLeaseGate.AuthorizeIgnoringLeaseAsync(userId, cipher);
         if (access is null && !ClientSupportsPartialCiphers)
         {
             throw new NotFoundException();
@@ -176,7 +176,7 @@ public class CiphersController : Controller
     private async Task<FullCipherAccess> AuthorizeAdminWriteReturnOrThrowAsync(
         Guid userId, Guid organizationId, Cipher cipher)
     {
-        var access = await _cipherLeaseGate.AuthorizeAdminWriteReturnAsync(userId, organizationId, cipher);
+        var access = await _cipherLeaseGate.AuthorizeAdminIgnoringLeaseAsync(userId, organizationId, cipher);
         if (access is null && !ClientSupportsPartialCiphers)
         {
             throw new NotFoundException();

@@ -31,10 +31,10 @@ public class UnrestrictedCipherLeaseGate : ICipherLeaseGate
         IDictionary<Guid, IGrouping<Guid, CollectionCipher>>? collectionCiphersByCipher)
         => Task.FromResult(FullCipherAccess.Unrestricted());
 
-    public Task<FullCipherAccess?> AuthorizeWriteReturnAsync(Guid userId, Cipher cipher)
+    public Task<FullCipherAccess?> AuthorizeIgnoringLeaseAsync(Guid userId, Cipher cipher)
         => Task.FromResult<FullCipherAccess?>(FullCipherAccess.Unrestricted());
 
-    public Task<FullCipherAccess?> AuthorizeAdminWriteReturnAsync(Guid userId, Guid organizationId, Cipher cipher)
+    public Task<FullCipherAccess?> AuthorizeAdminIgnoringLeaseAsync(Guid userId, Guid organizationId, Cipher cipher)
         => Task.FromResult<FullCipherAccess?>(FullCipherAccess.Unrestricted());
 
     public Task<FullCipherAccess> EnsureCanMutateAsync(Guid userId, Cipher cipher)

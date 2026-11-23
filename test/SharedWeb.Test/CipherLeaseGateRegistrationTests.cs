@@ -68,10 +68,10 @@ public class CipherLeaseGateRegistrationTests
             IDictionary<Guid, IGrouping<Guid, CollectionCipher>>? collectionCiphersByCipher) =>
             throw new NotSupportedException();
 
-        public Task<FullCipherAccess?> AuthorizeWriteReturnAsync(Guid userId, Cipher cipher) =>
+        public Task<FullCipherAccess?> AuthorizeIgnoringLeaseAsync(Guid userId, Cipher cipher) =>
             throw new NotSupportedException();
 
-        public Task<FullCipherAccess?> AuthorizeAdminWriteReturnAsync(
+        public Task<FullCipherAccess?> AuthorizeAdminIgnoringLeaseAsync(
             Guid userId, Guid organizationId, Cipher cipher) =>
             throw new NotSupportedException();
 
