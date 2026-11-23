@@ -25,24 +25,27 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
         _factory = factory;
     }
 
-    private static async Task<(IdentityApplicationFactory Factory, User User)> CreateFactoryWithTwoFactorUserAsync()
+    /// <summary>
+    /// Registers a user with email two-factor under a unique address, so tests can share the class fixture's
+    /// host instead of each starting (and leaving running) a host of their own.
+    /// </summary>
+    private async Task<(string Email, User User)> CreateTwoFactorUserAsync()
     {
-        var factory = new IdentityApplicationFactory();
-        await CreateUserAsync(factory, TestEmail, UserEmailTwoFactor);
-        var user = await factory.GetService<IUserRepository>().GetByEmailAsync(TestEmail);
-        return (factory, user);
+        var email = NewUniqueEmail();
+        await CreateUserAsync(_factory, email, BuildUserEmailTwoFactor(email));
+        var user = await _factory.GetService<IUserRepository>().GetByEmailAsync(email);
+        return (email, user);
     }
 
     [Fact]
     public async Task TokenEndpoint_GrantTypePassword_RememberTwoFactorType_InvalidTwoFactorToken_Fails()
     {
         // Arrange
-        var localFactory = new IdentityApplicationFactory();
-        await CreateUserAsync(localFactory, TestEmail, UserEmailTwoFactor);
+        var (email, _) = await CreateTwoFactorUserAsync();
 
         // Act
-        var context = await localFactory.ContextFromPasswordWithTwoFactorAsync(
-                                TestEmail, TestPassword, twoFactorProviderType: "Remember");
+        var context = await _factory.ContextFromPasswordWithTwoFactorAsync(
+                                email, TestPassword, twoFactorProviderType: "Remember");
 
         // Assert
         var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
@@ -88,17 +91,17 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
     [InlineData("1")]
     public async Task RememberToken_ReplayedOnNextLogin_DoesNotIssueAnotherToken(string twoFactorRemember)
     {
-        var (factory, _) = await CreateFactoryWithTwoFactorUserAsync();
+        var (email, _) = await CreateTwoFactorUserAsync();
 
         var emailCode = await EmailLoginCodeAsync(
-            factory, TestEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
-        var (_, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
-            TestEmail, TestPassword,
+            _factory, email, IdentityApplicationFactory.DefaultDeviceIdentifier);
+        var (_, rememberToken) = await _factory.TokensFromPasswordWithTwoFactorAsync(
+            email, TestPassword,
             twoFactorProviderType: ProviderKey(TwoFactorProviderType.Email), twoFactorToken: emailCode);
         Assert.False(string.IsNullOrEmpty(rememberToken));
 
-        var context = await factory.ContextFromPasswordWithTwoFactorAsync(
-            TestEmail,
+        var context = await _factory.ContextFromPasswordWithTwoFactorAsync(
+            email,
             TestPassword,
             twoFactorProviderType: ProviderKey(TwoFactorProviderType.Remember),
             twoFactorToken: rememberToken!,
@@ -118,11 +121,11 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
     [Fact]
     public async Task LegacyRememberToken_IsUpgradedToCurrentFormat()
     {
-        var (factory, user) = await CreateFactoryWithTwoFactorUserAsync();
-        var legacyToken = await factory.GenerateLegacyRememberTokenAsync(user);
+        var (email, user) = await CreateTwoFactorUserAsync();
+        var legacyToken = await _factory.GenerateLegacyRememberTokenAsync(user);
 
-        var context = await factory.ContextFromPasswordWithTwoFactorAsync(
-            TestEmail,
+        var context = await _factory.ContextFromPasswordWithTwoFactorAsync(
+            email,
             TestPassword,
             twoFactorProviderType: ProviderKey(TwoFactorProviderType.Remember),
             twoFactorToken: legacyToken,
@@ -136,8 +139,8 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
         Assert.StartsWith(TwoFactorRememberTokenable.ClearTextPrefix, upgraded);
 
         // And the replacement works on the login after that.
-        var replayContext = await factory.ContextFromPasswordWithTwoFactorAsync(
-            TestEmail,
+        var replayContext = await _factory.ContextFromPasswordWithTwoFactorAsync(
+            email,
             TestPassword,
             twoFactorProviderType: ProviderKey(TwoFactorProviderType.Remember),
             twoFactorToken: upgraded!,
@@ -165,24 +168,24 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
     [InlineData("1")]
     public async Task RecoveryCodeTeardown_RevokesTwoFactorRememberTokens(string twoFactorRemember)
     {
-        var (factory, user) = await CreateFactoryWithTwoFactorUserAsync();
-        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
+        var (email, user) = await CreateTwoFactorUserAsync();
+        var userRepository = _factory.Services.GetRequiredService<IUserRepository>();
 
         const string recoveryCode = "recoverycode123";
         user.TwoFactorRecoveryCode = recoveryCode;
         await userRepository.ReplaceAsync(user);
 
         var emailCode = await EmailLoginCodeAsync(
-            factory, TestEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
-        var (_, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
-            TestEmail, TestPassword,
+            _factory, email, IdentityApplicationFactory.DefaultDeviceIdentifier);
+        var (_, rememberToken) = await _factory.TokensFromPasswordWithTwoFactorAsync(
+            email, TestPassword,
             twoFactorProviderType: ProviderKey(TwoFactorProviderType.Email), twoFactorToken: emailCode);
         Assert.False(string.IsNullOrEmpty(rememberToken));
 
         // Tear down two-factor with the recovery code. The provider is sent as its numeric value because
         // BaseRequestValidator.DetermineValidationOrder only recognises a recovery-code request via int.TryParse.
-        var teardown = await factory.ContextFromPasswordWithTwoFactorAsync(
-            TestEmail,
+        var teardown = await _factory.ContextFromPasswordWithTwoFactorAsync(
+            email,
             TestPassword,
             twoFactorProviderType: ProviderKey(TwoFactorProviderType.RecoveryCode),
             twoFactorToken: recoveryCode,
@@ -195,13 +198,13 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
 
         // Put a second factor back, so the replay below is decided by the 2FA remember token state
         // rather than by the account simply having no second factor.
-        var recoveredUser = await userRepository.GetByEmailAsync(TestEmail);
+        var recoveredUser = await userRepository.GetByEmailAsync(email);
         Assert.NotNull(recoveredUser);
-        recoveredUser.TwoFactorProviders = UserEmailTwoFactor;
+        recoveredUser.TwoFactorProviders = BuildUserEmailTwoFactor(email);
         await userRepository.ReplaceAsync(recoveredUser);
 
-        var replay = await factory.ContextFromPasswordWithTwoFactorAsync(
-            TestEmail,
+        var replay = await _factory.ContextFromPasswordWithTwoFactorAsync(
+            email,
             TestPassword,
             twoFactorProviderType: ProviderKey(TwoFactorProviderType.Remember),
             twoFactorToken: rememberToken!,
@@ -223,29 +226,29 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
     [Fact]
     public async Task WrongRecoveryCode_DoesNotRevokeTwoFactorRememberTokens()
     {
-        var (factory, user) = await CreateFactoryWithTwoFactorUserAsync();
-        var userRepository = factory.Services.GetRequiredService<IUserRepository>();
+        var (email, user) = await CreateTwoFactorUserAsync();
+        var userRepository = _factory.Services.GetRequiredService<IUserRepository>();
 
         user.TwoFactorRecoveryCode = "recoverycode123";
         await userRepository.ReplaceAsync(user);
 
         var emailCode = await EmailLoginCodeAsync(
-            factory, TestEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
-        var (_, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
-            TestEmail, TestPassword,
+            _factory, email, IdentityApplicationFactory.DefaultDeviceIdentifier);
+        var (_, rememberToken) = await _factory.TokensFromPasswordWithTwoFactorAsync(
+            email, TestPassword,
             twoFactorProviderType: ProviderKey(TwoFactorProviderType.Email), twoFactorToken: emailCode);
         Assert.False(string.IsNullOrEmpty(rememberToken));
 
-        var device = await factory.GetService<IDeviceRepository>()
+        var device = await _factory.GetService<IDeviceRepository>()
             .GetByIdentifierAsync(IdentityApplicationFactory.DefaultDeviceIdentifier, user.Id);
         Assert.NotNull(device);
-        var rememberTokenRepository = factory.GetService<ITwoFactorRememberTokenRepository>();
+        var rememberTokenRepository = _factory.GetService<ITwoFactorRememberTokenRepository>();
         var rowBefore = await rememberTokenRepository.GetByUserIdDeviceIdAsync(user.Id, device.Id);
         Assert.NotNull(rowBefore);
 
         // Attempt recovery with the wrong code. It must be refused.
-        var wrongCode = await factory.ContextFromPasswordWithTwoFactorAsync(
-            TestEmail,
+        var wrongCode = await _factory.ContextFromPasswordWithTwoFactorAsync(
+            email,
             TestPassword,
             twoFactorProviderType: ProviderKey(TwoFactorProviderType.RecoveryCode),
             twoFactorToken: "not-the-recovery-code",
@@ -261,8 +264,8 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
         Assert.Equal(rowBefore.Stamp, rowAfter.Stamp);
 
         // ...so the old 2FA remember token still skips the challenge.
-        var replay = await factory.ContextFromPasswordWithTwoFactorAsync(
-            TestEmail,
+        var replay = await _factory.ContextFromPasswordWithTwoFactorAsync(
+            email,
             TestPassword,
             twoFactorProviderType: ProviderKey(TwoFactorProviderType.Remember),
             twoFactorToken: rememberToken!,
@@ -278,17 +281,17 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
     [Fact]
     public async Task RememberToken_PresentedFromDifferentDevice_IsRefused()
     {
-        var (factory, _) = await CreateFactoryWithTwoFactorUserAsync();
+        var (email, _) = await CreateTwoFactorUserAsync();
 
         var emailCode = await EmailLoginCodeAsync(
-            factory, TestEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
-        var (_, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
-            TestEmail, TestPassword,
+            _factory, email, IdentityApplicationFactory.DefaultDeviceIdentifier);
+        var (_, rememberToken) = await _factory.TokensFromPasswordWithTwoFactorAsync(
+            email, TestPassword,
             twoFactorProviderType: ProviderKey(TwoFactorProviderType.Email), twoFactorToken: emailCode);
         Assert.False(string.IsNullOrEmpty(rememberToken));
 
-        var context = await factory.ContextFromPasswordWithTwoFactorAsync(
-            TestEmail,
+        var context = await _factory.ContextFromPasswordWithTwoFactorAsync(
+            email,
             TestPassword,
             deviceIdentifier: Guid.NewGuid().ToString(),
             twoFactorProviderType: ProviderKey(TwoFactorProviderType.Remember),
