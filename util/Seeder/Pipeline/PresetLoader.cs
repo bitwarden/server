@@ -153,7 +153,8 @@ internal static class PresetLoader
                     ?? throw new InvalidOperationException(
                         $"Preset '{presetName}' has an 'sso' block without an 'identifier'."),
                 preset.Sso.Provider,
-                ParseMemberDecryptionType(preset.Sso.EncryptionType));
+                ParseMemberDecryptionType(preset.Sso.EncryptionType),
+                preset.Sso.KeyConnectorUrl);
         }
 
         if (preset.Roster?.Fixture is not null)

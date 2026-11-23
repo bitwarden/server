@@ -11,17 +11,21 @@ internal static class SsoConfigSeeder
     /// <summary>
     /// Produces a SAML 2.0 SSO configuration wired to the local dev IdP.
     /// </summary>
+    /// <param name="keyConnectorUrl">Key Connector service URL. Stored only when
+    /// <paramref name="memberDecryptionType"/> is <see cref="MemberDecryptionType.KeyConnector"/>.</param>
     internal static SsoConfig Create(
         Guid organizationId,
         string idpEntityId,
         string idpSingleSignOnServiceUrl,
         string idpX509PublicCert,
-        MemberDecryptionType memberDecryptionType = MemberDecryptionType.MasterPassword)
+        MemberDecryptionType memberDecryptionType = MemberDecryptionType.MasterPassword,
+        string? keyConnectorUrl = null)
     {
         var data = new SsoConfigurationData
         {
             ConfigType = SsoType.Saml2,
             MemberDecryptionType = memberDecryptionType,
+            KeyConnectorUrl = memberDecryptionType == MemberDecryptionType.KeyConnector ? keyConnectorUrl : null,
             IdpEntityId = idpEntityId,
             IdpSingleSignOnServiceUrl = idpSingleSignOnServiceUrl,
             IdpX509PublicCert = idpX509PublicCert,

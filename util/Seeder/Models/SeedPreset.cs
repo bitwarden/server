@@ -47,6 +47,7 @@ internal record SeedPresetSso
     public string? Identifier { get; init; }
     public string? EncryptionType { get; init; }
     public string? Provider { get; init; }
+    public string? KeyConnectorUrl { get; init; }
 }
 
 /// <summary>

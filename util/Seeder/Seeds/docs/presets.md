@@ -54,17 +54,20 @@ Test specific Bitwarden features. Fixture-based data for deterministic results.
 dotnet run -- preset --name features.{name} --mangle
 ```
 
-| Preset                         | Features Enabled                                                                                                 | Org Fixture      | Roster           | Ciphers          |
-| ------------------------------ | ---------------------------------------------------------------------------------------------------------------- | ---------------- | ---------------- | ---------------- |
-| sso-enterprise                 | singleOrg and requireSso policies (OIDC SSO config is not seeded by the Seeder yet)                              | verdant-health   | starter-team     | enterprise-basic |
-| tde-enterprise                 | singleOrg, requireSso and resetPassword (auto-enroll) policies (OIDC SSO config is not seeded by the Seeder yet) | obsidian-labs    | starter-team     | enterprise-basic |
-| local-sso                      | SSO (SAML 2.0, masterPassword) — local-IdP login org                                                             | verdant-health   | enterprise-basic | enterprise-basic |
-| policy-enterprise              | 7 enterprise policies with data                                                                                  | pinnacle-designs | starter-team     | —                |
-| default-collections-enterprise | Organization Data Ownership after the migration: default collections, member status mix, pending personal items  | — (inline)       | 80 generated     | 300 generated    |
+| Preset                         | Features Enabled                                                                                                 | Org Fixture        | Roster           | Ciphers          |
+| ------------------------------ | ---------------------------------------------------------------------------------------------------------------- | ------------------ | ---------------- | ---------------- |
+| sso-enterprise                 | singleOrg and requireSso policies (OIDC SSO config is not seeded by the Seeder yet)                              | verdant-health     | starter-team     | enterprise-basic |
+| tde-enterprise                 | singleOrg, requireSso and resetPassword (auto-enroll) policies (OIDC SSO config is not seeded by the Seeder yet) | obsidian-labs      | starter-team     | enterprise-basic |
+| local-sso                      | SSO (SAML 2.0, masterPassword) — local-IdP login org                                                             | verdant-health     | enterprise-basic | enterprise-basic |
+| key-connector-enterprise       | SSO (SAML 2.0, keyConnector at `http://localhost:5000`) with singleOrg and requireSso policies                   | maple-pine-trading | starter-team     | enterprise-basic |
+| policy-enterprise              | 7 enterprise policies with data                                                                                  | pinnacle-designs   | starter-team     | —                |
+| default-collections-enterprise | Organization Data Ownership after the migration: default collections, member status mix, pending personal items  | — (inline)         | 80 generated     | 300 generated    |
 
 `policy-enterprise` has no ciphers — it exists purely for testing policy enforcement.
 
 `tde-enterprise` enables the three policies the server turns on when a trusted-device-encryption SSO config is saved: Single Organization, Require SSO, and Account recovery administration with automatic enrollment.
+
+`key-connector-enterprise` (**Maple & Pine Trading Co**) is a SAML 2.0 SSO org on the bundled SimpleSAMLphp IdP with Key Connector as the member decryption option. The SSO config points at a Key Connector on `http://localhost:5000`, the port that the Aspire AppHost `key-connector` resource and the `KeyConnector` launch profile of the `key-connector` repo both use; start that service before you log in. The preset enables Single Organization and Require SSO, which the server requires for Key Connector. Seeded members keep their master passwords, so a User-role member who logs in through SSO is asked to migrate to Key Connector. The Owner and Admin keep their master passwords, as on the server. Wire the IdP the same way as `local-sso` (below): relay the printed org GUID, and add an `authsources.php` entry for each member you log in as. Seeding needs the `idp` container running, because the Seeder reads the IdP signing certificate from its metadata.
 
 `default-collections-enterprise` (**Massive Dynamic**) is an enterprise org after the Organization Data Ownership policy migrated members' items. 80 members: 70 Confirmed (2 of them Admins), 4 Invited, 2 Accepted, 4 Revoked. Each Confirmed User gets a "My Items" default collection; the Owner and Admins don't, as on the server. Half the collections hold migrated items (the two largest 120 and 60, some trashed), and 14 members still have personal items waiting to migrate (`pendingMigration`). Their "My Items" stays empty, as on the server.
 
