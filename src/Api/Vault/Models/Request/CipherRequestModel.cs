@@ -577,6 +577,12 @@ public class CipherCollectionsRequestModel
     public IEnumerable<string> CollectionIds { get; set; }
 }
 
+public class CipherSharedFoldersRequestModel
+{
+    [Required]
+    public IEnumerable<string> SharedFolderIds { get; set; }
+}
+
 public class CipherBulkArchiveRequestModel
 {
     [Required]
