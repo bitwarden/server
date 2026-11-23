@@ -24,6 +24,7 @@ public class LeasingBypassAuditTests(ApiApplicationFactory factory)
     private Collection _gating = null!;
     private Collection _otherGating = null!;
     private Collection _plain = null!;
+    private Collection _otherPlain = null!;
     private Guid _ownerId;
 
     public override async Task InitializeAsync()
@@ -42,6 +43,7 @@ public class LeasingBypassAuditTests(ApiApplicationFactory factory)
         _gating = await OrganizationTestHelpers.CreateCollectionAsync(Factory, Organization.Id, "Gated");
         _otherGating = await OrganizationTestHelpers.CreateCollectionAsync(Factory, Organization.Id, "Also gated");
         _plain = await OrganizationTestHelpers.CreateCollectionAsync(Factory, Organization.Id, "Plain");
+        _otherPlain = await OrganizationTestHelpers.CreateCollectionAsync(Factory, Organization.Id, "Also plain");
         _ownerId = (await Factory.GetService<IUserRepository>().GetByEmailAsync(OwnerEmail))!.Id;
 
         await LoginHelper.LoginAsync(OwnerEmail);
@@ -69,6 +71,20 @@ public class LeasingBypassAuditTests(ApiApplicationFactory factory)
         Assert.Equal(_plain.Id, row["collectionId"]!.GetValue<Guid>());
         Assert.Equal(_ownerId, row["actorId"]!.GetValue<Guid>());
         Assert.False(row["incomplete"]!.GetValue<bool>());
+    }
+
+    [Fact]
+    public async Task MovingAGatedItemToTwoPlainCollections_RecordsNoCollection()
+    {
+        var cipher = await CreateCipherAsync(_gating.Id);
+
+        var response = await Client.PutAsJsonAsync($"ciphers/{cipher.Id}/collections-admin",
+            new { collectionIds = new[] { _plain.Id, _otherPlain.Id } });
+        response.EnsureSuccessStatusCode();
+
+        var row = Assert.Single(await GetTrailAsync("credentialUngated"))!;
+        Assert.Equal(cipher.Id, row["cipherId"]!.GetValue<Guid>());
+        Assert.True(row["collectionId"] == null || row["collectionId"]!.GetValue<Guid?>() == null);
     }
 
     [Fact]

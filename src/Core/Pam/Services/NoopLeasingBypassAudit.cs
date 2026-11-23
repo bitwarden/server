@@ -2,15 +2,12 @@
 
 /// <summary>
 /// Open-source fallback for <see cref="ILeasingBypassAudit"/>. Nothing is gated without the commercial Pam library,
-/// so there is nothing to audit.
+/// so it runs the change and records nothing.
 /// </summary>
 public class NoopLeasingBypassAudit : ILeasingBypassAudit
 {
-    public Task<IReadOnlySet<Guid>> GetGatedCipherIdsAsync(Guid organizationId, IEnumerable<Guid> cipherIds)
-        => Task.FromResult<IReadOnlySet<Guid>>(new HashSet<Guid>());
-
-    public Task AuditUngatedAsync(Guid organizationId, Guid actingUserId, IReadOnlySet<Guid> gatedCipherIds)
-        => Task.CompletedTask;
+    public Task AuditCollectionChangeAsync(Guid organizationId, Guid actingUserId, IEnumerable<Guid> cipherIds,
+        Func<Task> change) => change();
 
     public Task AuditWholeVaultExportAsync(Guid organizationId, Guid actingUserId, IEnumerable<Guid> exportedCipherIds)
         => Task.CompletedTask;

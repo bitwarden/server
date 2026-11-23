@@ -1299,6 +1299,69 @@ public class CipherLeaseGateTests
             .GetCollectionIdsByCipherIdAsync(default);
     }
 
+    [Fact]
+    public async Task GetOrganizationGatedCipherIdsAsync_FlagOff_ReturnsNoneWithoutQuerying()
+    {
+        var (sutProvider, _, cipherId) = Setup(enabled: false);
+
+        var gated = await sutProvider.Sut.GetOrganizationGatedCipherIdsAsync(_organizationId, [cipherId]);
+
+        Assert.Empty(gated);
+        await sutProvider.GetDependency<IGatingCollectionResolver>().DidNotReceiveWithAnyArgs()
+            .GetGatingCollectionIdsAsync(default);
+    }
+
+    [Fact]
+    public async Task GetOrganizationGatedCipherIdsAsync_OrganizationWithoutPam_ReturnsNoneWithoutResolving()
+    {
+        var (sutProvider, _, cipherId) = Setup();
+        OrganizationAbilityIs(sutProvider, usePam: false);
+
+        var gated = await sutProvider.Sut.GetOrganizationGatedCipherIdsAsync(_organizationId, [cipherId]);
+
+        Assert.Empty(gated);
+        await sutProvider.GetDependency<IGatingCollectionResolver>().DidNotReceiveWithAnyArgs()
+            .GetGatingCollectionIdsAsync(default);
+    }
+
+    [Fact]
+    public async Task GetOrganizationGatedCipherIdsAsync_NoGatingCollection_ReturnsNoneWithoutReadingLinks()
+    {
+        var (sutProvider, _, cipherId) = Setup();
+        OrganizationLeasingCollection(sutProvider, _organizationId, Guid.NewGuid(), ruleEnabled: false);
+
+        var gated = await sutProvider.Sut.GetOrganizationGatedCipherIdsAsync(_organizationId, [cipherId]);
+
+        Assert.Empty(gated);
+        await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyByCipherIdsAsync(default!);
+    }
+
+    [Fact]
+    public async Task GetOrganizationGatedCipherIdsAsync_KeepsOnlyCiphersReachableThroughGatingCollectionsAlone()
+    {
+        var (sutProvider, _, gatedId) = Setup();
+        var alsoPlainId = Guid.NewGuid();
+        var unassignedId = Guid.NewGuid();
+        var gatingCollectionId = Guid.NewGuid();
+        OrganizationLeasingCollection(sutProvider, _organizationId, gatingCollectionId);
+        sutProvider.GetDependency<ICollectionCipherRepository>()
+            .GetManyByCipherIdsAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns([
+                new CollectionCipher { CipherId = gatedId, CollectionId = gatingCollectionId },
+                new CollectionCipher { CipherId = alsoPlainId, CollectionId = gatingCollectionId },
+                new CollectionCipher { CipherId = alsoPlainId, CollectionId = Guid.NewGuid() },
+            ]);
+
+        var gated = await sutProvider.Sut.GetOrganizationGatedCipherIdsAsync(_organizationId,
+            [gatedId, alsoPlainId, unassignedId]);
+
+        Assert.Equal([gatedId], gated);
+        // Reads the requested ciphers' links, not the whole organization's.
+        await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyByOrganizationIdAsync(default);
+    }
+
     /// <summary>
     /// Sets the cached ability of the organization every fixture belongs to.
     /// </summary>

@@ -64,4 +64,7 @@ public class UnrestrictedCipherLeaseGate : ICipherLeaseGate
     public FullCipherAccess AuthorizeAccessConnectorRotationRead(Cipher cipher) => FullCipherAccess.Unrestricted();
 
     public FullCipherAccess UnrestrictedForWholeVaultExport() => FullCipherAccess.Unrestricted();
+
+    public Task<IReadOnlySet<Guid>> GetOrganizationGatedCipherIdsAsync(Guid organizationId, IEnumerable<Guid> cipherIds)
+        => Task.FromResult<IReadOnlySet<Guid>>(new HashSet<Guid>());
 }

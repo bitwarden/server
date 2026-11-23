@@ -775,15 +775,15 @@ public class CipherService : ICipherService
         await ValidateChangeInCollectionsAsync(cipher, collectionIds, savingUserId);
 
         cipher.RevisionDate = DateTime.UtcNow;
-        var gatedCipherIds = await _leasingBypassAudit.GetGatedCipherIdsAsync(cipher.OrganizationId.Value, [cipher.Id]);
 
         // The sprocs will validate that all collections belong to this org/user and that they have
         // proper write permissions.
         if (orgAdmin)
         {
             await _cipherLeaseGate.EnsureCanMutateAsAdminAsync(savingUserId, cipher);
-            await _collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id,
-                cipher.OrganizationId.Value, collectionIds);
+            await _leasingBypassAudit.AuditCollectionChangeAsync(cipher.OrganizationId.Value, savingUserId,
+                [cipher.Id], () => _collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id,
+                    cipher.OrganizationId.Value, collectionIds));
         }
         else
         {
@@ -792,10 +792,11 @@ public class CipherService : ICipherService
                 throw new BadRequestException("You do not have permissions to edit this.");
             }
             await _cipherLeaseGate.EnsureCanMutateAsync(savingUserId, cipher);
-            await _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds);
+            await _leasingBypassAudit.AuditCollectionChangeAsync(cipher.OrganizationId.Value, savingUserId,
+                [cipher.Id], () => _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId,
+                    collectionIds));
         }
 
-        await _leasingBypassAudit.AuditUngatedAsync(cipher.OrganizationId.Value, savingUserId, gatedCipherIds);
         await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_UpdatedCollections);
 
         // push

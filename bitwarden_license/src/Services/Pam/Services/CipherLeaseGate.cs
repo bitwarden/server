@@ -290,6 +290,29 @@ public class CipherLeaseGate : ICipherLeaseGate
 
     public FullCipherAccess UnrestrictedForWholeVaultExport() => FullCipherAccess.Unrestricted();
 
+    public async Task<IReadOnlySet<Guid>> GetOrganizationGatedCipherIdsAsync(
+        Guid organizationId, IEnumerable<Guid> cipherIds)
+    {
+        var ids = cipherIds.ToHashSet();
+        if (!Enabled || ids.Count == 0
+            || !CanGate(await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId)))
+        {
+            return new HashSet<Guid>();
+        }
+
+        var leasingCollectionIds = await _gatingCollectionResolver.GetGatingCollectionIdsAsync(organizationId);
+        if (leasingCollectionIds.Count == 0)
+        {
+            return new HashSet<Guid>();
+        }
+
+        return (await _collectionCipherRepository.GetManyByCipherIdsAsync(ids))
+            .GroupBy(cc => cc.CipherId)
+            .Where(g => IsGated(g.Select(cc => cc.CollectionId).ToList(), leasingCollectionIds))
+            .Select(g => g.Key)
+            .ToHashSet();
+    }
+
     /// <summary>
     /// Whether the "/admin" decisions need no lease: the organization gates nothing, or the caller is an Owner or
     /// Admin of an organization that lets admins access all collection items.
@@ -311,7 +334,7 @@ public class CipherLeaseGate : ICipherLeaseGate
     /// Whether an access rule can gate anything in the organization: whether it uses Privileged Controls. Rules left
     /// in an organization without it gate nothing. An unknown organization can gate, so the full check runs.
     /// </summary>
-    internal static bool CanGate(OrganizationAbility? ability) => ability is not { UsePam: false };
+    private static bool CanGate(OrganizationAbility? ability) => ability is not { UsePam: false };
 
     /// <summary>
     /// The subset of <paramref name="organizationIds" /> in which an access rule can gate anything.
@@ -386,7 +409,7 @@ public class CipherLeaseGate : ICipherLeaseGate
     /// A cipher reachable through <paramref name="collectionIds" /> is gated only if every one of those
     /// collections gates. A cipher also in a plain collection, or in none, is not gated.
     /// </summary>
-    internal static bool IsGated(ICollection<Guid> collectionIds, ISet<Guid> leasingCollectionIds) =>
+    private static bool IsGated(ICollection<Guid> collectionIds, ISet<Guid> leasingCollectionIds) =>
         collectionIds.Count > 0 && collectionIds.All(leasingCollectionIds.Contains);
 
     /// <summary>

@@ -2958,6 +2958,8 @@ public class CipherServiceTests
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Collection> { foreignDefaultCollection, sharedCollection });
 
+        PassesCollectionChangesThrough(sutProvider);
+
         await sutProvider.Sut.SaveCollectionsAsync(cipher, targetCollectionIds, savingUserId, true);
 
         await sutProvider.GetDependency<ICollectionCipherRepository>()
@@ -2980,6 +2982,8 @@ public class CipherServiceTests
         sutProvider.GetDependency<ICollectionRepository>()
             .GetManyByManyIdsAsync(Arg.Any<IEnumerable<Guid>>())
             .Returns(new List<Collection>());
+
+        PassesCollectionChangesThrough(sutProvider);
 
         await sutProvider.Sut.SaveCollectionsAsync(cipher, targetCollectionIds, savingUserId, true);
 
@@ -3013,12 +3017,22 @@ public class CipherServiceTests
                 new() { Id = ownDefaultCollection.Id, Type = CollectionType.DefaultUserCollection }
             });
 
+        PassesCollectionChangesThrough(sutProvider);
+
         await sutProvider.Sut.SaveCollectionsAsync(cipher, targetCollectionIds, savingUserId, true);
 
         await sutProvider.GetDependency<ICollectionCipherRepository>()
             .Received(1)
             .UpdateCollectionsForAdminAsync(cipher.Id, cipher.OrganizationId.Value, targetCollectionIds);
     }
+
+    /// <summary>
+    /// Makes the leasing bypass audit run the collection write it wraps, as the open-source default does.
+    /// </summary>
+    private static void PassesCollectionChangesThrough(SutProvider<CipherService> sutProvider) =>
+        sutProvider.GetDependency<ILeasingBypassAudit>()
+            .AuditCollectionChangeAsync(default, default, default!, default!)
+            .ReturnsForAnyArgs(ci => ci.ArgAt<Func<Task>>(3)());
 
     private static void RefusesMutation(SutProvider<CipherService> sutProvider) =>
         sutProvider.GetDependency<ICipherLeaseGate>()
@@ -3225,37 +3239,26 @@ public class CipherServiceTests
     [Theory]
     [BitAutoData(false)]
     [BitAutoData(true)]
-    public async Task SaveCollectionsAsync_AuditsUngatingAroundTheReassignment(
+    public async Task SaveCollectionsAsync_ReassignsInsideTheLeasingBypassAudit(
         bool orgAdmin, SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, List<Guid> collectionIds)
     {
         cipher.OrganizationId = Guid.NewGuid();
         var organizationId = cipher.OrganizationId.Value;
         sutProvider.GetDependency<ICipherRepository>().GetCanEditByIdAsync(savingUserId, cipher.Id).Returns(true);
-        var audit = sutProvider.GetDependency<ILeasingBypassAudit>();
-        IReadOnlySet<Guid> gatedCipherIds = new HashSet<Guid> { cipher.Id };
-        audit.GetGatedCipherIdsAsync(organizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == cipher.Id))
-            .Returns(gatedCipherIds);
 
         await sutProvider.Sut.SaveCollectionsAsync(cipher, collectionIds, savingUserId, orgAdmin);
 
+        // The substitute audit never runs the write it is handed, so no write proves the write sits inside it.
+        await sutProvider.GetDependency<ILeasingBypassAudit>().Received(1).AuditCollectionChangeAsync(organizationId,
+            savingUserId, Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == cipher.Id), Arg.Any<Func<Task>>());
         var collectionCipherRepository = sutProvider.GetDependency<ICollectionCipherRepository>();
-        Received.InOrder(() =>
-        {
-            audit.GetGatedCipherIdsAsync(organizationId, Arg.Any<IEnumerable<Guid>>());
-            if (orgAdmin)
-            {
-                collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id, organizationId, collectionIds);
-            }
-            else
-            {
-                collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds);
-            }
-            audit.AuditUngatedAsync(organizationId, savingUserId, gatedCipherIds);
-        });
+        await collectionCipherRepository.DidNotReceiveWithAnyArgs().UpdateCollectionsAsync(default, default, default!);
+        await collectionCipherRepository.DidNotReceiveWithAnyArgs()
+            .UpdateCollectionsForAdminAsync(default, default, default!);
     }
 
     [Theory, BitAutoData]
-    public async Task SaveCollectionsAsync_GatedCipher_AuditsNoUngating(
+    public async Task SaveCollectionsAsync_GatedCipher_NeverReachesTheLeasingBypassAudit(
         SutProvider<CipherService> sutProvider, Cipher cipher, Guid savingUserId, List<Guid> collectionIds)
     {
         cipher.OrganizationId = Guid.NewGuid();
@@ -3266,7 +3269,7 @@ public class CipherServiceTests
             () => sutProvider.Sut.SaveCollectionsAsync(cipher, collectionIds, savingUserId, orgAdmin: false));
 
         await sutProvider.GetDependency<ILeasingBypassAudit>()
-            .DidNotReceiveWithAnyArgs().AuditUngatedAsync(default, default, default!);
+            .DidNotReceiveWithAnyArgs().AuditCollectionChangeAsync(default, default, default!, default!);
     }
 
     [Theory, BitAutoData]

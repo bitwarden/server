@@ -1,24 +1,17 @@
 ﻿namespace Bit.Core.Pam.Services;
 
 /// <summary>
-/// Audits the vault actions that release a leasing-gated cipher without a lease: a whole-vault export, and a
-/// collection change that leaves a gated cipher with an ungated path.
+/// Records the vault actions that release a leasing-gated cipher without a lease: a collection change that leaves a
+/// gated cipher with an ungated path, and a whole-vault export. <see cref="ICipherLeaseGate"/> decides what is gated.
 /// </summary>
-/// <remarks>
-/// Gated here is organization-wide and ignores leases, as in the "/admin" decisions of <see cref="ICipherLeaseGate"/>.
-/// </remarks>
 public interface ILeasingBypassAudit
 {
     /// <summary>
-    /// The subset of <paramref name="cipherIds"/> that is gated. Taken before a collection change, for
-    /// <see cref="AuditUngatedAsync"/> to compare against after it.
+    /// Runs <paramref name="change"/>, then records each of <paramref name="cipherIds"/> that was gated before it and
+    /// is not after it. Every write that changes a cipher's collections goes through this.
     /// </summary>
-    Task<IReadOnlySet<Guid>> GetGatedCipherIdsAsync(Guid organizationId, IEnumerable<Guid> cipherIds);
-
-    /// <summary>
-    /// Records each of <paramref name="gatedCipherIds"/> that is no longer gated.
-    /// </summary>
-    Task AuditUngatedAsync(Guid organizationId, Guid actingUserId, IReadOnlySet<Guid> gatedCipherIds);
+    Task AuditCollectionChangeAsync(Guid organizationId, Guid actingUserId, IEnumerable<Guid> cipherIds,
+        Func<Task> change);
 
     /// <summary>
     /// Records a whole-vault export when it carries a gated cipher.

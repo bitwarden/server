@@ -1085,17 +1085,10 @@ public class CiphersController : Controller
             await _cipherLeaseGate.EnsureCanMutateManyAsync(userId, ciphers);
         }
 
-        var gatedCipherIds = await _leasingBypassAudit.GetGatedCipherIdsAsync(model.OrganizationId, model.CipherIds);
-        if (model.RemoveCollections)
-        {
-            await _collectionCipherRepository.RemoveCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.CollectionIds);
-        }
-        else
-        {
-            await _collectionCipherRepository.AddCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.CollectionIds);
-        }
-
-        await _leasingBypassAudit.AuditUngatedAsync(model.OrganizationId, userId, gatedCipherIds);
+        await _leasingBypassAudit.AuditCollectionChangeAsync(model.OrganizationId, userId, model.CipherIds,
+            () => model.RemoveCollections
+                ? _collectionCipherRepository.RemoveCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.CollectionIds)
+                : _collectionCipherRepository.AddCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.CollectionIds));
     }
 
     [HttpPut("{id}/archive")]

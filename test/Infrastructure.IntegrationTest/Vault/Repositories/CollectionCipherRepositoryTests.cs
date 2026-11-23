@@ -302,4 +302,50 @@ public class CollectionCipherRepositoryTests
         Assert.Equal(collection.Id, collectionCipher.CollectionId);
         Assert.Equal(cipher.Id, collectionCipher.CipherId);
     }
+
+    [Theory, DatabaseData]
+    public async Task GetManyByCipherIdsAsync_ReturnsEveryLinkOfTheRequestedCiphersOnly(
+        IOrganizationRepository organizationRepository,
+        ICollectionRepository collectionRepository,
+        ICipherRepository cipherRepository,
+        ICollectionCipherRepository collectionCipherRepository)
+    {
+        var organization = await organizationRepository.CreateAsync(new Organization
+        {
+            Name = "Test Org",
+            PlanType = PlanType.EnterpriseAnnually,
+            Plan = "Enterprise",
+            BillingEmail = "billing@example.com"
+        });
+        var sharedCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Shared Collection",
+            OrganizationId = organization.Id,
+            Type = CollectionType.SharedCollection
+        });
+        var defaultUserCollection = await collectionRepository.CreateAsync(new Collection
+        {
+            Name = "Default User Collection",
+            OrganizationId = organization.Id,
+            Type = CollectionType.DefaultUserCollection
+        });
+        var inBoth = await CreateCipherAsync(cipherRepository, organization.Id);
+        var inShared = await CreateCipherAsync(cipherRepository, organization.Id);
+        var notRequested = await CreateCipherAsync(cipherRepository, organization.Id);
+        await collectionCipherRepository.AddCollectionsForManyCiphersAsync(organization.Id,
+            [inBoth.Id, inShared.Id, notRequested.Id], [sharedCollection.Id]);
+        await collectionCipherRepository.AddCollectionsForManyCiphersAsync(organization.Id,
+            [inBoth.Id], [defaultUserCollection.Id]);
+
+        var links = await collectionCipherRepository.GetManyByCipherIdsAsync([inBoth.Id, inShared.Id]);
+
+        Assert.Equal(3, links.Count);
+        Assert.Contains(links, l => l.CipherId == inBoth.Id && l.CollectionId == sharedCollection.Id);
+        Assert.Contains(links, l => l.CipherId == inBoth.Id && l.CollectionId == defaultUserCollection.Id);
+        Assert.Contains(links, l => l.CipherId == inShared.Id && l.CollectionId == sharedCollection.Id);
+        Assert.DoesNotContain(links, l => l.CipherId == notRequested.Id);
+    }
+
+    private static Task<Cipher> CreateCipherAsync(ICipherRepository cipherRepository, Guid organizationId) =>
+        cipherRepository.CreateAsync(new Cipher { Type = CipherType.Login, OrganizationId = organizationId, Data = "" });
 }
