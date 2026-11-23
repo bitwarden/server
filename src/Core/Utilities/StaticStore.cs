@@ -35,6 +35,8 @@ public static class StaticStore
         GlobalDomains.Add(GlobalEquivalentDomainsType.Proton, new List<string> { "proton.me", "protonmail.com", "protonvpn.com" });
         GlobalDomains.Add(GlobalEquivalentDomainsType.Atlassian, new List<string> { "atlassian.com", "bitbucket.org", "trello.com", "statuspage.io", "atlassian.net", "jira.com" });
         GlobalDomains.Add(GlobalEquivalentDomainsType.Twitter, new List<string> { "twitter.com", "x.com" });
+        GlobalDomains.Add(GlobalEquivalentDomainsType.CoxCommunications, new List<string> {  "cox.com", "spectrum.net" });
+
         #endregion
     }
 
