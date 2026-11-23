@@ -36,6 +36,12 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
 
     public IdentityApplicationFactory Identity => _identityApplicationFactory;
 
+    /// <summary>
+    /// The in-memory Data Protection provider the API and Identity hosts share. Give it to any other test host that
+    /// must unprotect a token the API protects, or protect one the API unprotects.
+    /// </summary>
+    public IDataProtectionProvider DataProtectionProvider { get; } = new EphemeralDataProtectionProvider();
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         base.ConfigureWebHost(builder);
@@ -59,12 +65,10 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
     /// </summary>
     private void ShareDataProtectionWithIdentity()
     {
-        var dataProtectionProvider = new EphemeralDataProtectionProvider();
-
         void UseSharedProvider(IServiceCollection services)
         {
             services.RemoveAll<IDataProtectionProvider>();
-            services.AddSingleton<IDataProtectionProvider>(dataProtectionProvider);
+            services.AddSingleton(DataProtectionProvider);
         }
 
         ConfigureServices(UseSharedProvider);
