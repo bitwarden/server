@@ -1,10 +1,15 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Bit.Core.Utilities;
+using Bit.Infrastructure.EntityFramework.Repositories;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Bit.Infrastructure.IntegrationTest.Comparers;
 using Bit.Pam.Entities;
 using Bit.Pam.Enums;
 using Bit.Pam.Repositories;
+using Microsoft.Data.SqlClient;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace Bit.Infrastructure.IntegrationTest.Pam.Repositories;
@@ -16,6 +21,8 @@ public class AccessRequestExtensionRepositoryTests
 
     [DatabaseTheory, DatabaseData]
     public async Task CreateApprovedExtensionAsync_ExtendsLeaseInPlaceAndRecordsRequest(
+        Database database,
+        IServiceProvider services,
         IOrganizationRepository organizationRepository,
         ICollectionRepository collectionRepository,
         IAccessRequestRepository accessRequestRepository,
@@ -29,11 +36,16 @@ public class AccessRequestExtensionRepositoryTests
         var lease = await CreateActiveLeaseAsync(
             accessRequestRepository, accessLeaseRepository, organization.Id, collection.Id, requesterId, now);
         var newNotAfter = lease.NotAfter.AddHours(1);
+        var decision = BuildAutoDecision(now);
+        decision.ConditionKind = AccessConditionKind.IpAllowlist;
+        var extension = BuildExtension(lease, newNotAfter, now);
 
         var outcome = await accessRequestRepository.CreateApprovedExtensionAsync(
-            BuildExtension(lease, newNotAfter, now), BuildAutoDecision(now), now, _leaseEndedComment);
+            extension, decision, now, _leaseEndedComment);
 
         Assert.Equal(AccessLeaseExtendOutcome.Extended, outcome);
+        Assert.Equal(AccessConditionKind.IpAllowlist,
+            await ReadConditionKindAsync(database, services, extension.Id));
 
         var updatedLease = await accessLeaseRepository.GetByIdAsync(lease.Id);
         Assert.NotNull(updatedLease);
@@ -137,6 +149,31 @@ public class AccessRequestExtensionRepositoryTests
 
         Assert.Equal(1, await accessRequestRepository.CountExtensionsByLeaseIdAsync(leaseA.Id));
         Assert.Equal(0, await accessRequestRepository.CountExtensionsByLeaseIdAsync(leaseB.Id));
+    }
+
+    /// <summary>Reads the decision's condition kind out of band; no repository read returns it.</summary>
+    private static async Task<AccessConditionKind?> ReadConditionKindAsync(
+        Database database, IServiceProvider services, Guid accessRequestId)
+    {
+        if (database.Type == SupportedDatabaseProviders.SqlServer && !database.UseEf)
+        {
+            await using var connection = new SqlConnection(database.ConnectionString);
+            await connection.OpenAsync();
+            await using var command = connection.CreateCommand();
+            command.CommandText =
+                "SELECT [ConditionKind] FROM [dbo].[AccessDecision] WHERE [AccessRequestId] = @AccessRequestId";
+            command.Parameters.AddWithValue("@AccessRequestId", accessRequestId);
+            var value = await command.ExecuteScalarAsync();
+            return value is null or DBNull ? null : (AccessConditionKind)Convert.ToByte(value);
+        }
+
+        using var scope = services.CreateScope();
+        var dbContext = scope.ServiceProvider.GetRequiredService<DatabaseContext>();
+        return await dbContext.AccessDecisions
+            .AsNoTracking()
+            .Where(d => d.AccessRequestId == accessRequestId)
+            .Select(d => d.ConditionKind)
+            .SingleAsync();
     }
 
     private static async Task<AccessLease> CreateActiveLeaseAsync(

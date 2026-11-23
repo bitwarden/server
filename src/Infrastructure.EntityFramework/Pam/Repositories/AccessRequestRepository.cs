@@ -524,7 +524,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         decisionEntity.AccessRequestId = requestEntity.Id;
         decisionEntity.DeciderKind = AccessDeciderKind.Automatic;
         decisionEntity.ApproverId = null;
-        decisionEntity.ConditionKind = null;
+        decisionEntity.ConditionKind = verdict == AccessDecisionVerdict.Approve ? decision.ConditionKind : null;
         decisionEntity.Verdict = verdict;
         decisionEntity.Comment = comment;
         decisionEntity.EvaluationContext = null;

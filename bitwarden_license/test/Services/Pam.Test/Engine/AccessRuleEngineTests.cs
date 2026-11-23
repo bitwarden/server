@@ -1,4 +1,5 @@
 ﻿using System.Net;
+using Bit.Pam.Enums;
 using Bit.Services.Pam.Engine;
 using Bit.Services.Pam.Models.Conditions;
 using Xunit;
@@ -70,6 +71,9 @@ public class AccessRuleEngineTests
 
     private sealed class StubCondition(AccessEvaluation result) : AccessCondition
     {
+        [System.Text.Json.Serialization.JsonIgnore]
+        public override AccessConditionKind Kind => AccessConditionKind.IpAllowlist;
+
         public AccessSignals? ReceivedSignals { get; private set; }
 
         public override AccessEvaluation Evaluate(AccessSignals signals)
