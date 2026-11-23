@@ -246,6 +246,7 @@ public static partial class FeatureFlagKeys
     public const string FedRampGovRegion = "fedramp-gov-region";
     public const string ManagedDeviceFramework = "pm-27719-managed-device-framework";
     public const string FlightRecorderTsLogging = "pm-30935-flight-recorder-ts-logging";
+    public const string DesktopJsonFileStorage = "pm-47525-desktop-json-file-storage";
 
     /* Tools Team */
     public const string SendControls = "pm-31885-send-controls";
