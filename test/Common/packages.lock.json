@@ -1445,7 +1445,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.11.0, )"
+          "HttpExtensions": "[2026.11.1, )"
         }
       },
       "httpextensions": {
