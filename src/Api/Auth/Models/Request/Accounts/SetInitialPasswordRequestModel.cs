@@ -33,8 +33,8 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     [Obsolete("Use MasterPasswordUnlock instead")]
     public int? KdfParallelism { get; set; }
 
-    // TODO: legacy Keys can be removed once the EnableAccountEncryptionV2JitPasswordRegistration feature flag
-    // has been unwound in https://bitwarden.atlassian.net/browse/PM-27327. See comment on SetInitialPasswordV1Async()
+    // TODO: legacy Keys can be removed once clients without V2 MP JIT registration
+    // (https://bitwarden.atlassian.net/browse/PM-27327) have aged out. See comment on SetInitialPasswordV1Async()
     // for further details.
     [Obsolete("Use AccountKeys instead")]
     public KeysRequestModel? Keys { get; set; }
@@ -105,6 +105,17 @@ public class SetInitialPasswordRequestModel : IValidatableObject
             yield break;
         }
 
+        // AccountKeys are only consumed by the V2 path, which requires MPAD + MPUD. Reject them on a
+        // legacy-shape request instead of silently dropping the keypair in V1.
+        if (AccountKeys != null && !HasAuthAndUnlockData())
+        {
+            yield return new ValidationResult(
+                $"{nameof(AccountKeys)} requires {nameof(MasterPasswordAuthentication)} and {nameof(MasterPasswordUnlock)}.",
+                [nameof(AccountKeys)]);
+
+            yield break;
+        }
+
         // If both MPAD and MPUD are present and the shape is clean — validate their content.
         if (HasAuthAndUnlockData())
         {
@@ -168,7 +179,7 @@ public class SetInitialPasswordRequestModel : IValidatableObject
     /// True when the request uses the modern data shape (MasterPasswordAuthentication + MasterPasswordUnlock).
     /// This is a shape check, NOT a routing guarantee — modern-shape requests can route to:
     ///   - The TDE command, when no keypair is present (neither AccountKeys nor Keys)
-    ///   - The V2 MP JIT command, when AccountKeys is present and the V2 MP JIT feature flag is on
+    ///   - The V2 MP JIT command, when AccountKeys is present
     ///   - The V1 path, otherwise (e.g., modern V1 MP JIT with legacy Keys)
     /// See the `set-password` endpoint.
     /// </summary>

@@ -3,7 +3,6 @@ using System.Text.Json;
 using Bit.Api.IntegrationTest.Auth.Helpers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Repositories;
@@ -14,7 +13,6 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Microsoft.AspNetCore.Identity;
-using NSubstitute;
 using Xunit;
 using IFeatureService = Bitwarden.Server.Sdk.Features.IFeatureService;
 
@@ -33,7 +31,6 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
-    private readonly IFeatureService _featureService;
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
@@ -49,7 +46,6 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
         _factory.SubstituteService<IMailService>(_ => { });
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
-        _featureService = _factory.GetService<IFeatureService>();
         _userRepository = _factory.GetService<IUserRepository>();
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
         _organizationUserRepository = _factory.GetService<IOrganizationUserRepository>();
@@ -72,7 +68,6 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
         bool acceptOrganizationInvite, OrganizationUserStatusType expectedStatus)
     {
         // Arrange
-        SetV2MpJitFlag(true);
         var (organization, userEmail) = await ArrangeInvitedSsoJitMasterPasswordUserAsync();
         var json = CreateModernRequestJson(userEmail, organization.Identifier!, acceptOrganizationInvite,
             includeAccountKeys: true);
@@ -97,7 +92,6 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
         bool acceptOrganizationInvite, OrganizationUserStatusType expectedStatus)
     {
         // Arrange - legacy Keys routes to the V1 command.
-        SetV2MpJitFlag(false);
         var (organization, userEmail) = await ArrangeInvitedSsoJitMasterPasswordUserAsync();
         var json = CreateModernRequestJson(userEmail, organization.Identifier!, acceptOrganizationInvite,
             includeAccountKeys: false, includeLegacyKeys: true);
@@ -117,7 +111,6 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
     public async Task FinishJitProvisionForPassword_AcceptOrganizationInviteOmitted_ReturnsBadRequest()
     {
         // Arrange
-        SetV2MpJitFlag(true);
         var (organization, userEmail) = await ArrangeInvitedSsoJitMasterPasswordUserAsync();
         var json = CreateModernRequestJson(userEmail, organization.Identifier!, acceptOrganizationInvite: null,
             includeAccountKeys: true);
@@ -131,33 +124,9 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
     }
 
     [Fact]
-    public async Task FinishJitProvisionForPassword_V2FlagOff_WithAccountKeys_ReturnsBadRequest()
+    public async Task FinishJitProvisionForPassword_WithoutKeypair_ReturnsBadRequest()
     {
         // Arrange
-        SetV2MpJitFlag(false);
-        var (organization, userEmail) = await ArrangeInvitedSsoJitMasterPasswordUserAsync();
-        var json = CreateModernRequestJson(userEmail, organization.Identifier!, acceptOrganizationInvite: false,
-            includeAccountKeys: true);
-
-        // Act
-        var response = await PostAsync(json);
-
-        // Assert
-        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
-        var user = await _userRepository.GetByEmailAsync(userEmail);
-        Assert.NotNull(user);
-        Assert.Null(user.MasterPassword);
-        Assert.Null(user.Key);
-        await AssertOrgUserStatusAsync(organization.Id, user.Id, OrganizationUserStatusType.Invited);
-    }
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task FinishJitProvisionForPassword_WithoutKeypair_ReturnsBadRequest(bool v2FlagEnabled)
-    {
-        // Arrange
-        SetV2MpJitFlag(v2FlagEnabled);
         var (organization, userEmail) = await ArrangeInvitedSsoJitMasterPasswordUserAsync();
         var json = CreateModernRequestJson(userEmail, organization.Identifier!, acceptOrganizationInvite: true,
             includeAccountKeys: false);
@@ -179,7 +148,6 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
         string propertyName, bool sendExplicitNull)
     {
         // Arrange
-        SetV2MpJitFlag(true);
         var (organization, userEmail) = await ArrangeInvitedSsoJitMasterPasswordUserAsync();
         var request = CreateModernRequest(userEmail, organization.Identifier!, acceptOrganizationInvite: true,
             includeAccountKeys: true);
@@ -204,10 +172,9 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
     [InlineData(false)]
     [InlineData(true)]
     public async Task FinishJitProvisionForPassword_AccountKeysAlreadyInitialized_ReturnsBadRequest(
-        bool v2FlagEnabled)
+        bool v2Request)
     {
         // Arrange
-        SetV2MpJitFlag(v2FlagEnabled);
         var (organization, userEmail) = await ArrangeInvitedSsoJitMasterPasswordUserAsync();
         var user = await _userRepository.GetByEmailAsync(userEmail);
         Assert.NotNull(user);
@@ -216,7 +183,7 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
         await _userRepository.ReplaceAsync(user);
 
         var json = CreateModernRequestJson(userEmail, organization.Identifier!, acceptOrganizationInvite: true,
-            includeAccountKeys: v2FlagEnabled, includeLegacyKeys: !v2FlagEnabled);
+            includeAccountKeys: v2Request, includeLegacyKeys: !v2Request);
 
         // Act
         var response = await PostAsync(json);
@@ -244,11 +211,6 @@ public class SsoJitProvisionFinishControllerPasswordTests : IClassFixture<ApiApp
 
         // Assert
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
-    }
-
-    private void SetV2MpJitFlag(bool enabled)
-    {
-        _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration).Returns(enabled);
     }
 
     /// <summary>

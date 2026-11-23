@@ -22,8 +22,8 @@ public class SsoJitProvisionFinishPasswordRequestModel : IValidatableObject
 
     public AccountKeysRequestModel? AccountKeys { get; set; }
 
-    // TODO: legacy Keys can be removed once the EnableAccountEncryptionV2JitPasswordRegistration feature flag
-    // has been unwound in https://bitwarden.atlassian.net/browse/PM-27327.
+    // TODO: legacy Keys can be removed once clients without V2 MP JIT registration
+    // (https://bitwarden.atlassian.net/browse/PM-27327) have aged out.
     [Obsolete("Use AccountKeys instead")]
     public KeysRequestModel? Keys { get; set; }
 
@@ -40,7 +40,7 @@ public class SsoJitProvisionFinishPasswordRequestModel : IValidatableObject
     public required bool AcceptOrganizationInvite { get; set; }
 
     // TODO: Can be removed when its only consumer, SsoJitProvisionFinishController.FinishJitProvisionForPasswordV1Async(),
-    // is removed with the V2 MP JIT feature flag.
+    // is removed.
     public User ToUser(User existingUser)
     {
         existingUser.MasterPasswordHint = MasterPasswordHint;
