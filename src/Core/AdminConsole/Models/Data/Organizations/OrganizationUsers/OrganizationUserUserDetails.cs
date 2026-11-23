@@ -32,6 +32,7 @@ public class OrganizationUserUserDetails : IExternal, ITwoFactorProvidersUser, I
     public bool AccessSecretsManager { get; set; }
     public bool AccessPam { get; set; }
     public string ExternalId { get; set; }
+    public string ExternalName { get; set; }
     public string SsoExternalId { get; set; }
     public string Permissions { get; set; }
     public string ResetPasswordKey { get; set; }

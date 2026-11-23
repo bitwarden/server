@@ -5,47 +5,24 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- Expiry is derived, not stored; PamLeaseExpirySweep's INSERT decides which run owns a lease.
-    -- UPDLOCK/HOLDLOCK serializes concurrent sweeps; a loser re-checks after commit and skips it.
-    DECLARE @Due TABLE ([AccessLeaseId] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY)
-
-    INSERT INTO [dbo].[PamLeaseExpirySweep]
-    (
-        [AccessLeaseId],
-        [SweptDate]
-    )
-    OUTPUT
-        inserted.[AccessLeaseId]
-    INTO @Due
-    SELECT
-        AL.[Id],
-        @Now
-    FROM
-        [dbo].[AccessLease] AL
-    WHERE
-        AL.[Action] = 0 -- None: no early end recorded, so the closed window is a natural expiry
-        AND AL.[NotAfter] <= @Now
-        AND AL.[NotAfter] > @Since -- keeps the read from growing with lease history
-        AND NOT EXISTS (
-            SELECT
-                1
-            FROM
-                [dbo].[PamLeaseExpirySweep] S WITH (UPDLOCK, HOLDLOCK)
-            WHERE
-                S.[AccessLeaseId] = AL.[Id]
-        )
-
+    -- Expiry is derived, not stored; stamping [SweptDate] decides which run owns a lease. A concurrent sweep blocks
+    -- on the row lock and re-checks [SweptDate] IS NULL afterwards, so it skips what the winner stamped.
     -- No join needed; the caller audits/triggers off the lease row itself.
-    SELECT
-        AL.[Id],
-        AL.[OrganizationId],
-        AL.[CollectionId],
-        AL.[CipherId],
-        AL.[RequesterId],
-        AL.[NotBefore],
-        AL.[NotAfter]
-    FROM
-        [dbo].[AccessLease] AL
-    INNER JOIN
-        @Due D ON D.[AccessLeaseId] = AL.[Id]
+    UPDATE
+        [dbo].[AccessLease]
+    SET
+        [SweptDate] = @Now
+    OUTPUT
+        inserted.[Id],
+        inserted.[OrganizationId],
+        inserted.[CollectionId],
+        inserted.[CipherId],
+        inserted.[RequesterId],
+        inserted.[NotBefore],
+        inserted.[NotAfter]
+    WHERE
+        [Action] = 0 -- None: no early end recorded, so the closed window is a natural expiry
+        AND [SweptDate] IS NULL
+        AND [NotAfter] <= @Now
+        AND [NotAfter] > @Since -- keeps the read from growing with lease history
 END

@@ -1,6 +1,7 @@
 ﻿using Bit.Core.AdminConsole.Models.Data;
 using Bit.Core.AdminConsole.Models.Mail.Mailer.MemberEmailChanged;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationDomains;
+using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.UpdateUser.v2;
 using Bit.Core.AdminConsole.Utilities.v2.Validation;
 using Bit.Core.Auth.UserFeatures.UserEmail;
@@ -13,6 +14,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models;
 using Bit.Core.Models.Data;
+using Bit.Core.OrganizationFeatures.OrganizationSubscriptions.Interface;
 using Bit.Core.Platform.Mail.Mailer;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
@@ -274,6 +276,39 @@ public class UpdateOrganizationUserCommandTests
         await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
             .DidNotReceiveWithAnyArgs()
             .RunAsync(default!, default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task UpdateUserAsync_EnablingSecretsManagerAndPrivilegedControls_ValidationRejects_ReturnsItsErrorWithoutBuyingSecretsManagerSeat(
+        SutProvider<UpdateOrganizationUserCommand> sutProvider,
+        Organization organization,
+        [OrganizationUser(OrganizationUserStatusType.Confirmed, OrganizationUserType.User)] OrganizationUser organizationUser)
+    {
+        organizationUser.AccessPam = false;
+        organizationUser.AccessSecretsManager = false;
+        var request = Setup(sutProvider, organization, organizationUser, targetAccessSecretsManager: true, targetAccessPam: true);
+        sutProvider.GetDependency<ICountNewSmSeatsRequiredQuery>()
+            .CountNewSmSeatsRequiredAsync(organization.Id, 1)
+            .Returns(1);
+        sutProvider.GetDependency<IUpdateOrganizationUserValidator>()
+            .ValidateAsync(Arg.Any<UpdateOrganizationUserRequest>())
+            .Returns(ci => ValidationResultHelpers.Invalid(ci.Arg<UpdateOrganizationUserRequest>(),
+                new PrivilegedControlsSeatLimitReachedError()));
+
+        var result = await sutProvider.Sut.UpdateUserAsync(request);
+
+        Assert.True(result.IsError);
+        Assert.IsType<PrivilegedControlsSeatLimitReachedError>(result.AsError);
+        await sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .UpdateSubscriptionAsync(default!);
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default);
+        await sutProvider.GetDependency<IOrganizationUserRepository>()
+            .DidNotReceiveWithAnyArgs()
+            .ReplaceAsync(Arg.Any<OrganizationUser>(), Arg.Any<IEnumerable<CollectionAccessSelection>>());
     }
 
     [Theory]

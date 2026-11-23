@@ -17,9 +17,6 @@ internal static class LeaseEndpoints
         group.MapGet("active", (LeaseEndpointsHandler handler, ClaimsPrincipal user) => handler.GetActive(user))
             .WithName("Pam_Leases_GetActive");
 
-        group.MapGet("history", (LeaseEndpointsHandler handler, ClaimsPrincipal user) => handler.GetHistory(user))
-            .WithName("Pam_Leases_GetHistory");
-
         group.MapGet("mine", (LeaseEndpointsHandler handler, ClaimsPrincipal user) => handler.GetMine(user))
             .WithName("Pam_Leases_GetMine");
 

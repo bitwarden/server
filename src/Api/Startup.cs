@@ -19,6 +19,7 @@ using Microsoft.OpenApi;
 using Bit.SharedWeb.Utilities;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Quartz;
 using Bit.Core.Auth.UserFeatures;
 using Bit.Core.Entities;
 using Bit.Core.Billing.Extensions;
@@ -74,6 +75,7 @@ public class Startup
 
         // Settings
         var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
+        services.AddGlobalSettingsBridge();
         if (!globalSettings.SelfHosted)
         {
             services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));
@@ -260,6 +262,10 @@ public class Startup
         services.AddSwaggerGen(globalSettings, Environment);
         Jobs.JobsHostedService.AddJobsServices(services, globalSettings.SelfHosted);
         services.AddHostedService<Jobs.JobsHostedService>();
+
+        // Runs the in-memory scheduler for delayed one-off jobs, separate from the JobsHostedService scheduler
+        // which deletes unknown jobs on startup.
+        services.AddQuartzHostedService();
 
         // Add Event Integrations services
         services.AddEventIntegrationsCommandsQueries(globalSettings);

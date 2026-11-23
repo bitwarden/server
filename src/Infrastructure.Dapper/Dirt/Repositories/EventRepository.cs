@@ -56,9 +56,10 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
     public async Task<PagedResult<IEvent>> GetManyBySecretAsync(Secret secret,
         DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
-        return await GetManyAsync($"[{Schema}].[Event_ReadPageBySecretId]",
+        return await GetManyAsync($"[{Schema}].[Event_ReadPageBySecretId_V2]",
                   new Dictionary<string, object?>
                   {
+                      ["@OrganizationId"] = secret.OrganizationId,
                       ["@SecretId"] = secret.Id
                   }, startDate, endDate, pageOptions);
 
@@ -67,9 +68,10 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
     public async Task<PagedResult<IEvent>> GetManyByProjectAsync(Project project,
       DateTime startDate, DateTime endDate, PageOptions pageOptions)
     {
-        return await GetManyAsync($"[{Schema}].[Event_ReadPageByProjectId]",
+        return await GetManyAsync($"[{Schema}].[Event_ReadPageByProjectId_V2]",
                   new Dictionary<string, object?>
                   {
+                      ["@OrganizationId"] = project.OrganizationId,
                       ["@ProjectId"] = project.Id
                   }, startDate, endDate, pageOptions);
 
@@ -265,6 +267,8 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         eventsTable.Columns.Add(accessRequestIdColumn);
         var accessLeaseIdColumn = new DataColumn(nameof(e.AccessLeaseId), typeof(Guid));
         eventsTable.Columns.Add(accessLeaseIdColumn);
+        var systemUserColumn = new DataColumn(nameof(e.SystemUser), typeof(byte));
+        eventsTable.Columns.Add(systemUserColumn);
 
         foreach (DataColumn col in eventsTable.Columns)
         {
@@ -303,6 +307,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
             row[sendIdColumn] = ev.SendId.HasValue ? ev.SendId.Value : DBNull.Value;
             row[accessRequestIdColumn] = ev.AccessRequestId.HasValue ? ev.AccessRequestId.Value : DBNull.Value;
             row[accessLeaseIdColumn] = ev.AccessLeaseId.HasValue ? ev.AccessLeaseId.Value : DBNull.Value;
+            row[systemUserColumn] = ev.SystemUser.HasValue ? (byte)ev.SystemUser.Value : DBNull.Value;
             eventsTable.Rows.Add(row);
         }
 

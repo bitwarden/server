@@ -81,8 +81,7 @@ public class ActivateAccessRequestCommandTests
         SetupApprovedRequest(sutProvider, request);
         request.ExtensionOfLeaseId = parentLeaseId;
         // With the parent revoked, the extension guard is the only thing refusing the mint.
-        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>()
-            .AppliesAsync(request.RequesterId, request.CipherId).Returns(true);
+        SetupAllPathsResolve(sutProvider, request, singleActiveLease: true);
 
         await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
@@ -253,8 +252,7 @@ public class ActivateAccessRequestCommandTests
     {
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
-        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(request.RequesterId, request.CipherId)
-            .Returns(true);
+        SetupAllPathsResolve(sutProvider, request, singleActiveLease: true);
         sutProvider.GetDependency<IAccessLeaseRepository>()
             .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, true)
             .Returns(AccessLeaseMintOutcome.Minted);
@@ -271,8 +269,7 @@ public class ActivateAccessRequestCommandTests
     {
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
-        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(request.RequesterId, request.CipherId)
-            .Returns(true);
+        SetupAllPathsResolve(sutProvider, request, singleActiveLease: true);
         sutProvider.GetDependency<IAccessLeaseRepository>()
             .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, true)
             .Returns(AccessLeaseMintOutcome.SingleActiveLeaseConflict);
@@ -292,8 +289,7 @@ public class ActivateAccessRequestCommandTests
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
         // An escape path leaves the caller unconstrained.
-        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(request.RequesterId, request.CipherId)
-            .Returns(false);
+        SetupAllPathsResolve(sutProvider, request, singleActiveLease: false);
         sutProvider.GetDependency<IAccessLeaseRepository>()
             .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, false)
             .Returns(AccessLeaseMintOutcome.Minted);
@@ -329,8 +325,7 @@ public class ActivateAccessRequestCommandTests
     {
         var sutProvider = Setup();
         SetupApprovedRequest(sutProvider, request);
-        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>().AppliesAsync(request.RequesterId, request.CipherId)
-            .Returns(true);
+        SetupAllPathsResolve(sutProvider, request, singleActiveLease: true);
         sutProvider.GetDependency<IAccessLeaseRepository>()
             .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, true)
             .Returns(AccessLeaseMintOutcome.SingleActiveLeaseConflict);
@@ -377,9 +372,6 @@ public class ActivateAccessRequestCommandTests
             .NotifyCollectionApproversAsync(default);
         await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyRequesterAsync(default);
-        // Held to the rule that approved it, not whatever rule governs the cipher today.
-        await sutProvider.GetDependency<IGoverningRuleResolver>().DidNotReceiveWithAnyArgs()
-            .ResolveAsync(default, default, default!);
     }
 
     [Theory, BitAutoData]
@@ -526,6 +518,17 @@ public class ActivateAccessRequestCommandTests
         sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(_requesterIp);
         // Licensed by default; the licensing tests override it.
         sutProvider.GetDependency<ICurrentContext>().AccessPam(request.OrganizationId).Returns(true);
+    }
+
+    private static void SetupAllPathsResolve(
+        SutProvider<ActivateAccessRequestCommand> sutProvider, AccessRequest request, bool singleActiveLease)
+    {
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(request.RequesterId, request.CipherId, Arg.Any<AccessSignals>())
+            .Returns(new GoverningRule(request.OrganizationId, request.CollectionId, false, [])
+            {
+                SingleActiveLease = singleActiveLease,
+            });
     }
 
     private static void SetupPinnedRule(
