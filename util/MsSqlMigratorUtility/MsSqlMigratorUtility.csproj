@@ -10,7 +10,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommandDotNet" Version="[7.0.5]" />
+    <PackageReference Include="CommandDotNet" Version="[8.1.1]" />
     <PackageReference Include="Microsoft.Extensions.Logging" Version="[10.0.14]" />
     <PackageReference Include="Microsoft.Extensions.Logging.Console" Version="[10.0.14]" />
   </ItemGroup>
