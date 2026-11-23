@@ -78,57 +78,10 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
     }
 
     /// <summary>
-    /// A two-factor login that asks for a 2FA remember token gets one back.
-    /// </summary>
-    [Fact]
-    public async Task RememberRequested_ResponseCarriesRememberToken()
-    {
-        var (factory, _) = await CreateFactoryWithTwoFactorUserAsync();
-
-        var emailCode = await EmailLoginCodeAsync(
-            factory, TestEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
-        var (accessToken, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
-            TestEmail, TestPassword,
-            twoFactorProviderType: ProviderKey(TwoFactorProviderType.Email), twoFactorToken: emailCode);
-
-        Assert.NotNull(accessToken);
-        Assert.False(string.IsNullOrEmpty(rememberToken));
-    }
-
-    /// <summary>
-    /// The token is honored on a later login, with no second factor supplied.
-    /// </summary>
-    [Fact]
-    public async Task RememberToken_ReplayedOnNextLogin_SkipsTwoFactorChallenge()
-    {
-        var (factory, _) = await CreateFactoryWithTwoFactorUserAsync();
-
-        var emailCode = await EmailLoginCodeAsync(
-            factory, TestEmail, IdentityApplicationFactory.DefaultDeviceIdentifier);
-        var (_, rememberToken) = await factory.TokensFromPasswordWithTwoFactorAsync(
-            TestEmail, TestPassword,
-            twoFactorProviderType: ProviderKey(TwoFactorProviderType.Email), twoFactorToken: emailCode);
-        Assert.False(string.IsNullOrEmpty(rememberToken));
-
-        // Clients send remember=0 when re-authenticating with a stored token.
-        var context = await factory.ContextFromPasswordWithTwoFactorAsync(
-            TestEmail,
-            TestPassword,
-            twoFactorProviderType: ProviderKey(TwoFactorProviderType.Remember),
-            twoFactorToken: rememberToken!,
-            twoFactorRemember: "0");
-
-        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
-
-        var accessToken = AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String).GetString();
-        Assert.False(string.IsNullOrEmpty(accessToken));
-    }
-
-    /// <summary>
-    /// A login that presents a 2FA remember token must not be issued another one, or an active user's
-    /// 2FA remember token would renew forever. Replayed with and without asking for another 2FA remember token, since
-    /// a client can send <c>TwoFactorRemember=1</c> regardless.
+    /// A login that presents a 2FA remember token completes on the token alone, with no second factor
+    /// supplied, and must not be issued another one, or an active user's 2FA remember token would renew
+    /// forever. Replayed with and without asking for another 2FA remember token, since a client can send
+    /// <c>TwoFactorRemember=1</c> regardless. Clients send <c>0</c> when re-authenticating with a stored token.
     /// </summary>
     [Theory]
     [InlineData("0")]
@@ -158,28 +111,9 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
         Assert.False(root.TryGetProperty("TwoFactorToken", out _));
     }
 
-    [Fact]
-    public async Task LegacyRememberToken_IsStillAccepted()
-    {
-        var (factory, user) = await CreateFactoryWithTwoFactorUserAsync();
-        var legacyToken = await factory.GenerateLegacyRememberTokenAsync(user);
-
-        var context = await factory.ContextFromPasswordWithTwoFactorAsync(
-            TestEmail,
-            TestPassword,
-            twoFactorProviderType: ProviderKey(TwoFactorProviderType.Remember),
-            twoFactorToken: legacyToken,
-            twoFactorRemember: "0");
-
-        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
-
-        AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
-    }
-
     /// <summary>
-    /// Accepting a legacy token also replaces it, so each device moves to the current format on
-    /// its next login rather than waiting for its token to expire.
+    /// A legacy token is still accepted, and accepting it also replaces it, so each device moves to the
+    /// current format on its next login rather than waiting for its token to expire.
     /// </summary>
     [Fact]
     public async Task LegacyRememberToken_IsUpgradedToCurrentFormat()
@@ -197,6 +131,7 @@ public class TwoFactorLoginRememberTokenTests : IClassFixture<IdentityApplicatio
         using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
         var root = body.RootElement;
 
+        AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String);
         var upgraded = AssertHelper.AssertJsonProperty(root, "TwoFactorToken", JsonValueKind.String).GetString();
         Assert.StartsWith(TwoFactorRememberTokenable.ClearTextPrefix, upgraded);
 
