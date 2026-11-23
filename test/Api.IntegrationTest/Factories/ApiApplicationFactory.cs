@@ -42,11 +42,32 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
             var jobService = services.First(sd => sd.ServiceType == typeof(IHostedService) && sd.ImplementationType == typeof(Jobs.JobsHostedService));
             services.Remove(jobService);
 
+            // The Identity host starts on the first backchannel call, so an anonymous request does not start it.
             services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
             {
-                options.BackchannelHttpHandler = _identityApplicationFactory.Server.CreateHandler();
+                options.BackchannelHttpHandler =
+                    new DeferredHttpMessageHandler(() => _identityApplicationFactory.Server.CreateHandler());
             });
         });
+    }
+
+    private sealed class DeferredHttpMessageHandler(Func<HttpMessageHandler> createInnerHandler) : HttpMessageHandler
+    {
+        private readonly Lazy<HttpMessageInvoker> _inner = new(() => new HttpMessageInvoker(createInnerHandler()));
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken) =>
+            _inner.Value.SendAsync(request, cancellationToken);
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing && _inner.IsValueCreated)
+            {
+                _inner.Value.Dispose();
+            }
+
+            base.Dispose(disposing);
+        }
     }
 
     /// <summary>
