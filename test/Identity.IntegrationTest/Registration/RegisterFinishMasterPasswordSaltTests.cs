@@ -1,6 +1,4 @@
-﻿#nullable enable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Auth.Models.Api.Request.Accounts;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
@@ -12,26 +10,32 @@ using Bit.Test.Common.Helpers;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
 using static Bit.Identity.IntegrationTest.Helpers.RegistrationTestHelpers;
+using static Bit.Identity.IntegrationTest.Helpers.TokenResponseAssertions;
+
+#nullable enable
 
 namespace Bit.Identity.IntegrationTest.Registration;
 
 /// <summary>
-/// The salt that a client sends at registration finish is stored as sent and is returned to every client
-/// that derives the master key. A salt that contains '@' is an email-derived salt and must equal the
-/// trimmed, lowercased email. A salt without '@' is accepted as sent.
+/// Integration tests for the master password salt that a client sends at registration finish. The server stores the
+/// salt as sent and returns it to every client that derives the master key. A salt that contains '@' is an
+/// email-derived salt and must equal the trimmed, lowercased email. A salt without '@' is accepted as sent.
 /// </summary>
 public class RegisterFinishMasterPasswordSaltTests
 {
-    private const string _invalidSaltMessage = "Invalid master password salt.";
     private const string _type7EncryptedString = "7.AOs41Hd8OQiCPXjyJKCiDA==";
     private const string _type7WrappedSigningKey = "7.DRv74Kg1RSlFSam1MNFlGD==";
 
+    /// <summary>
+    /// An email salt that keeps the case that the user typed is rejected, and no account is created. Clients derive
+    /// the master key from the lowercased email, so they could not reproduce this salt.
+    /// </summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task RegisterFinish_EmailSaltWithTypedCase_ReturnsBadRequestAndCreatesNoUser(bool v2AccountKeys)
+    public async Task RegisterFinish_EmailSaltWithTypedCase_IsRejected(bool v2AccountKeys)
     {
-        var factory = new IdentityApplicationFactory();
+        using var factory = new IdentityApplicationFactory();
         var typedEmail = NewTypedEmail();
         var request = BuildRequest(typedEmail, salt: typedEmail, v2AccountKeys);
         request.EmailVerificationToken = ProtectRegistrationTokenWithoutEmailSent(factory, typedEmail, "Salt Test");
@@ -41,10 +45,13 @@ public class RegisterFinishMasterPasswordSaltTests
         await AssertInvalidSaltAndNoUserAsync(factory, context, typedEmail);
     }
 
+    /// <summary>
+    /// An email salt from a different email is rejected, and no account is created.
+    /// </summary>
     [Fact]
-    public async Task RegisterFinish_EmailSaltFromAnotherEmail_ReturnsBadRequestAndCreatesNoUser()
+    public async Task RegisterFinish_EmailSaltFromAnotherEmail_IsRejected()
     {
-        var factory = new IdentityApplicationFactory();
+        using var factory = new IdentityApplicationFactory();
         var email = $"salt.test+{Guid.NewGuid():N}@example.com";
         var request = BuildRequest(email, salt: $"other+{Guid.NewGuid():N}@example.com", v2AccountKeys: false);
         request.EmailVerificationToken = ProtectRegistrationTokenWithoutEmailSent(factory, email, "Salt Test");
@@ -55,8 +62,7 @@ public class RegisterFinishMasterPasswordSaltTests
     }
 
     /// <summary>
-    /// The salt rule runs before the registration token is checked, so placeholder tokens show that every
-    /// token type gets the same rejection.
+    /// The salt rule applies to every registration token type, not only to email verification.
     /// </summary>
     [Theory]
     [InlineData(RegisterFinishTokenType.OrganizationInvite)]
@@ -64,12 +70,12 @@ public class RegisterFinishMasterPasswordSaltTests
     [InlineData(RegisterFinishTokenType.EmergencyAccessInvite)]
     [InlineData(RegisterFinishTokenType.ProviderInvite)]
     [InlineData(RegisterFinishTokenType.SalesAssisted)]
-    public async Task RegisterFinish_EmailSaltWithTypedCase_AnyTokenType_ReturnsBadRequestAndCreatesNoUser(
-        RegisterFinishTokenType tokenType)
+    public async Task RegisterFinish_EmailSaltWithTypedCase_IsRejectedForEveryTokenType(RegisterFinishTokenType tokenType)
     {
-        var factory = new IdentityApplicationFactory();
+        using var factory = new IdentityApplicationFactory();
         var typedEmail = NewTypedEmail();
         var request = BuildRequest(typedEmail, salt: typedEmail, v2AccountKeys: false);
+        // The salt rule runs before the token is checked, so a placeholder token is enough to select the type.
         SetPlaceholderToken(request, tokenType);
         Assert.Equal(tokenType, request.GetTokenType());
 
@@ -78,12 +84,16 @@ public class RegisterFinishMasterPasswordSaltTests
         await AssertInvalidSaltAndNoUserAsync(factory, context, typedEmail);
     }
 
+    /// <summary>
+    /// An email salt that equals the trimmed, lowercased email is stored as sent. Prelogin and the password login
+    /// return it.
+    /// </summary>
     [Theory]
     [InlineData(false)]
     [InlineData(true)]
-    public async Task RegisterFinish_EmailSaltTrimmedAndLowercased_StoresSaltAndReturnsItAtLogin(bool v2AccountKeys)
+    public async Task RegisterFinish_EmailSaltTrimmedAndLowercased_IsStoredAndReturned(bool v2AccountKeys)
     {
-        var factory = new IdentityApplicationFactory();
+        using var factory = new IdentityApplicationFactory();
         var typedEmail = NewTypedEmail();
         var salt = typedEmail.Trim().ToLowerInvariant();
         var request = BuildRequest(typedEmail, salt, v2AccountKeys);
@@ -95,13 +105,17 @@ public class RegisterFinishMasterPasswordSaltTests
         await AssertSaltStoredAndReturnedAsync(factory, typedEmail, salt, v2AccountKeys);
     }
 
+    /// <summary>
+    /// A salt without '@' is not email-derived, such as a base64 or hex value. It is stored as sent, with no
+    /// comparison to the email. Prelogin and the password login return it.
+    /// </summary>
     [Theory]
     [InlineData("dGhpcyBpcyBhIHNhbHQgdmFsdWUgdGhhdCBpcyBub3QgYW4gZW1haWw=", false)]
     [InlineData("dGhpcyBpcyBhIHNhbHQgdmFsdWUgdGhhdCBpcyBub3QgYW4gZW1haWw=", true)]
     [InlineData("a3f1c2d4e5b60718293a4b5c6d7e8f90a3f1c2d4e5b60718293a4b5c6d7e8f90", false)]
-    public async Task RegisterFinish_SaltWithoutAtSign_StoresSaltAsSentAndReturnsItAtLogin(string salt, bool v2AccountKeys)
+    public async Task RegisterFinish_SaltWithoutAtSign_IsStoredAsSentAndReturned(string salt, bool v2AccountKeys)
     {
-        var factory = new IdentityApplicationFactory();
+        using var factory = new IdentityApplicationFactory();
         var typedEmail = NewTypedEmail();
         var request = BuildRequest(typedEmail, salt, v2AccountKeys);
         request.EmailVerificationToken = ProtectRegistrationTokenWithoutEmailSent(factory, typedEmail, "Salt Test");
@@ -112,10 +126,13 @@ public class RegisterFinishMasterPasswordSaltTests
         await AssertSaltStoredAndReturnedAsync(factory, typedEmail, salt, v2AccountKeys);
     }
 
+    /// <summary>
+    /// A registration request in the older format sends no salt. It still succeeds, and no salt is stored.
+    /// </summary>
     [Fact]
-    public async Task RegisterFinish_LegacyShapeWithoutSalt_SucceedsAndStoresNoSalt()
+    public async Task RegisterFinish_LegacyShapeWithoutSalt_StoresNoSalt()
     {
-        var factory = new IdentityApplicationFactory();
+        using var factory = new IdentityApplicationFactory();
         var typedEmail = NewTypedEmail();
         var request = new RegisterFinishRequestModel
         {
@@ -229,16 +246,28 @@ public class RegisterFinishMasterPasswordSaltTests
         }
     }
 
+    /// <summary>
+    /// Asserts a 400 response whose only validation error is the invalid salt, and that no account exists.
+    /// </summary>
     private static async Task AssertInvalidSaltAndNoUserAsync(
         IdentityApplicationFactory factory, HttpContext context, string email)
     {
         Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
-        using var reader = new StreamReader(context.Response.Body);
-        Assert.Contains(_invalidSaltMessage, await reader.ReadToEndAsync());
+        using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+        var validationErrors = AssertHelper.AssertJsonProperty(body.RootElement, "validationErrors", JsonValueKind.Object);
+        var error = Assert.Single(validationErrors.EnumerateObject());
+        Assert.Equal(nameof(MasterPasswordUnlockDataRequestModel.Salt), error.Name);
+        var message = Assert.Single(error.Value.EnumerateArray());
+        Assert.Equal("Invalid master password salt.", message.GetString());
+
         Assert.False(await factory.GetDatabaseContext().Users
             .AnyAsync(u => u.Email.ToLower() == email.ToLower()));
     }
 
+    /// <summary>
+    /// Asserts that the account stores the expected salt and the expected account key shape, and that prelogin and the
+    /// password login return the stored salt.
+    /// </summary>
     private static async Task AssertSaltStoredAndReturnedAsync(
         IdentityApplicationFactory factory, string email, string expectedSalt, bool v2AccountKeys)
     {
@@ -254,11 +283,11 @@ public class RegisterFinishMasterPasswordSaltTests
         Assert.Equal(expectedSalt, preloginBody.RootElement.GetProperty("salt").GetString());
 
         var loginContext = await factory.ContextFromPasswordAsync(user.Email, IdentityApplicationFactory.DefaultUserPasswordHash);
-        Assert.Equal(StatusCodes.Status200OK, loginContext.Response.StatusCode);
-        using var loginBody = await AssertHelper.AssertResponseTypeIs<JsonDocument>(loginContext);
-        var masterPasswordUnlock = loginBody.RootElement
-            .GetProperty("UserDecryptionOptions")
-            .GetProperty("MasterPasswordUnlock");
-        Assert.Equal(expectedSalt, masterPasswordUnlock.GetProperty("Salt").GetString());
+        using var loginBody = await AssertDefaultTokenBodyAsync(loginContext);
+        var masterPasswordUnlock = AssertHelper.AssertJsonProperty(
+            AssertHelper.AssertJsonProperty(loginBody.RootElement, "UserDecryptionOptions", JsonValueKind.Object),
+            "MasterPasswordUnlock", JsonValueKind.Object);
+        Assert.Equal(expectedSalt,
+            AssertHelper.AssertJsonProperty(masterPasswordUnlock, "Salt", JsonValueKind.String).GetString());
     }
 }
