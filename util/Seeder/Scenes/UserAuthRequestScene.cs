@@ -26,7 +26,7 @@ public class UserAuthRequestScene(
 
         public DeviceType RequestDeviceType { get; set; } = DeviceType.ChromeBrowser;
         [MaxLength(50)]
-        public string? RequestDeviceIdentifier { get; set; }
+        public string RequestDeviceIdentifier { get; set; } = Guid.NewGuid().ToString();
         [MaxLength(50)]
         public string RequestIpAddress { get; set; } = "127.0.0.1";
         [MaxLength(200)]
@@ -63,7 +63,7 @@ public class UserAuthRequestScene(
             request.OrganizationId,
             request.Type,
             request.RequestDeviceType,
-            request.RequestDeviceIdentifier ?? Guid.NewGuid().ToString(),
+            request.RequestDeviceIdentifier,
             request.RequestIpAddress,
             request.RequestCountryName,
             requestKeyPair.PublicKey);
