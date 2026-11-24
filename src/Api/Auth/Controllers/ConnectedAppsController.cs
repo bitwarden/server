@@ -1,9 +1,9 @@
-#nullable enable
+﻿#nullable enable
 
 using Bit.Api.Auth.Models.Request;
 using Bit.Api.Auth.Models.Response;
-using Bit.Core;
 using Bit.Api.Models.Response;
+using Bit.Core;
 using Bit.Core.Auth.ConnectedApps.Commands.Interfaces;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Services;
