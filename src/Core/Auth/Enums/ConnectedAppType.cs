@@ -1,4 +1,4 @@
-namespace Bit.Core.Auth.Enums;
+﻿namespace Bit.Core.Auth.Enums;
 
 /// <summary>
 /// The kind of connected app a <see cref="Entities.ConnectedApp"/> record represents. Agent access is the
