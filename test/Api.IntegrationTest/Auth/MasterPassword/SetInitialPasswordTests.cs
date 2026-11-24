@@ -2,7 +2,6 @@
 using System.Text.Json;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
-using Bit.Core;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Data;
@@ -15,7 +14,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.Identity;
-using NSubstitute;
 using Xunit;
 using static Bit.Api.IntegrationTest.Auth.Helpers.MasterPasswordPayloads;
 using static Bit.Core.KeyManagement.Enums.SignatureAlgorithm;
@@ -31,7 +29,6 @@ public class SetInitialPasswordTests : IClassFixture<ApiApplicationFactory>, IAs
     private readonly ApiApplicationFactory _factory;
     private readonly LoginHelper _loginHelper;
     private readonly IUserRepository _userRepository;
-    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IPasswordHasher<User> _passwordHasher;
     private readonly IOrganizationRepository _organizationRepository;
     private readonly ISsoConfigRepository _ssoConfigRepository;
@@ -46,7 +43,6 @@ public class SetInitialPasswordTests : IClassFixture<ApiApplicationFactory>, IAs
         _client = factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
         _userRepository = _factory.GetService<IUserRepository>();
-        _featureService = _factory.GetService<Bitwarden.Server.Sdk.Features.IFeatureService>();
         _passwordHasher = _factory.GetService<IPasswordHasher<User>>();
         _organizationRepository = _factory.GetService<IOrganizationRepository>();
         _ssoConfigRepository = _factory.GetService<ISsoConfigRepository>();
@@ -182,7 +178,7 @@ public class SetInitialPasswordTests : IClassFixture<ApiApplicationFactory>, IAs
     }
 
     // Modern client + V1 encryption: request carries MPAD + MPUD + legacy Keys (no AccountKeys),
-    // V2 MP JIT flag OFF → request routes to the V1 command. KDF/Key/Salt come from MPUD, keypair
+    // so it routes to the V1 command. KDF/Key/Salt come from MPUD, keypair
     // from legacy Keys.
     [Theory]
     [BitAutoData]
@@ -230,7 +226,7 @@ public class SetInitialPasswordTests : IClassFixture<ApiApplicationFactory>, IAs
         await _userRepository.ReplaceAsync(user);
 
         // Modern V1 MP JIT request shape: MPAD + MPUD + legacy Keys, no AccountKeys.
-        // V2 MP JIT flag is left OFF (default mock behavior), so this routes to the V1 command.
+        // No AccountKeys, so this routes to the V1 command.
         // Salt must equal the email during Stage 1 (PM-27044) — ValidateSaltUnchangedForUser rejects
         // divergent salts until clients consume the explicit salt from prelogin (Stage 3 / PM-28143).
         var request = new
@@ -443,8 +439,6 @@ public class SetInitialPasswordTests : IClassFixture<ApiApplicationFactory>, IAs
     [BitAutoData]
     public async Task PostSetPasswordAsync_V2_MasterPasswordDecryption_Success(string organizationSsoIdentifier)
     {
-        _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration).Returns(true);
-
         // Arrange - Create organization and user
         var ownerEmail = $"owner-{Guid.NewGuid()}@bitwarden.com";
         await _factory.LoginWithNewAccount(ownerEmail);
@@ -699,6 +693,59 @@ public class SetInitialPasswordTests : IClassFixture<ApiApplicationFactory>, IAs
         var orgUser = orgUsers.FirstOrDefault(ou => ou.OrganizationId == organization.Id);
         Assert.NotNull(orgUser);
         Assert.Equal(OrganizationUserStatusType.Confirmed, orgUser.Status);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task PostSetPasswordAsync_V2_ExistingKeypairWithAccountKeys_ReturnsBadRequest(
+        string organizationSsoIdentifier)
+    {
+        // Arrange - TDE user (keypair set, no master password) sending V2 MP JIT AccountKeys.
+        var ownerEmail = $"owner-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(ownerEmail);
+
+        var (organization, _) = await OrganizationTestHelpers.SignUpAsync(_factory,
+            ownerEmail: ownerEmail,
+            name: "Test Org TDE");
+        organization.UseSso = true;
+        organization.Identifier = organizationSsoIdentifier;
+        await _organizationRepository.ReplaceAsync(organization);
+
+        var userEmail = $"user-{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(userEmail);
+        await OrganizationTestHelpers.CreateUserAsync(_factory, organization.Id, userEmail,
+            OrganizationUserType.User, userStatusType: OrganizationUserStatusType.Confirmed);
+        await _loginHelper.LoginAsync(userEmail);
+
+        var user = await _userRepository.GetByEmailAsync(userEmail);
+        Assert.NotNull(user);
+        user.MasterPassword = null;
+        user.Key = null;
+        user.PublicKey = "tde-publicKey";
+        user.PrivateKey = _mockEncryptedType7String;
+        user.SignedPublicKey = "tde-signedPublicKey";
+        user.SecurityVersion = 2;
+        user.SecurityState = "v2-tde";
+        await _userRepository.ReplaceAsync(user);
+
+        var jsonRequest = CreateV2SetPasswordRequestJson(userEmail, organization.Identifier, "hint",
+            includeAccountKeys: true);
+
+        // Act
+        using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/set-password");
+        message.Content = new StringContent(jsonRequest, System.Text.Encoding.UTF8, "application/json");
+        var response = await _client.SendAsync(message);
+
+        // Assert - rejected before any write; existing keypair kept.
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        var updatedUser = await _userRepository.GetByEmailAsync(userEmail);
+        Assert.NotNull(updatedUser);
+        Assert.Null(updatedUser.MasterPassword);
+        Assert.Null(updatedUser.Key);
+        Assert.Equal("tde-publicKey", updatedUser.PublicKey);
+        Assert.Equal(_mockEncryptedType7String, updatedUser.PrivateKey);
+        Assert.Equal("tde-signedPublicKey", updatedUser.SignedPublicKey);
+        Assert.Equal("v2-tde", updatedUser.SecurityState);
     }
 
     [Fact]

@@ -126,6 +126,16 @@
           "LaunchDarkly.ServerSdk": "8.14.1"
         }
       },
+      "Bitwarden.Server.Sdk.PasswordHashing": {
+        "type": "Direct",
+        "requested": "[0.1.0, 0.1.0]",
+        "resolved": "0.1.0",
+        "contentHash": "oFMsRz8FIo9ax0k1HOalOliZX0u9WfJTQ88advpEJBhzXsudEM53UjYFMoydsEKLDcfn5G+D3QVwaCmT9Jo2BQ==",
+        "dependencies": {
+          "Microsoft.Extensions.DependencyInjection.Abstractions": "10.0.14",
+          "Microsoft.Extensions.Identity.Core": "10.0.14"
+        }
+      },
       "Braintree": {
         "type": "Direct",
         "requested": "[5.36.0, 5.36.0]",
@@ -1263,7 +1273,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.11.0, )"
+          "HttpExtensions": "[2026.11.1, )"
         }
       },
       "httpextensions": {

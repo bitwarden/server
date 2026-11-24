@@ -24,6 +24,10 @@ namespace Bit.Services.Pam.Services;
 /// A single read releases a gated cipher's secrets to a caller holding a valid active lease; a bulk read never
 /// does, since a sync or list would persist the secret in the client's local store. Mutation follows the single
 /// read (a lease-holder may edit, delete, restore, or move), but a mutation's write-return follows the bulk read.
+///
+/// Neither a lease nor the Owner/Admin exemption releases anything to a client that cannot hold the partial shape
+/// (see <see cref="PartialCipherSupport" />). Such a client keeps whatever it is sent, and a sync push can lead it to
+/// fetch a gated cipher it has no local copy of, so for it every gated cipher stays withheld.
 /// </remarks>
 public class CipherLeaseGate : ICipherLeaseGate
 {
@@ -60,6 +64,14 @@ public class CipherLeaseGate : ICipherLeaseGate
     }
 
     private bool Enabled => _featureService.IsEnabled(FeatureFlagKeys.Pam);
+
+    /// <summary>
+    /// Whether the calling client can hold the partial shape, and so may be released a gated cipher's secrets.
+    /// </summary>
+    private bool ClientHoldsPartials => PartialCipherSupport.IsSupportedBy(
+        _currentContext.DeviceType,
+        _currentContext.ClientVersion,
+        _featureService.IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers));
 
     public async Task<FullCipherAccess?> AuthorizeReadAsync(Guid userId, Cipher cipher)
     {
@@ -128,10 +140,7 @@ public class CipherLeaseGate : ICipherLeaseGate
             await _collectionRepository.GetManyByUserIdAsync(userId), collectionCiphersByCipher);
     }
 
-    /// <remarks>
-    /// Ignores leases: a lease does not unlock the echo of a mutation.
-    /// </remarks>
-    public async Task<FullCipherAccess?> AuthorizeWriteReturnAsync(Guid userId, Cipher cipher)
+    public async Task<FullCipherAccess?> AuthorizeIgnoringLeaseAsync(Guid userId, Cipher cipher)
     {
         if (!Enabled)
         {
@@ -145,9 +154,9 @@ public class CipherLeaseGate : ICipherLeaseGate
 
     /// <remarks>
     /// Resolves gated-ness from the organization's collections like <see cref="AuthorizeAdminReadAsync" />, and
-    /// ignores leases like <see cref="AuthorizeWriteReturnAsync" />.
+    /// ignores leases like <see cref="AuthorizeIgnoringLeaseAsync" />.
     /// </remarks>
-    public async Task<FullCipherAccess?> AuthorizeAdminWriteReturnAsync(
+    public async Task<FullCipherAccess?> AuthorizeAdminIgnoringLeaseAsync(
         Guid userId, Guid organizationId, Cipher cipher)
     {
         if (!Enabled)
@@ -292,7 +301,7 @@ public class CipherLeaseGate : ICipherLeaseGate
 
     /// <summary>
     /// Whether the "/admin" decisions need no lease: the organization gates nothing, or the caller is an Owner or
-    /// Admin of an organization that lets admins access all collection items.
+    /// Admin of an organization that lets admins access all collection items, on a client that can hold partials.
     /// </summary>
     private async Task<bool> AdminNeedsNoLeaseAsync(Guid organizationId)
     {
@@ -302,8 +311,9 @@ public class CipherLeaseGate : ICipherLeaseGate
             return true;
         }
 
-        return _currentContext.GetOrganization(organizationId) is
-        { Type: OrganizationUserType.Owner or OrganizationUserType.Admin }
+        return ClientHoldsPartials
+               && _currentContext.GetOrganization(organizationId) is
+               { Type: OrganizationUserType.Owner or OrganizationUserType.Admin }
                && ability is { AllowAdminAccessToAllCollectionItems: true };
     }
 
@@ -463,13 +473,13 @@ public class CipherLeaseGate : ICipherLeaseGate
 
     /// <summary>
     /// Whether a lease held in <paramref name="organizationId" /> still authorizes anything: whether the holder is
-    /// still licensed.
+    /// still licensed, and is calling from a client that can hold partials.
     /// </summary>
     /// <remarks>
     /// Claims-based, so a de-licensed member's leases stop working at their next token refresh.
     /// </remarks>
     private bool LeaseCanRelease(Guid? organizationId) =>
-        organizationId is { } id && _currentContext.AccessPam(id);
+        organizationId is { } id && _currentContext.AccessPam(id) && ClientHoldsPartials;
 
     /// <summary>
     /// Whether an enabled access rule governs the cipher for this caller. A personal cipher, or one in an organization

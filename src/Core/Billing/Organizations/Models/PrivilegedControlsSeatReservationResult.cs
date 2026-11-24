@@ -8,6 +8,8 @@ namespace Bit.Core.Billing.Organizations.Models;
 /// <param name="Error">
 /// Why the seats could not be reserved: <see cref="PrivilegedControlsSeatLimitReachedError"/>,
 /// <see cref="CannotAutoscalePrivilegedControlsSeatsOnSelfHostError"/>,
+/// <see cref="NotEnoughPrivilegedControlsSeatsError"/>,
+/// <see cref="Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.PrivilegedControlsSeatsMustNotExceedPasswordManagerSeatsError"/>,
 /// <see cref="PrivilegedControlsSeatExpansionFailedError"/>, or
 /// <see cref="PrivilegedControlsSeatReservationUnexpectedError"/>. Null when the reservation succeeded.
 /// </param>

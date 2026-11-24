@@ -44,10 +44,7 @@ public class OrganizationUsersControllerBulkEnablePamTests
         _factory.SubstituteService<IStripeAdapter>(_ => { });
         _factory.SubstituteService<IFeatureService>(featureService =>
             featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true));
-        // Billing reads self-hosted from the environment, which is fixed at startup, so it follows the settings flag
-        // the tests flip instead.
-        _factory.SubstituteService<IBitwardenEnvironment>(environment =>
-            environment.SelfHosted.Returns(_ => _factory.GetService<GlobalSettings>().SelfHosted));
+        _factory.SubstituteService<IBitwardenEnvironment>(environment => environment.SelfHosted.Returns(false));
         _client = _factory.CreateClient();
         _loginHelper = new LoginHelper(_factory, _client);
     }
@@ -55,7 +52,9 @@ public class OrganizationUsersControllerBulkEnablePamTests
     public async Task InitializeAsync()
     {
         _globalSettings = _factory.GetService<GlobalSettings>();
-        _globalSettings.SelfHosted = false;
+        // The settings and environment substitute are shared across this class's tests, so a test that switches to
+        // self-hosted would otherwise leave it on for the next one.
+        SetSelfHosted(false);
         // The feature service substitute is shared across this class's tests, so a test that turns the flag off
         // would otherwise leave it off for the next one.
         _factory.GetService<IFeatureService>().IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true);
@@ -77,7 +76,7 @@ public class OrganizationUsersControllerBulkEnablePamTests
 
     public Task DisposeAsync()
     {
-        _globalSettings.SelfHosted = false;
+        SetSelfHosted(false);
         _client.Dispose();
         return Task.CompletedTask;
     }
@@ -213,7 +212,7 @@ public class OrganizationUsersControllerBulkEnablePamTests
         await GrantPamAsync(seatHolder);
         var member = await CreateMemberAsync();
 
-        _globalSettings.SelfHosted = true;
+        SetSelfHosted(true);
 
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/enable-pam",
             new OrganizationUserBulkRequestModel { Ids = [member.Id] });
@@ -235,7 +234,7 @@ public class OrganizationUsersControllerBulkEnablePamTests
         await GrantPamAsync(seatHolder);
         var member = await CreateMemberAsync();
 
-        _globalSettings.SelfHosted = false;
+        SetSelfHosted(false);
 
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/enable-pam",
             new OrganizationUserBulkRequestModel { Ids = [member.Id] });
@@ -260,7 +259,7 @@ public class OrganizationUsersControllerBulkEnablePamTests
         await GrantPamAsync(seatHolder);
         var member = await CreateMemberAsync();
 
-        _globalSettings.SelfHosted = false;
+        SetSelfHosted(false);
         _factory.GetService<IFeatureService>().IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
 
         var response = await _client.PutAsJsonAsync($"organizations/{_organization.Id}/users/enable-pam",
@@ -333,6 +332,14 @@ public class OrganizationUsersControllerBulkEnablePamTests
         await _factory.LoginWithNewAccount(email);
         return await OrganizationTestHelpers.CreateUserAsync(_factory, organizationId ?? _organization.Id, email,
             OrganizationUserType.User, userStatusType: status);
+    }
+
+    // Billing reads self-hosted from the environment and the rest of the server reads it from settings, so the tests
+    // switch both together.
+    private void SetSelfHosted(bool selfHosted)
+    {
+        _globalSettings.SelfHosted = selfHosted;
+        _factory.GetService<IBitwardenEnvironment>().SelfHosted.Returns(selfHosted);
     }
 
     private async Task SetUsePamAsync(bool value)
