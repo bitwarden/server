@@ -43,7 +43,7 @@ public class SyncController : Controller
     private readonly IProviderUserRepository _providerUserRepository;
     private readonly IPolicyRepository _policyRepository;
     private readonly ISendRepository _sendRepository;
-    private readonly IAgentConnectionRepository _agentConnectionRepository;
+    private readonly IConnectedAppRepository _connectedAppRepository;
     private readonly GlobalSettings _globalSettings;
     private readonly ICurrentContext _currentContext;
     private readonly Version _sshKeyCipherMinimumVersion = new(Constants.SSHKeyCipherMinimumVersion);
@@ -65,7 +65,7 @@ public class SyncController : Controller
         IProviderUserRepository providerUserRepository,
         IPolicyRepository policyRepository,
         ISendRepository sendRepository,
-        IAgentConnectionRepository agentConnectionRepository,
+        IConnectedAppRepository connectedAppRepository,
         GlobalSettings globalSettings,
         ICurrentContext currentContext,
         Bitwarden.Server.Sdk.Features.IFeatureService featureService,
@@ -84,7 +84,7 @@ public class SyncController : Controller
         _providerUserRepository = providerUserRepository;
         _policyRepository = policyRepository;
         _sendRepository = sendRepository;
-        _agentConnectionRepository = agentConnectionRepository;
+        _connectedAppRepository = connectedAppRepository;
         _globalSettings = globalSettings;
         _currentContext = currentContext;
         _featureService = featureService;
@@ -156,16 +156,16 @@ public class SyncController : Controller
         var policiesNew = await _policyRepository.GetManyConfirmedAcceptedByUserIdAsync(user.Id);
         var organizationUserDetailsNew = await _organizationUserRepository.GetManyConfirmedAcceptedDetailsByUserAsync(user.Id);
 
-        IEnumerable<Core.Auth.Entities.AgentConnection> agentConnections = null;
+        IEnumerable<Core.Auth.Entities.ConnectedApp> connectedApps = null;
         if (_featureService.IsEnabled(FeatureFlagKeys.OpenIdConnectProvider))
         {
-            agentConnections = await _agentConnectionRepository.GetManyByUserIdAsync(user.Id);
+            connectedApps = await _connectedAppRepository.GetManyByUserIdAsync(user.Id);
         }
 
         var response = new SyncResponseModel(_globalSettings, user, userAccountKeys, userTwoFactorEnabled, userHasPremiumFromOrganization, organizationAbilities,
             organizationIdsClaimingActiveUser, organizationUserDetails, providerUserDetails, providerUserOrganizationDetails,
             folders, collections, ciphers, collectionCiphersGroupDict, excludeDomains, policies, sends, webAuthnCredentials,
-            policiesNew, organizationUserDetailsNew, fullCipherAccess, agentConnections);
+            policiesNew, organizationUserDetailsNew, fullCipherAccess, connectedApps);
         return response;
     }
 

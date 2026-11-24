@@ -73,7 +73,7 @@ public static class EntityFrameworkServiceCollectionExtensions
 
     public static void AddPasswordManagerEFRepositories(this IServiceCollection services, bool selfHosted)
     {
-        services.AddSingleton<IAgentConnectionRepository, AgentConnectionRepository>();
+        services.AddSingleton<IConnectedAppRepository, ConnectedAppRepository>();
         services.AddSingleton<IApiKeyRepository, ApiKeyRepository>();
         services.AddSingleton<IAuthRequestRepository, AuthRequestRepository>();
         services.AddSingleton<ICipherRepository, CipherRepository>();

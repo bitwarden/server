@@ -42,15 +42,15 @@ public static class UserServiceCollectionExtensions
         services.AddUserEmailCommands();
         services.AddUserVerificationCommands();
         services.AddSsoJitProvisionTrustedDeviceCommands();
-        services.AddAgentConnectionCommands();
+        services.AddConnectedAppCommands();
     }
 
-    private static void AddAgentConnectionCommands(this IServiceCollection services)
+    private static void AddConnectedAppCommands(this IServiceCollection services)
     {
-        services.AddScoped<AgentFeatures.Commands.Interfaces.ICreateAgentConnectionCommand,
-            AgentFeatures.Commands.CreateAgentConnectionCommand>();
-        services.AddScoped<AgentFeatures.Commands.Interfaces.IRevokeAgentConnectionCommand,
-            AgentFeatures.Commands.RevokeAgentConnectionCommand>();
+        services.AddScoped<ConnectedApps.Commands.Interfaces.ICreateConnectedAppCommand,
+            ConnectedApps.Commands.CreateConnectedAppCommand>();
+        services.AddScoped<ConnectedApps.Commands.Interfaces.IRevokeConnectedAppCommand,
+            ConnectedApps.Commands.RevokeConnectedAppCommand>();
     }
 
     private static void AddUserVerificationCommands(this IServiceCollection services)

@@ -472,7 +472,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.ToTable("Policy", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AgentConnection", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.ConnectedApp", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("char(36)");
@@ -506,7 +506,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("UserId")
                         .HasAnnotation("SqlServer:Clustered", false);
 
-                    b.ToTable("AgentConnection", (string)null);
+                    b.ToTable("ConnectedApp", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AuthRequest", b =>
@@ -3725,7 +3725,7 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AgentConnection", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.ConnectedApp", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()

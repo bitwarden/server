@@ -26,7 +26,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     private readonly ICipherRepository _cipherRepository;
     private readonly IFolderRepository _folderRepository;
     private readonly ISendRepository _sendRepository;
-    private readonly IAgentConnectionRepository _agentConnectionRepository;
+    private readonly IConnectedAppRepository _connectedAppRepository;
     private readonly IEmergencyAccessRepository _emergencyAccessRepository;
     private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IDeviceRepository _deviceRepository;
@@ -54,7 +54,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
     /// <param name="userSignatureKeyPairRepository">Provides a method to update re-encrypted signature keys</param>
     public RotateUserAccountKeysCommand(IUserService userService, IUserRepository userRepository,
         ICipherRepository cipherRepository, IFolderRepository folderRepository, ISendRepository sendRepository,
-        IAgentConnectionRepository agentConnectionRepository,
+        IConnectedAppRepository connectedAppRepository,
         IEmergencyAccessRepository emergencyAccessRepository, IOrganizationUserRepository organizationUserRepository,
         IDeviceRepository deviceRepository,
         IMasterPasswordService masterPasswordService,
@@ -66,7 +66,7 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
         _sendRepository = sendRepository;
-        _agentConnectionRepository = agentConnectionRepository;
+        _connectedAppRepository = connectedAppRepository;
         _emergencyAccessRepository = emergencyAccessRepository;
         _organizationUserRepository = organizationUserRepository;
         _deviceRepository = deviceRepository;
@@ -247,12 +247,12 @@ public class RotateUserAccountKeysCommand : IRotateUserAccountKeysCommand
         // Re-wrap agent-access PSKs with the new user key. The API request model + a fail-closed rotation
         // completeness validator (ensuring the client submits every agent connection) must be wired before
         // the OIDC-provider flag is enabled in production, or a rotation could orphan an un-rewrapped PSK.
-        if (model.AgentConnections.Any())
+        if (model.ConnectedApps.Any())
         {
-            var connectionsWithUpdatedDate = model.AgentConnections.ToList()
+            var connectionsWithUpdatedDate = model.ConnectedApps.ToList()
                 .Select(c => { c.RevisionDate = now; return c; });
             saveEncryptedDataActions.Add(
-                _agentConnectionRepository.UpdateForKeyRotation(user.Id, connectionsWithUpdatedDate));
+                _connectedAppRepository.UpdateForKeyRotation(user.Id, connectionsWithUpdatedDate));
         }
     }
 

@@ -467,7 +467,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.ToTable("Policy", (string)null);
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AgentConnection", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.ConnectedApp", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("TEXT");
@@ -501,7 +501,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("UserId")
                         .HasAnnotation("SqlServer:Clustered", false);
 
-                    b.ToTable("AgentConnection", (string)null);
+                    b.ToTable("ConnectedApp", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AuthRequest", b =>
@@ -3714,7 +3714,7 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Navigation("Organization");
                 });
 
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.AgentConnection", b =>
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Auth.Models.ConnectedApp", b =>
                 {
                     b.HasOne("Bit.Infrastructure.EntityFramework.Models.User", "User")
                         .WithMany()

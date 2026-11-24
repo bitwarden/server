@@ -112,12 +112,12 @@ public enum PushType : byte
     [NotificationInfo("@bitwarden/team-pam-dev", typeof(Models.UserPushNotification))]
     RefreshAccessRequest = 29,
 
-    [NotificationInfo("@bitwarden/team-auth-dev", typeof(Auth.Models.SyncAgentConnectionPushNotification))]
-    SyncAgentConnectionCreate = 30,
+    [NotificationInfo("@bitwarden/team-auth-dev", typeof(Auth.Models.SyncConnectedAppPushNotification))]
+    SyncConnectedAppCreate = 30,
 
-    [NotificationInfo("@bitwarden/team-auth-dev", typeof(Auth.Models.SyncAgentConnectionPushNotification))]
-    SyncAgentConnectionUpdate = 31,
+    [NotificationInfo("@bitwarden/team-auth-dev", typeof(Auth.Models.SyncConnectedAppPushNotification))]
+    SyncConnectedAppUpdate = 31,
 
-    [NotificationInfo("@bitwarden/team-auth-dev", typeof(Auth.Models.SyncAgentConnectionPushNotification))]
-    SyncAgentConnectionDelete = 32,
+    [NotificationInfo("@bitwarden/team-auth-dev", typeof(Auth.Models.SyncConnectedAppPushNotification))]
+    SyncConnectedAppDelete = 32,
 }

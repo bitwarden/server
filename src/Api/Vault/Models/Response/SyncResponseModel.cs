@@ -50,7 +50,7 @@ public class SyncResponseModel() : ResponseModel("sync")
         IEnumerable<Policy> policiesNew = null,
         IEnumerable<OrganizationUserOrganizationDetails> organizationUserDetailsNew = null,
         FullCipherAccess fullCipherAccess = null,
-        IEnumerable<AgentConnection> agentConnections = null)
+        IEnumerable<ConnectedApp> connectedApps = null)
         : this()
     {
         Profile = new ProfileResponseModel(user, userAccountKeysData, organizationUserDetails, providerUserDetails,
@@ -68,8 +68,8 @@ public class SyncResponseModel() : ResponseModel("sync")
         Policies = policies?.Select(p => new PolicyResponseModel(p)) ?? new List<PolicyResponseModel>();
         PoliciesNew = policiesNew?.Select(p => new PolicyResponseModel(p));
         Sends = sends.Select(s => new SendResponseModel(s));
-        AgentConnections = agentConnections?.Select(c => new AgentConnectionResponseModel(c))
-            ?? new List<AgentConnectionResponseModel>();
+        ConnectedApps = connectedApps?.Select(c => new ConnectedAppResponseModel(c))
+            ?? new List<ConnectedAppResponseModel>();
         var webAuthnPrfOptions = webAuthnCredentials
             .Where(c => c.GetPrfStatus() == WebAuthnPrfStatus.Enabled)
             .Select(c => new WebAuthnPrfDecryptionOption(
@@ -140,6 +140,6 @@ public class SyncResponseModel() : ResponseModel("sync")
     /// The user's agent-access connections. Each carries the user-key-encrypted PSK for an authorized
     /// "Login with Bitwarden" partner; clients decrypt locally.
     /// </summary>
-    public IEnumerable<AgentConnectionResponseModel> AgentConnections { get; set; }
+    public IEnumerable<ConnectedAppResponseModel> ConnectedApps { get; set; }
     public UserDecryptionResponseModel UserDecryption { get; set; }
 }

@@ -30,7 +30,7 @@ public class BaseRotateUserAccountKeysData
     /// Agent-access connections whose user-key-encrypted PSK the client has re-wrapped. Optional for
     /// backward compatibility; empty when the client submits none.
     /// </summary>
-    public IReadOnlyList<AgentConnection> AgentConnections { get; set; } = [];
+    public IReadOnlyList<ConnectedApp> ConnectedApps { get; set; } = [];
 
     /// <summary>
     /// Rejects a rotation from a client that holds an out-of-date user key. The ids are compared only when
