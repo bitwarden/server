@@ -81,11 +81,14 @@ public class PamRotationConfigRepository : Repository<CoreEntity, EfModel, Guid>
         return Mapper.Map<List<CoreEntity>>(configs);
     }
 
-    public async Task DeletePendingAccessEndAsync(Guid configId)
+    public async Task DeletePendingAccessEndAsync(Guid configId, DateTime? createdOnOrBefore = null)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
-        await dbContext.PamPendingAccessEnds.Where(p => p.RotationConfigId == configId).ExecuteDeleteAsync();
+        await dbContext.PamPendingAccessEnds
+            .Where(p => p.RotationConfigId == configId
+                && (createdOnOrBefore == null || p.CreationDate <= createdOnOrBefore))
+            .ExecuteDeleteAsync();
     }
 
     public async Task<bool> RaiseManualObligationOnAccessEndAsync(Guid configId, DateTime now)

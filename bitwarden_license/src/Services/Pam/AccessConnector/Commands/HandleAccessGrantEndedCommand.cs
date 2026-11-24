@@ -63,10 +63,12 @@ public class HandleAccessGrantEndedCommand : IHandleAccessGrantEndedCommand
 
         if (target.Method == PamTargetSystemMethod.Automatic)
         {
+            // Cleared only once the offer returns, so the rotation sweep retries one that throws. A row recorded after
+            // the cut-off belongs to an access end the offer may not cover, so it stays for its own trigger.
+            var cutOff = _timeProvider.GetUtcNow().UtcDateTime;
             // OfferAsync re-checks can_offer and no-ops when it does not hold.
             await _offerRotationCommand.OfferAsync(config.Id, PamRotationSource.AccessEnd);
-            // Cleared only once the offer returns, so the rotation sweep retries one that throws.
-            await _configRepository.DeletePendingAccessEndAsync(config.Id);
+            await _configRepository.DeletePendingAccessEndAsync(config.Id, cutOff);
             return;
         }
 

@@ -144,6 +144,34 @@ public class PamPendingAccessEndTests
     }
 
     [DatabaseTheory, DatabaseData]
+    public async Task DeletePendingAccessEndAsync_WithCutOff_KeepsLaterRows(
+        IOrganizationRepository organizationRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        IPamRotationConfigRepository pamRotationConfigRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var target = await CreateTargetAsync(pamTargetSystemRepository, organization.Id, now,
+            PamTargetSystemMethod.Automatic);
+        var config = await pamRotationConfigRepository.CreateAsync(BuildConfig(organization.Id, target.Id, now));
+        var earlier = await SeedLeaseAsync(accessRequestRepository, accessLeaseRepository, organization.Id,
+            config.CipherId, now.AddMinutes(-5), now.AddHours(1));
+        var later = await SeedLeaseAsync(accessRequestRepository, accessLeaseRepository, organization.Id,
+            config.CipherId, now.AddMinutes(-5), now.AddHours(1));
+        await RevokeAsync(accessLeaseRepository, earlier, now);
+        await RevokeAsync(accessLeaseRepository, later, now.AddMinutes(2));
+
+        await pamRotationConfigRepository.DeletePendingAccessEndAsync(config.Id, now.AddMinutes(1));
+
+        Assert.DoesNotContain(await pamRotationConfigRepository.GetManyPendingAccessEndAsync(now.AddMinutes(1)),
+            c => c.Id == config.Id);
+        Assert.Contains(await pamRotationConfigRepository.GetManyPendingAccessEndAsync(now.AddMinutes(3)),
+            c => c.Id == config.Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
     public async Task RaiseManualObligationOnAccessEndAsync_RaisesOnceAndClearsPending(
         IOrganizationRepository organizationRepository,
         IPamTargetSystemRepository pamTargetSystemRepository,

@@ -24,8 +24,11 @@ public interface IPamRotationConfigRepository : IRepository<PamRotationConfig, G
     /// </summary>
     Task<ICollection<PamRotationConfig>> GetManyPendingAccessEndAsync(DateTime createdBefore);
 
-    /// <summary>Clears the config's pending access ends once their trigger has run.</summary>
-    Task DeletePendingAccessEndAsync(Guid configId);
+    /// <summary>
+    /// Clears the config's pending access ends once their trigger has run: all of them, or only those recorded at or
+    /// before <paramref name="createdOnOrBefore"/>.
+    /// </summary>
+    Task DeletePendingAccessEndAsync(Guid configId, DateTime? createdOnOrBefore = null);
 
     /// <summary>
     /// Clears a manual config's pending access ends and pulls its rotation due at <paramref name="now"/>, in one write.

@@ -108,13 +108,39 @@ public class HandleAccessGrantEndedCommandTests
         Received.InOrder(() =>
         {
             sutProvider.GetDependency<IOfferRotationCommand>().OfferAsync(config.Id, PamRotationSource.AccessEnd);
-            sutProvider.GetDependency<IPamRotationConfigRepository>().DeletePendingAccessEndAsync(config.Id);
+            sutProvider.GetDependency<IPamRotationConfigRepository>().DeletePendingAccessEndAsync(config.Id, _now);
         });
         await sutProvider.GetDependency<IPamRotationConfigRepository>().DidNotReceiveWithAnyArgs()
             .ReplaceAsync(default!);
         // OfferRotationCommand audits the offer itself.
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs()
             .EmitAsync(default!);
+    }
+
+    // A lease that ends while the offer runs may not be covered by it, so its row must survive the clear.
+    [Theory, BitAutoData]
+    public async Task HandleAsync_AutomaticOptedIn_KeepsRowsRecordedDuringTheOffer(
+        PamRotationConfig config, PamTargetSystem target)
+    {
+        var sutProvider = Setup();
+        config.RotateOnAccessEnd = true;
+        config.Enabled = true;
+        target.Id = config.TargetSystemId;
+        target.Method = PamTargetSystemMethod.Automatic;
+        sutProvider.GetDependency<IPamRotationConfigRepository>().GetByCipherIdAsync(config.CipherId)
+            .Returns(config);
+        sutProvider.GetDependency<IPamTargetSystemRepository>().GetByIdAsync(config.TargetSystemId).Returns(target);
+        sutProvider.GetDependency<IOfferRotationCommand>().OfferAsync(config.Id, PamRotationSource.AccessEnd)
+            .Returns(_ =>
+            {
+                sutProvider.GetDependency<FakeTimeProvider>().Advance(TimeSpan.FromSeconds(5));
+                return PamRotationJobCreateOutcome.Created;
+            });
+
+        await sutProvider.Sut.HandleAsync(config.CipherId);
+
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1)
+            .DeletePendingAccessEndAsync(config.Id, _now);
     }
 
     // The pending access end must outlive a failed offer, so the rotation sweep can retry it.

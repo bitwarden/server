@@ -76,12 +76,12 @@ public class PamRotationConfigRepository : Repository<PamRotationConfig, Guid>, 
         return results.ToList();
     }
 
-    public async Task DeletePendingAccessEndAsync(Guid configId)
+    public async Task DeletePendingAccessEndAsync(Guid configId, DateTime? createdOnOrBefore = null)
     {
         await using var connection = new SqlConnection(ConnectionString);
         await connection.ExecuteAsync(
             $"[{Schema}].[PamPendingAccessEnd_DeleteByRotationConfigId]",
-            new { RotationConfigId = configId },
+            new { RotationConfigId = configId, CreatedOnOrBefore = createdOnOrBefore },
             commandType: CommandType.StoredProcedure);
     }
 
