@@ -46,8 +46,8 @@ internal static class OrganizationExtensions
     /// <summary>
     /// Creates an OrganizationUser with a dynamically provided encrypted org key.
     /// The encryptedOrgKey should be generated using sdkService.GenerateUserOrganizationKey().
-    /// Invited and Staged members are recorded by <see cref="OrganizationUser.Email"/> only, matching the
-    /// invitation and SCIM/Directory Connector provisioning flows; every other status links the user's ID.
+    /// Invited and Staged members are recorded by <see cref="OrganizationUser.Email"/> only, with no
+    /// <c>UserId</c>, <c>Key</c> or <c>ExternalId</c>; every other status links the user's ID.
     /// </summary>
     internal static OrganizationUser CreateOrganizationUserWithKey(
         this Organization organization,
@@ -57,7 +57,7 @@ internal static class OrganizationExtensions
         string? encryptedOrgKey)
     {
         var shouldLinkUserId = status is not (OrganizationUserStatusType.Invited or OrganizationUserStatusType.Staged);
-        var shouldIncludeKey = status == OrganizationUserStatusType.Confirmed || status == OrganizationUserStatusType.Revoked;
+        var shouldIncludeKey = status is OrganizationUserStatusType.Confirmed or OrganizationUserStatusType.Revoked;
 
         return new OrganizationUser
         {

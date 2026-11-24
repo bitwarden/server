@@ -17,8 +17,8 @@ public struct OrganizationUserSceneResult
 /// Links an existing user to an existing organization as an OrganizationUser with the requested
 /// role and status. For Confirmed/Revoked statuses the organization's symmetric key is encrypted
 /// to the user's public key; Invited/Accepted/Staged statuses carry no key. Invited and Staged
-/// members are recorded by email only (no linked <c>UserId</c>), the way invitations and
-/// SCIM/Directory Connector provisioning create them.
+/// members are recorded by email only, with no <c>UserId</c>, <c>Key</c> or <c>ExternalId</c>, so
+/// the invite link accept flow finds them by email.
 /// </summary>
 public class OrganizationUserScene(
     IUserRepository userRepository,

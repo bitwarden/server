@@ -8,9 +8,8 @@ using Xunit;
 namespace Bit.SeederApi.IntegrationTest.Scenes;
 
 /// <summary>
-/// Exercises OrganizationUserScene through POST /seed: a Staged member is recorded the way SCIM/Directory
-/// Connector provisioning records it (email only, no linked user, no key), so the invite link accept flow
-/// can find it by email.
+/// Exercises OrganizationUserScene through POST /seed: a Staged member is recorded by email only (no
+/// <c>UserId</c>, <c>Key</c> or <c>ExternalId</c>), so the invite link accept flow can find it by email.
 /// </summary>
 public class OrganizationUserSceneTests : IClassFixture<InPlaySeederApiApplicationFactory>, IAsyncLifetime
 {
