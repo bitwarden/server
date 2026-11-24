@@ -25,7 +25,8 @@ public class PasswordGrantAuthRequestTests
     private const string AccessCode = "auth_request_access_code";
 
     /// <summary>
-    /// An approved, answered, unused auth request on a known device logs the user in with its access code.
+    /// An approved, answered, unused auth request on a known device logs the user in with its access code, and the
+    /// login marks the auth request as used.
     /// </summary>
     [Fact]
     public async Task ValidateAsync_ValidateContextAsync_ValidAuthRequest_Success()
@@ -34,10 +35,13 @@ public class PasswordGrantAuthRequestTests
         var user = await RegisterUserAsync(factory);
         await AddKnownDevice(factory, user.Id);
         var authRequest = await CreateAuthRequestAsync(factory, user.Id);
+        Assert.Null(authRequest.AuthenticationDate);
 
         var context = await PostAuthRequestLoginAsync(factory, authRequest.Id, AccessCode);
 
         using var body = await AssertDefaultTokenBodyAsync(context);
+        var authRequestAfter = await factory.GetService<IAuthRequestRepository>().GetByIdAsync(authRequest.Id);
+        Assert.NotNull(authRequestAfter!.AuthenticationDate);
     }
 
     /// <summary>
@@ -182,6 +186,38 @@ public class PasswordGrantAuthRequestTests
     }
 
     /// <summary>
+    /// An auth request ID that does not exist is rejected.
+    /// </summary>
+    [Fact]
+    public async Task PasswordGrant_UnknownAuthRequestId_IsRejected()
+    {
+        using var factory = new IdentityApplicationFactory();
+        var user = await RegisterUserAsync(factory);
+        await AddKnownDevice(factory, user.Id);
+        await CreateAuthRequestAsync(factory, user.Id);
+
+        var context = await PostAuthRequestLoginAsync(factory, Guid.NewGuid(), AccessCode);
+
+        await AssertErrorModelAsync(context, IncorrectCredentialsMessage);
+    }
+
+    /// <summary>
+    /// An auth request ID that is not a GUID is rejected.
+    /// </summary>
+    [Fact]
+    public async Task PasswordGrant_NonGuidAuthRequestId_IsRejected()
+    {
+        using var factory = new IdentityApplicationFactory();
+        var user = await RegisterUserAsync(factory);
+        await AddKnownDevice(factory, user.Id);
+        await CreateAuthRequestAsync(factory, user.Id);
+
+        var context = await PostAuthRequestLoginAsync(factory, "not_a_guid", AccessCode);
+
+        await AssertErrorModelAsync(context, IncorrectCredentialsMessage);
+    }
+
+    /// <summary>
     /// Saves an auth request that is valid for a login of the user with <see cref="AccessCode"/>: approved,
     /// answered, not expired, and not used. <paramref name="customize"/> changes it before it is saved.
     /// </summary>
@@ -205,8 +241,12 @@ public class PasswordGrantAuthRequestTests
         return await factory.GetService<IAuthRequestRepository>().CreateAsync(authRequest);
     }
 
+    private static Task<HttpContext> PostAuthRequestLoginAsync(IdentityApplicationFactory factory,
+        Guid authRequestId, string password) =>
+        PostAuthRequestLoginAsync(factory, authRequestId.ToString(), password);
+
     private static async Task<HttpContext> PostAuthRequestLoginAsync(IdentityApplicationFactory factory,
-        Guid authRequestId, string password)
+        string authRequestId, string password)
     {
         return await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
@@ -218,7 +258,7 @@ public class PasswordGrantAuthRequestTests
             { "grant_type", "password" },
             { "username", DefaultUsername },
             { "password", password },
-            { "AuthRequest", authRequestId.ToString().ToLowerInvariant() },
+            { "AuthRequest", authRequestId },
         }));
     }
 
