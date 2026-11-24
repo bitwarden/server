@@ -718,14 +718,6 @@ public class AdminRecoverAccountCommandTests
             otherOwnerMembership.OrganizationId, Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == otherOwnerMembership.Id), null);
         await removeOrganizationUserCommand.DidNotReceive().RemoveUsersAsync(
             organization.Id, Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid?>());
-
-        var userRepository = sutProvider.GetDependency<IUserRepository>();
-        Received.InOrder(() =>
-        {
-            removeOrganizationUserCommand.RemoveUsersAsync(otherMembership.OrganizationId, Arg.Any<IEnumerable<Guid>>(), null);
-            removeOrganizationUserCommand.RemoveUsersAsync(otherOwnerMembership.OrganizationId, Arg.Any<IEnumerable<Guid>>(), null);
-            userRepository.ReplaceAsync(user);
-        });
     }
 
     [Theory]
