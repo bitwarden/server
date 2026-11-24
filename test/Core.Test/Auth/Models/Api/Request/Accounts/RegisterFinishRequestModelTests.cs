@@ -641,6 +641,44 @@ public class RegisterFinishRequestModelTests
         Assert.Empty(results);
     }
 
+    /// <summary>
+    /// For a non-ASCII domain, the rule accepts the email trimmed and lowercased with the Unicode full lowercase
+    /// mapping.
+    /// </summary>
+    [Theory]
+    [InlineData("user@ÜBER.de", "user@über.de")]
+    [InlineData("user@ΟΔΟΣ.gr", "user@οδοσ.gr")] // Σ before '.' and a letter.
+    [InlineData("user@ΣΟΦΙΑ.gr", "user@σοφια.gr")]
+    [InlineData("user@Σ-net.gr", "user@σ-net.gr")] // No letter before Σ.
+    [InlineData("user@ΟΔΟΣ-net.gr", "user@οδος-net.gr")] // Word-final Σ.
+    [InlineData("user@example.ΑΣ", "user@example.ας")]
+    [InlineData("user@İzmir.com.tr", "user@i\u0307zmir.com.tr")]
+    [InlineData("user@I\u0307zmir.com.tr", "user@i\u0307zmir.com.tr")] // Decomposed İ: I + U+0307.
+    public void Validate_EmailSaltForNonAsciiDomain_IsValid(string email, string salt)
+    {
+        var results = Validate(BuildModelWithEmailAndSalt(email, salt));
+
+        Assert.Empty(results);
+    }
+
+    /// <summary>
+    /// <see cref="string.ToLowerInvariant"/> differs from the Unicode full lowercase mapping for a word-final Σ (σ, not
+    /// ς) and for İ (unchanged, not i + U+0307). Clients do not derive the master key from these salts, so the rule
+    /// rejects them.
+    /// </summary>
+    [Theory]
+    [InlineData("user@ΟΔΟΣ-net.gr", "user@οδοσ-net.gr")]
+    [InlineData("user@example.ΑΣ", "user@example.ασ")]
+    [InlineData("user@İzmir.com.tr", "user@İzmir.com.tr")]
+    [InlineData("user@İZMİR.com.tr", "user@İzmİr.com.tr")]
+    public void Validate_EmailSaltLowercasedWithToLowerInvariant_WhenFullMappingDiffers_ReturnsInvalidSaltError(
+        string email, string salt)
+    {
+        var result = Assert.Single(Validate(BuildModelWithEmailAndSalt(email, salt)));
+
+        Assert.Equal("Invalid master password salt.", result.ErrorMessage);
+    }
+
     [Fact]
     public void Validate_LegacyShapeWithoutSalt_DoesNotReturnSaltError()
     {

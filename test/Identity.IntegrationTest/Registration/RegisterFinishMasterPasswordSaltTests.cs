@@ -127,6 +127,49 @@ public class RegisterFinishMasterPasswordSaltTests
     }
 
     /// <summary>
+    /// For a non-ASCII domain, the salt must equal the email trimmed and lowercased with the Unicode full lowercase
+    /// mapping. That mapping differs from <see cref="string.ToLowerInvariant"/> for a word-final Σ (ς, not σ) and
+    /// for İ (i + U+0307, not İ), so a salt lowercased with <see cref="string.ToLowerInvariant"/> is rejected there.
+    /// </summary>
+    [Theory]
+    [InlineData("ΟΔΟΣ.gr", "οδοσ.gr", true)]
+    [InlineData("ΟΔΟΣ-net.gr", "οδος-net.gr", true)]
+    [InlineData("ΟΔΟΣ-net.gr", "οδοσ-net.gr", false)]
+    [InlineData("İzmir.com.tr", "i\u0307zmir.com.tr", true)]
+    [InlineData("İzmir.com.tr", "İzmir.com.tr", false)]
+    public async Task RegisterFinish_EmailSaltForNonAsciiDomain_FollowsTheFullLowercaseMapping(
+        string typedDomain, string saltDomain, bool accepted)
+    {
+        using var factory = new IdentityApplicationFactory();
+        var localPart = $"salt.test+{Guid.NewGuid():N}";
+        var email = $"{localPart}@{typedDomain}";
+        var salt = $"{localPart}@{saltDomain}";
+        var request = BuildRequest(email, salt, v2AccountKeys: false);
+        request.EmailVerificationToken = ProtectRegistrationTokenWithoutEmailSent(factory, email, "Salt Test");
+
+        var context = await factory.PostRegisterFinishAsync(request);
+
+        // The test database lowercases only ASCII, so find the account by its unique ASCII local part.
+        var user = await factory.GetDatabaseContext().Users
+            .SingleOrDefaultAsync(u => u.Email.StartsWith(localPart + "@"));
+        if (accepted)
+        {
+            Assert.Equal(StatusCodes.Status200OK, context.Response.StatusCode);
+            Assert.NotNull(user);
+            Assert.Equal(salt, user.MasterPasswordSalt);
+        }
+        else
+        {
+            Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+            using var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
+            var validationErrors = AssertHelper.AssertJsonProperty(body.RootElement, "validationErrors", JsonValueKind.Object);
+            var error = Assert.Single(validationErrors.EnumerateObject());
+            Assert.Equal(nameof(MasterPasswordUnlockDataRequestModel.Salt), error.Name);
+            Assert.Null(user);
+        }
+    }
+
+    /// <summary>
     /// A registration request in the older format sends no salt. It still succeeds, and no salt is stored.
     /// </summary>
     [Fact]
