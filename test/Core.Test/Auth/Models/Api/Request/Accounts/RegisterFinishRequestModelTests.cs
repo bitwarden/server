@@ -581,6 +581,85 @@ public class RegisterFinishRequestModelTests
         Assert.Contains(results, r => r.ErrorMessage == "Invalid master password salt.");
     }
 
+    private static RegisterFinishRequestModel BuildModelWithEmailAndSalt(string email, string salt) => new()
+    {
+        Email = email,
+        UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
+        MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+        {
+            Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
+            MasterKeyWrappedUserKey = "wrapped",
+            Salt = salt
+        },
+        MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+        {
+            Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
+            MasterPasswordAuthenticationHash = "auth-hash",
+            Salt = salt
+        },
+        EmailVerificationToken = "token"
+    };
+
+    [Theory]
+    [InlineData("user@example.com", "user@example.com")]
+    [InlineData("User@Example.com", "user@example.com")]
+    [InlineData("USER@EXAMPLE.COM", "user@example.com")]
+    public void Validate_EmailSaltEqualsTrimmedLowercasedEmail_IsValid(string email, string salt)
+    {
+        var results = Validate(BuildModelWithEmailAndSalt(email, salt));
+
+        Assert.Empty(results);
+    }
+
+    [Theory]
+    [InlineData("User@Example.com", "User@Example.com")]
+    [InlineData("user@example.com", "User@example.com")]
+    [InlineData("user@example.com", "user@example.com ")]
+    [InlineData("user@example.com", " user@example.com")]
+    [InlineData("user@example.com", "other@example.com")]
+    [InlineData("user@example.com", "user@example.org")]
+    [InlineData("user@example.com", "user@")]
+    [InlineData("user@example.com", "@")]
+    public void Validate_EmailSaltDiffersFromTrimmedLowercasedEmail_ReturnsInvalidSaltError(string email, string salt)
+    {
+        var results = Validate(BuildModelWithEmailAndSalt(email, salt));
+
+        var result = Assert.Single(results);
+        Assert.Equal("Invalid master password salt.", result.ErrorMessage);
+        Assert.Contains(nameof(MasterPasswordUnlockDataRequestModel.Salt), result.MemberNames);
+    }
+
+    [Theory]
+    [InlineData("user@example.com", "dGhpcyBpcyBhIHNhbHQgdmFsdWU=")]
+    [InlineData("User@Example.com", "dGhpcyBpcyBhIHNhbHQgdmFsdWU=")]
+    [InlineData("user@example.com", "a3f1c2d4e5b60718293a4b5c6d7e8f90")]
+    [InlineData("user@example.com", "USER.EXAMPLE.COM")]
+    public void Validate_SaltWithoutAtSign_IsValidForAnyEmail(string email, string salt)
+    {
+        var results = Validate(BuildModelWithEmailAndSalt(email, salt));
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Validate_LegacyShapeWithoutSalt_DoesNotReturnSaltError()
+    {
+        var model = new RegisterFinishRequestModel
+        {
+            Email = "User@Example.com",
+            UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
+            MasterPasswordHash = "auth-hash",
+            UserSymmetricKey = "wrapped",
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            EmailVerificationToken = "token"
+        };
+
+        var results = Validate(model);
+
+        Assert.Empty(results);
+    }
+
     private static RegisterFinishRequestModel BuildValidBaseModelWithoutToken() => new()
     {
         Email = "user@example.com",

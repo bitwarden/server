@@ -205,6 +205,16 @@ public class RegisterFinishRequestModel : IValidatableObject
             }
         }
 
+        // 2.5 A salt that contains '@' is an email-derived salt. Clients derive it as the trimmed,
+        //     lowercased email, so any other email-derived value gives a salt that clients cannot
+        //     reproduce. A salt without '@' is not email-derived and is accepted as sent.
+        if (IsEmailDerivedSaltThatDoesNotMatchEmail(MasterPasswordUnlock?.Salt))
+        {
+            yield return new ValidationResult(
+                "Invalid master password salt.",
+                [nameof(MasterPasswordUnlock.Salt)]);
+        }
+
         // 3. Validate root kdf values if kdf values are not in the unlock and authentication.
         if (MasterPasswordUnlock == null && MasterPasswordAuthentication == null)
         {
@@ -345,5 +355,12 @@ public class RegisterFinishRequestModel : IValidatableObject
                 yield return new ValidationResult("Invalid registration finish request");
                 break;
         }
+    }
+
+    private bool IsEmailDerivedSaltThatDoesNotMatchEmail(string? salt)
+    {
+        return salt is not null &&
+               salt.Contains('@') &&
+               !string.Equals(salt, Email.ToLowerInvariant().Trim(), StringComparison.Ordinal);
     }
 }
