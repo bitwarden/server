@@ -113,31 +113,41 @@ internal class MailKitSmtpMailDeliveryService : IMailDeliveryService
                 );
             }
 
-            if (_smtp.AuthType == SmtpAuthType.Password)
+            switch (_smtp.AuthType)
             {
-                if (!string.IsNullOrWhiteSpace(_smtp.Username) && !string.IsNullOrWhiteSpace(_smtp.Password))
+                case SmtpAuthType.Password:
                 {
-                    await client.AuthenticateAsync(
-                        _smtp.Username,
-                        _smtp.Password,
-                        cancellationToken
-                    );
+                    if (!string.IsNullOrWhiteSpace(_smtp.Username) && !string.IsNullOrWhiteSpace(_smtp.Password))
+                    {
+                        await client.AuthenticateAsync(
+                            _smtp.Username,
+                            _smtp.Password,
+                            cancellationToken
+                        );
+                    }
+
+                    break;
                 }
-            }
-            else
-            {
-                var credentials = await _credentialProvider.GetCredentialsAsync(cancellationToken);
-                try
+                case SmtpAuthType.MicrosoftOAuth:
+                case SmtpAuthType.CustomOAuth:
                 {
-                    await client.AuthenticateAsync(credentials, cancellationToken);
+                    var credentials = await _credentialProvider.GetCredentialsAsync(cancellationToken);
+                    try
+                    {
+                        await client.AuthenticateAsync(credentials, cancellationToken);
+                    }
+                    catch (MailKit.Security.AuthenticationException)
+                    {
+                        await _credentialProvider.InvalidateAsync(credentials, cancellationToken);
+                        var retryCredentials = await _credentialProvider.GetCredentialsAsync(cancellationToken);
+                        // A second failure propagates to the caller.
+                        await client.AuthenticateAsync(retryCredentials, cancellationToken);
+                    }
+
+                    break;
                 }
-                catch (MailKit.Security.AuthenticationException)
-                {
-                    await _credentialProvider.InvalidateAsync(credentials, cancellationToken);
-                    var retryCredentials = await _credentialProvider.GetCredentialsAsync(cancellationToken);
-                    // A second failure propagates to the caller.
-                    await client.AuthenticateAsync(retryCredentials, cancellationToken);
-                }
+                default:
+                    throw new ArgumentOutOfRangeException();
             }
 
             await client.SendAsync(mimeMessage, cancellationToken);

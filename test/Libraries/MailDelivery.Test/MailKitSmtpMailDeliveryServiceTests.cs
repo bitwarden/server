@@ -239,4 +239,18 @@ public class MailKitSmtpMailDeliveryServiceTests
 
         await credentialProvider.Received(2).GetCredentialsAsync(Arg.Any<CancellationToken>());
     }
+
+    [Fact]
+    public async Task SendEmailAsync_UnknownAuthType_ThrowsArgumentOutOfRangeException()
+    {
+        var port = RandomPort();
+        using var smtpServer = new SmtpServer(
+            new DefaultServerBehaviour(false, port, CreateSelfSignedCert("localhost")));
+        smtpServer.Start();
+
+        var sut = CreateSutForServer(port, (SmtpAuthType)999, Substitute.For<ISmtpCredentialProvider>());
+
+        using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+        await Assert.ThrowsAsync<ArgumentOutOfRangeException>(() => SendTestMessageAsync(sut, cts.Token));
+    }
 }
