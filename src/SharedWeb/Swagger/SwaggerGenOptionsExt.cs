@@ -29,6 +29,7 @@ public static class SwaggerGenOptionsExt
 
         config.OperationFilter<ActionNameOperationFilter>();
         config.OperationFilter<BindNeverOperationFilter>();
+        config.OperationFilter<MultipartFileUploadOperationFilter>();
         config.DocumentFilter<SendAccessBearerOperationFilter>();
 
         // Set the operation ID to the name of the controller followed by the name of the function.
