@@ -12,7 +12,7 @@ using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Xunit;
-using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorIntegrationTestHelpers;
+using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorTestHelpers;
 
 namespace Bit.Api.IntegrationTest.Auth.EmergencyAccess;
 

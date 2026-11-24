@@ -544,7 +544,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
             _factory, _organization.Id, OrganizationUserType.User);
         await SetResetPasswordKeyAsync(targetOrgUser);
 
-        var device = await TwoFactorIntegrationTestHelpers.SeedTwoFactorRememberTokenAsync(
+        var device = await TwoFactorTestHelpers.SeedTwoFactorRememberTokenAsync(
             _factory, targetEmail, "stamp-before-reset");
 
         // Act
@@ -559,7 +559,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
-        await TwoFactorIntegrationTestHelpers.AssertTwoFactorRememberTokenRotatedAsync(
+        await TwoFactorTestHelpers.AssertTwoFactorRememberTokenRotatedAsync(
             _factory, targetEmail, device, "stamp-before-reset");
     }
 
@@ -580,7 +580,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
             _factory, _organization.Id, OrganizationUserType.User);
         await SetResetPasswordKeyAsync(targetOrgUser);
 
-        var device = await TwoFactorIntegrationTestHelpers.SeedTwoFactorRememberTokenAsync(
+        var device = await TwoFactorTestHelpers.SeedTwoFactorRememberTokenAsync(
             _factory, targetEmail, "stamp-untouched");
 
         // Act
@@ -597,7 +597,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
-        await TwoFactorIntegrationTestHelpers.AssertTwoFactorRememberTokenUnchangedAsync(
+        await TwoFactorTestHelpers.AssertTwoFactorRememberTokenUnchangedAsync(
             _factory, targetEmail, device, "stamp-untouched");
     }
 
@@ -613,7 +613,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
             _factory, _organization.Id, OrganizationUserType.User);
         await SetResetPasswordKeyAsync(targetOrgUser);
 
-        var device = await TwoFactorIntegrationTestHelpers.SeedTwoFactorRememberTokenAsync(
+        var device = await TwoFactorTestHelpers.SeedTwoFactorRememberTokenAsync(
             _factory, targetEmail, "stamp-before-reset");
 
         // Act
@@ -630,7 +630,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
-        await TwoFactorIntegrationTestHelpers.AssertTwoFactorRememberTokenRotatedAsync(
+        await TwoFactorTestHelpers.AssertTwoFactorRememberTokenRotatedAsync(
             _factory, targetEmail, device, "stamp-before-reset");
     }
 }
