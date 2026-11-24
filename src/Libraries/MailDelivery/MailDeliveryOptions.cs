@@ -143,7 +143,7 @@ public sealed class MailDeliveryOptions
         /// Authentication mechanism used when connecting. Defaults to <see cref="SmtpAuthType.Password"/>,
         /// which requires no OAuth properties.
         /// </summary>
-        public SmtpAuthType AuthType { get; set; }
+        public SmtpAuthType AuthType { get; set; } = SmtpAuthType.Password;
 
         /// <summary>
         /// Microsoft Entra tenant ID. Shorthand for <see cref="OAuth"/>'s <see cref="OAuthOptions.TokenEndpoint"/>:
