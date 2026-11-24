@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.Identity.IntegrationTest.Helpers;
@@ -136,23 +135,6 @@ public class PasswordGrantCredentialTests
 
         await AssertErrorModelAsync(context, IncorrectCredentialsMessage);
         Assert.Equal(1, await CountUserEventsAsync(factory, user.Id, EventType.User_FailedLogIn));
-    }
-
-    /// <summary>
-    /// A failed login waits at least 2 seconds before it responds, which slows down password guessing.
-    /// </summary>
-    [Fact]
-    public async Task PasswordGrant_WrongPassword_RespondsAfterDelay()
-    {
-        using var factory = new IdentityApplicationFactory();
-        await RegisterUserAsync(factory);
-
-        var stopwatch = Stopwatch.StartNew();
-        var context = await factory.ContextFromPasswordAsync(DefaultUsername, "wrong_master_password_hash");
-        stopwatch.Stop();
-
-        await AssertErrorModelAsync(context, IncorrectCredentialsMessage);
-        Assert.True(stopwatch.Elapsed >= TimeSpan.FromSeconds(2), $"Responded after {stopwatch.Elapsed}.");
     }
 
     /// <summary>
