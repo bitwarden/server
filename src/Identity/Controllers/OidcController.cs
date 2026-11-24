@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Bit.Core;
 using Bit.Core.Auth.IdentityServer;
@@ -11,6 +11,7 @@ using Duende.IdentityServer;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Bit.Identity.Controllers;
@@ -30,7 +31,15 @@ public class OidcController : Controller
     private readonly IOAuthConsentNonceStore _nonceStore;
     private readonly IFeatureService _featureService;
     private readonly GlobalSettings _globalSettings;
+    private readonly IDataProtector _consentCsrfProtector;
     private readonly ILogger<OidcController> _logger;
+
+    /// <summary>
+    /// Browser-binding cookie set when a partner request is redirected to the web vault and verified at
+    /// the consent callback, so only the browser that started the authorize can complete it.
+    /// </summary>
+    private const string ConsentCsrfCookieName = "bw.oidc_consent_csrf";
+    private const string ConsentCsrfCookiePath = "/oidc";
 
     public OidcController(
         IIdentityServerInteractionService interaction,
@@ -39,6 +48,7 @@ public class OidcController : Controller
         IOAuthConsentNonceStore nonceStore,
         IFeatureService featureService,
         GlobalSettings globalSettings,
+        IDataProtectionProvider dataProtectionProvider,
         ILogger<OidcController> logger)
     {
         _interaction = interaction;
@@ -47,6 +57,7 @@ public class OidcController : Controller
         _nonceStore = nonceStore;
         _featureService = featureService;
         _globalSettings = globalSettings;
+        _consentCsrfProtector = dataProtectionProvider.CreateProtector("OidcConsentCsrf");
         _logger = logger;
     }
 
@@ -75,6 +86,7 @@ public class OidcController : Controller
 
         if (IsPartnerRequest(context))
         {
+            IssueConsentCsrfCookie(returnUrl);
             return Redirect(BuildVaultAuthorizeUrl(returnUrl));
         }
 
@@ -91,6 +103,7 @@ public class OidcController : Controller
         var context = await _interaction.GetAuthorizationContextAsync(returnUrl);
         if (context != null && IsPartnerRequest(context))
         {
+            IssueConsentCsrfCookie(returnUrl);
             return Redirect(BuildVaultAuthorizeUrl(returnUrl));
         }
 
@@ -145,15 +158,29 @@ public class OidcController : Controller
             throw new InvalidOperationException("Invalid consent token.");
         }
 
+        // Browser binding: the callback signs the user in, so it must come from the same browser that
+        // started this authorize request. Without this a leaked/forwarded consent token could be
+        // completed in a victim's browser, logging them in as the token's user (login CSRF).
+        if (!TryValidateConsentCsrfCookie(returnUrl))
+        {
+            throw new InvalidOperationException("Consent request could not be verified for this browser.");
+        }
+
         // Single-use: a replayed callback fails here even with an otherwise-valid token.
         if (!await _nonceStore.TryConsumeAsync(consentToken.Nonce))
         {
             throw new InvalidOperationException("Consent token has already been used or has expired.");
         }
 
+        // Short-lived, non-persistent session: it only needs to live long enough for IdentityServer to
+        // resume and complete this one authorize request, mirroring the org-SSO sign-in.
         await HttpContext.SignInAsync(new IdentityServerUser(consentToken.UserId.ToString())
         {
             IdentityProvider = IdentityServerConstants.LocalIdentityProvider,
+        }, new AuthenticationProperties
+        {
+            IsPersistent = false,
+            ExpiresUtc = DateTimeOffset.UtcNow.AddMinutes(1),
         });
 
         await _interaction.GrantConsentAsync(context, new ConsentResponse
@@ -162,6 +189,7 @@ public class OidcController : Controller
             RememberConsent = true,
         }, consentToken.UserId.ToString());
 
+        ClearConsentCsrfCookie();
         return Redirect(returnUrl);
     }
 
@@ -175,6 +203,50 @@ public class OidcController : Controller
         var vaultUri = _globalSettings.BaseServiceUri.Vault;
         return $"{vaultUri}/#/oauth/authorize?returnUrl={Uri.EscapeDataString(returnUrl)}";
     }
+
+    /// <summary>
+    /// Sets a browser-binding cookie carrying the data-protected hash of the authorize request. Only a
+    /// browser that passed through this redirect holds it; <see cref="TryValidateConsentCsrfCookie"/>
+    /// requires it at the callback, bound to the same request.
+    /// </summary>
+    private void IssueConsentCsrfCookie(string returnUrl)
+    {
+        var payload = _consentCsrfProtector.Protect(OAuthConsentTokenable.HashAuthorizationRequest(returnUrl));
+        Response.Cookies.Append(ConsentCsrfCookieName, payload, new CookieOptions
+        {
+            HttpOnly = true,
+            // Secure in production (https); relaxed on http for local development.
+            Secure = Request.IsHttps,
+            SameSite = SameSiteMode.Lax,
+            Path = ConsentCsrfCookiePath,
+            MaxAge = OAuthConsentTokenable.Lifetime,
+            IsEssential = true,
+        });
+    }
+
+    private bool TryValidateConsentCsrfCookie(string returnUrl)
+    {
+        if (!Request.Cookies.TryGetValue(ConsentCsrfCookieName, out var payload) ||
+            string.IsNullOrEmpty(payload))
+        {
+            return false;
+        }
+
+        try
+        {
+            var boundHash = _consentCsrfProtector.Unprotect(payload);
+            return string.Equals(boundHash, OAuthConsentTokenable.HashAuthorizationRequest(returnUrl),
+                StringComparison.Ordinal);
+        }
+        catch
+        {
+            // Tampered or undecryptable cookie.
+            return false;
+        }
+    }
+
+    private void ClearConsentCsrfCookie() =>
+        Response.Cookies.Delete(ConsentCsrfCookieName, new CookieOptions { Path = ConsentCsrfCookiePath });
 
     /// <summary>
     /// The agent's loopback redirect the web vault completion connector forwards the PSK to. Supplied by

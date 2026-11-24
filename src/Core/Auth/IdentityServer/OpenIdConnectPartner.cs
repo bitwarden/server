@@ -1,4 +1,4 @@
-namespace Bit.Core.Auth.IdentityServer;
+﻿namespace Bit.Core.Auth.IdentityServer;
 
 /// <summary>
 /// A pre-registered third-party "Login with Bitwarden" OIDC partner (e.g. an agentic bot integration),

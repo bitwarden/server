@@ -1,4 +1,4 @@
-#nullable enable
+﻿#nullable enable
 
 using Bit.Core.Auth.ConnectedApps.Commands.Interfaces;
 using Bit.Core.Auth.Entities;

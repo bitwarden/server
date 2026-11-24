@@ -1,4 +1,4 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
 using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Utilities;

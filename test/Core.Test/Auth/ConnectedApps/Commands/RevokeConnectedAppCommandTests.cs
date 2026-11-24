@@ -1,4 +1,4 @@
-using Bit.Core.Auth.ConnectedApps.Commands;
+﻿using Bit.Core.Auth.ConnectedApps.Commands;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Repositories;
@@ -28,6 +28,9 @@ public class RevokeConnectedAppCommandTests
         await sutProvider.Sut.RevokeAsync(connection.UserId, connection.Id);
 
         await sutProvider.GetDependency<IConnectedAppRepository>().Received(1).DeleteAsync(connection);
+        // The remembered OIDC consent grant for this partner is also revoked.
+        await sutProvider.GetDependency<IGrantRepository>().Received(1).DeleteManyAsync(
+            connection.UserId.ToString(), null, connection.PartnerClientId, "user_consent");
         await sutProvider.GetDependency<IPushNotificationService>()
             .Received(1).PushAsync(Arg.Is<PushNotification<SyncConnectedAppPushNotification>>(
                 p => p.Type == PushType.SyncConnectedAppDelete && p.TargetId == connection.UserId));
@@ -45,6 +48,8 @@ public class RevokeConnectedAppCommandTests
 
         await sutProvider.GetDependency<IConnectedAppRepository>()
             .DidNotReceiveWithAnyArgs().DeleteAsync(default);
+        await sutProvider.GetDependency<IGrantRepository>()
+            .DidNotReceiveWithAnyArgs().DeleteManyAsync(default, default, default, default);
     }
 
     [Theory, BitAutoData]

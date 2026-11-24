@@ -1,4 +1,4 @@
-namespace Bit.Core.Auth.Models;
+﻿namespace Bit.Core.Auth.Models;
 
 /// <summary>
 /// Push payload telling a user's clients an <c>ConnectedApp</c> changed so they can re-sync the

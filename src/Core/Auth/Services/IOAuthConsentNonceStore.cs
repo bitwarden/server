@@ -1,4 +1,4 @@
-namespace Bit.Core.Auth.Services;
+﻿namespace Bit.Core.Auth.Services;
 
 /// <summary>
 /// Issues and single-use-consumes nonces for the OIDC "Login with Bitwarden" consent handshake. A nonce is

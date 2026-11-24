@@ -1,4 +1,4 @@
-using Bit.Core.Auth.IdentityServer;
+﻿using Bit.Core.Auth.IdentityServer;
 using Duende.IdentityServer;
 using Duende.IdentityServer.Models;
 

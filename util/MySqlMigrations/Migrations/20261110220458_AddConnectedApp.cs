@@ -1,54 +1,52 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore.Migrations;
+﻿using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace Bit.MySqlMigrations.Migrations
+namespace Bit.MySqlMigrations.Migrations;
+
+/// <inheritdoc />
+public partial class AddConnectedApp : Migration
 {
     /// <inheritdoc />
-    public partial class AddConnectedApp : Migration
+    protected override void Up(MigrationBuilder migrationBuilder)
     {
-        /// <inheritdoc />
-        protected override void Up(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.CreateTable(
-                name: "ConnectedApp",
-                columns: table => new
-                {
-                    Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    UserId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
-                    PartnerClientId = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Name = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    Key = table.Column<string>(type: "longtext", nullable: false)
-                        .Annotation("MySql:CharSet", "utf8mb4"),
-                    CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    RevisionDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
-                    RevokedDate = table.Column<DateTime>(type: "datetime(6)", nullable: true)
-                },
-                constraints: table =>
-                {
-                    table.PrimaryKey("PK_ConnectedApp", x => x.Id);
-                    table.ForeignKey(
-                        name: "FK_ConnectedApp_User_UserId",
-                        column: x => x.UserId,
-                        principalTable: "User",
-                        principalColumn: "Id");
-                })
-                .Annotation("MySql:CharSet", "utf8mb4");
+        migrationBuilder.CreateTable(
+            name: "ConnectedApp",
+            columns: table => new
+            {
+                Id = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                UserId = table.Column<Guid>(type: "char(36)", nullable: false, collation: "ascii_general_ci"),
+                PartnerClientId = table.Column<string>(type: "longtext", nullable: false)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
+                Name = table.Column<string>(type: "longtext", nullable: false)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
+                Key = table.Column<string>(type: "longtext", nullable: false)
+                    .Annotation("MySql:CharSet", "utf8mb4"),
+                CreationDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                RevisionDate = table.Column<DateTime>(type: "datetime(6)", nullable: false),
+                RevokedDate = table.Column<DateTime>(type: "datetime(6)", nullable: true)
+            },
+            constraints: table =>
+            {
+                table.PrimaryKey("PK_ConnectedApp", x => x.Id);
+                table.ForeignKey(
+                    name: "FK_ConnectedApp_User_UserId",
+                    column: x => x.UserId,
+                    principalTable: "User",
+                    principalColumn: "Id");
+            })
+            .Annotation("MySql:CharSet", "utf8mb4");
 
-            migrationBuilder.CreateIndex(
-                name: "IX_ConnectedApp_UserId",
-                table: "ConnectedApp",
-                column: "UserId");
-        }
+        migrationBuilder.CreateIndex(
+            name: "IX_ConnectedApp_UserId",
+            table: "ConnectedApp",
+            column: "UserId");
+    }
 
-        /// <inheritdoc />
-        protected override void Down(MigrationBuilder migrationBuilder)
-        {
-            migrationBuilder.DropTable(
-                name: "ConnectedApp");
-        }
+    /// <inheritdoc />
+    protected override void Down(MigrationBuilder migrationBuilder)
+    {
+        migrationBuilder.DropTable(
+            name: "ConnectedApp");
     }
 }

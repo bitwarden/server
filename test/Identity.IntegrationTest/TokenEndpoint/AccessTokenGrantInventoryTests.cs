@@ -52,6 +52,9 @@ public class AccessTokenGrantInventoryTests
         [typeof(InternalClientProvider)] = false,
         [typeof(SecretsManagerApiKeyProvider)] = false,
         [typeof(PamAccessConnectorClientProvider)] = false,
+        // "Login with Bitwarden" partner clients: authorization-code + identity scopes only, so they
+        // issue no user access token and need no device-claim tests.
+        [typeof(PartnerClientProvider)] = false,
     };
 
     [Fact]

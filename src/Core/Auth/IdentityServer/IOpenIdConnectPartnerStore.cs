@@ -1,4 +1,4 @@
-namespace Bit.Core.Auth.IdentityServer;
+﻿namespace Bit.Core.Auth.IdentityServer;
 
 /// <summary>
 /// Read-only registry of the pre-registered "Login with Bitwarden" OIDC partner clients, sourced from

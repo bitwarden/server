@@ -1,4 +1,4 @@
-namespace Bit.Core.Auth.Models.Business.Tokenables;
+﻿namespace Bit.Core.Auth.Models.Business.Tokenables;
 
 /// <summary>Mints <see cref="OAuthConsentTokenable"/> instances with the configured single-use lifetime.</summary>
 public interface IOAuthConsentTokenableFactory

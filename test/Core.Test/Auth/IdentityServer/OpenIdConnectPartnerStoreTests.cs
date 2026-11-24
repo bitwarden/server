@@ -1,4 +1,4 @@
-using Bit.Core.Auth.IdentityServer;
+﻿using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Settings;
 using Xunit;
 

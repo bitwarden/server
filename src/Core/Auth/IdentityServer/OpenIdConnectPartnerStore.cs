@@ -1,4 +1,4 @@
-using System.Collections.Frozen;
+﻿using System.Collections.Frozen;
 using Bit.Core.Settings;
 
 namespace Bit.Core.Auth.IdentityServer;

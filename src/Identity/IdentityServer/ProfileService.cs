@@ -1,4 +1,6 @@
 ﻿using System.Security.Claims;
+using System.Security.Cryptography;
+using System.Text;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
@@ -9,7 +11,6 @@ using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Utilities;
 using Duende.IdentityModel;
-using Duende.IdentityServer.Extensions;
 using Duende.IdentityServer.Models;
 using Duende.IdentityServer.Services;
 
@@ -64,7 +65,9 @@ public class ProfileService : IProfileService
             {
                 var identityClaims = new List<Claim>
                 {
-                    new(JwtClaimTypes.Subject, partnerUser.Id.ToString()),
+                    // Pairwise subject: a per-partner identifier so two partners cannot correlate the same
+                    // user by comparing `sub`, and the real user id is never exposed.
+                    new(JwtClaimTypes.Subject, PairwiseSubject(partnerUser.Id, context.Client.ClientId)),
                     new(JwtClaimTypes.Email, partnerUser.Email ?? string.Empty),
                     new(JwtClaimTypes.EmailVerified, partnerUser.EmailVerified ? "true" : "false",
                         ClaimValueTypes.Boolean),
@@ -118,6 +121,16 @@ public class ProfileService : IProfileService
         {
             context.IssuedClaims.AddRange(newClaims);
         }
+    }
+
+    /// <summary>
+    /// Derives a stable, per-partner pseudonymous subject identifier for a user, so a token issued to one
+    /// partner cannot be correlated with a token issued to another and the real user id is never exposed.
+    /// </summary>
+    private static string PairwiseSubject(Guid userId, string clientId)
+    {
+        var hash = SHA256.HashData(Encoding.UTF8.GetBytes($"{userId:N}|{clientId}"));
+        return CoreHelpers.Base64UrlEncode(hash);
     }
 
     public async Task IsActiveAsync(IsActiveContext context)

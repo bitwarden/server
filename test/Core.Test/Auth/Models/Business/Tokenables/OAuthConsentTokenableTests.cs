@@ -1,4 +1,4 @@
-using Bit.Core.Auth.Models.Business.Tokenables;
+﻿using Bit.Core.Auth.Models.Business.Tokenables;
 using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Microsoft.AspNetCore.DataProtection;

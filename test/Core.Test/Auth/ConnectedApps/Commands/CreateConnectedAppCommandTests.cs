@@ -1,4 +1,4 @@
-using Bit.Core.Auth.ConnectedApps.Commands;
+﻿using Bit.Core.Auth.ConnectedApps.Commands;
 using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models;
