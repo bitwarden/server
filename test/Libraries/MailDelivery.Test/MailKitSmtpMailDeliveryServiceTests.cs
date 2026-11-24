@@ -151,8 +151,10 @@ public class MailKitSmtpMailDeliveryServiceTests
         await credentialProvider.DidNotReceive().InvalidateAsync(Arg.Any<SaslMechanism>(), Arg.Any<CancellationToken>());
     }
 
-    [Fact]
-    public async Task SendEmailAsync_OAuth_Success_CallsGetCredentialsOnceAndNeverInvalidates()
+    [Theory]
+    [InlineData(SmtpAuthType.MicrosoftOAuth)]
+    [InlineData(SmtpAuthType.CustomOAuth)]
+    public async Task SendEmailAsync_OAuth_Success_CallsGetCredentialsOnceAndNeverInvalidates(SmtpAuthType authType)
     {
         var port = RandomPort();
         var behavior = new DefaultServerBehaviour(false, port, CreateSelfSignedCert("localhost"));
@@ -171,7 +173,7 @@ public class MailKitSmtpMailDeliveryServiceTests
         credentialProvider.GetCredentialsAsync(Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<SaslMechanism>(new SaslMechanismPlain("oauth-user", "good-token")));
 
-        var sut = CreateSutForServer(port, SmtpAuthType.MicrosoftOAuth, credentialProvider);
+        var sut = CreateSutForServer(port, authType, credentialProvider);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await SendTestMessageAsync(sut, cts.Token);
@@ -180,8 +182,10 @@ public class MailKitSmtpMailDeliveryServiceTests
         await credentialProvider.DidNotReceive().InvalidateAsync(Arg.Any<SaslMechanism>(), Arg.Any<CancellationToken>());
     }
 
-    [Fact]
-    public async Task SendEmailAsync_OAuth_FirstAuthenticationRejected_InvalidatesAndRetriesOnce()
+    [Theory]
+    [InlineData(SmtpAuthType.MicrosoftOAuth)]
+    [InlineData(SmtpAuthType.CustomOAuth)]
+    public async Task SendEmailAsync_OAuth_FirstAuthenticationRejected_InvalidatesAndRetriesOnce(SmtpAuthType authType)
     {
         var port = RandomPort();
         var behavior = new DefaultServerBehaviour(false, port, CreateSelfSignedCert("localhost"));
@@ -204,7 +208,7 @@ public class MailKitSmtpMailDeliveryServiceTests
                 Task.FromResult<SaslMechanism>(rejectedCredentials),
                 Task.FromResult<SaslMechanism>(acceptedCredentials));
 
-        var sut = CreateSutForServer(port, SmtpAuthType.MicrosoftOAuth, credentialProvider);
+        var sut = CreateSutForServer(port, authType, credentialProvider);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await SendTestMessageAsync(sut, cts.Token);
@@ -213,8 +217,10 @@ public class MailKitSmtpMailDeliveryServiceTests
         await credentialProvider.Received(2).GetCredentialsAsync(Arg.Any<CancellationToken>());
     }
 
-    [Fact]
-    public async Task SendEmailAsync_OAuth_SecondAuthenticationRejected_PropagatesAndDoesNotRetryAgain()
+    [Theory]
+    [InlineData(SmtpAuthType.MicrosoftOAuth)]
+    [InlineData(SmtpAuthType.CustomOAuth)]
+    public async Task SendEmailAsync_OAuth_SecondAuthenticationRejected_PropagatesAndDoesNotRetryAgain(SmtpAuthType authType)
     {
         var port = RandomPort();
         var behavior = new DefaultServerBehaviour(false, port, CreateSelfSignedCert("localhost"));
@@ -232,7 +238,7 @@ public class MailKitSmtpMailDeliveryServiceTests
                 Task.FromResult<SaslMechanism>(new SaslMechanismPlain("oauth-user", "bad-token-1")),
                 Task.FromResult<SaslMechanism>(new SaslMechanismPlain("oauth-user", "bad-token-2")));
 
-        var sut = CreateSutForServer(port, SmtpAuthType.MicrosoftOAuth, credentialProvider);
+        var sut = CreateSutForServer(port, authType, credentialProvider);
 
         using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
         await Assert.ThrowsAsync<AuthenticationException>(() => SendTestMessageAsync(sut, cts.Token));
