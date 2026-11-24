@@ -78,6 +78,36 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task PutPartial_PushesUserFieldsToTheActingUser(User user, Guid folderId, SutProvider<CiphersController> sutProvider)
+    {
+        var cipherId = Guid.NewGuid();
+
+        sutProvider.GetDependency<IUserService>()
+            .GetUserByPrincipalAsync(Arg.Any<ClaimsPrincipal>())
+            .Returns(user);
+
+        var cipherDetails = new CipherDetails
+        {
+            Id = cipherId,
+            UserId = user.Id,
+            Favorite = true,
+            FolderId = folderId,
+            Type = Core.Vault.Enums.CipherType.SecureNote,
+            Data = "{}"
+        };
+
+        sutProvider.GetDependency<ICipherRepository>()
+            .GetByIdAsync(cipherId, user.Id)
+            .Returns(cipherDetails);
+
+        await sutProvider.Sut.PutPartial(cipherId, new CipherPartialRequestModel { Favorite = true, FolderId = folderId.ToString() });
+
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1)
+            .PushSyncCipherUserFieldsAsync(user.Id,
+                Arg.Is<IReadOnlyCollection<CipherDetails>>(c => c.Single() == cipherDetails), true);
+    }
+
+    [Theory, BitAutoData]
     public async Task Put_BlobEncryptedLoginCipherWithOldClient_SkipsFido2VersionCheck(
         User user,
         SutProvider<CiphersController> sutProvider)

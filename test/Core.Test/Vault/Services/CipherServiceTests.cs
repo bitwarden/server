@@ -3434,6 +3434,17 @@ public class CipherServiceTests
     }
 
     [Theory, BitAutoData]
+    public async Task MoveManyAsync_PushesUserFieldsToTheMovingUser(
+        SutProvider<CipherService> sutProvider, Guid movingUserId, List<Guid> cipherIds)
+    {
+        await sutProvider.Sut.MoveManyAsync(cipherIds, null, movingUserId);
+
+        await sutProvider.GetDependency<ICipherSyncPushService>().Received(1)
+            .PushSyncCipherUserFieldsAsync(movingUserId,
+                Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.SequenceEqual(cipherIds)), false);
+    }
+
+    [Theory, BitAutoData]
     public async Task DeleteManyAsync_OneGatedCipher_ThrowsAndDeletesNothing(
         SutProvider<CipherService> sutProvider, List<CipherDetails> ciphers, Guid deletingUserId)
     {

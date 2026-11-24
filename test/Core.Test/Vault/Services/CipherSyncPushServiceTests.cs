@@ -3,6 +3,9 @@ using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Models;
+using Bit.Core.Vault.Models.Data;
+using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
@@ -277,4 +280,108 @@ public class CipherSyncPushServiceTests
                 n.Payload.CollectionIds != null &&
                 n.Payload.CollectionIds.Contains(collectionId)));
     }
+
+    [Theory, BitAutoData]
+    public async Task PushSyncCipherUserFieldsAsync_FlagOff_PushesSyncCiphers(
+        SutProvider<CipherSyncPushService> sutProvider, Guid userId, CipherDetails cipher)
+    {
+        await sutProvider.Sut.PushSyncCipherUserFieldsAsync(userId, [cipher], true);
+
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n =>
+                n.Type == PushType.SyncCiphers &&
+                n.Target == NotificationTarget.User &&
+                n.TargetId == userId &&
+                n.ExcludeCurrentContext));
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
+            .PushAsync(Arg.Any<PushNotification<SyncCipherUserFieldsPushNotification>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PushSyncCipherUserFieldsAsync_FlagOn_PushesUserFieldsPerCipher(
+        SutProvider<CipherSyncPushService> sutProvider, Guid userId, CipherDetails cipher1, CipherDetails cipher2)
+    {
+        EnableUserFieldsPush(sutProvider);
+        cipher1.ArchivedDate = DateTime.UtcNow;
+        cipher2.ArchivedDate = null;
+
+        await sutProvider.Sut.PushSyncCipherUserFieldsAsync(userId, [cipher1, cipher2], true);
+
+        foreach (var cipher in new[] { cipher1, cipher2 })
+        {
+            await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+                .PushAsync(Arg.Is<PushNotification<SyncCipherUserFieldsPushNotification>>(n =>
+                    n.Type == PushType.SyncCipherUserFields &&
+                    n.Target == NotificationTarget.User &&
+                    n.TargetId == userId &&
+                    n.ExcludeCurrentContext &&
+                    n.Payload.Id == cipher.Id &&
+                    n.Payload.UserId == userId &&
+                    n.Payload.FolderId == cipher.FolderId &&
+                    n.Payload.Favorite == cipher.Favorite &&
+                    n.Payload.ArchivedDate == cipher.ArchivedDate));
+        }
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PushSyncCipherUserFieldsAsync_FlagOn_TooManyCiphers_PushesSyncCiphers(
+        SutProvider<CipherSyncPushService> sutProvider, Guid userId)
+    {
+        EnableUserFieldsPush(sutProvider);
+        var ciphers = Enumerable.Range(0, CipherSyncPushService.MaxSyncCipherUserFieldsPushes + 1)
+            .Select(_ => new CipherDetails { Id = Guid.NewGuid() })
+            .ToList();
+
+        await sutProvider.Sut.PushSyncCipherUserFieldsAsync(userId, ciphers, true);
+
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n =>
+                n.Type == PushType.SyncCiphers && n.TargetId == userId));
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
+            .PushAsync(Arg.Any<PushNotification<SyncCipherUserFieldsPushNotification>>());
+    }
+
+    [Theory, BitAutoData]
+    public async Task PushSyncCipherUserFieldsAsync_CipherIds_FlagOff_PushesSyncCiphersWithoutLoadingCiphers(
+        SutProvider<CipherSyncPushService> sutProvider, Guid userId, Guid cipherId)
+    {
+        await sutProvider.Sut.PushSyncCipherUserFieldsAsync(userId, [cipherId], false);
+
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushAsync(Arg.Is<PushNotification<UserPushNotification>>(n =>
+                n.Type == PushType.SyncCiphers &&
+                n.TargetId == userId &&
+                !n.ExcludeCurrentContext));
+        await sutProvider.GetDependency<ICipherRepository>().DidNotReceiveWithAnyArgs()
+            .GetByIdAsync(default, default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task PushSyncCipherUserFieldsAsync_CipherIds_FlagOn_PushesLoadedCiphersAndSkipsMissing(
+        SutProvider<CipherSyncPushService> sutProvider, Guid userId, CipherDetails cipher, Guid missingCipherId)
+    {
+        EnableUserFieldsPush(sutProvider);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipher.Id, userId).Returns(cipher);
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(missingCipherId, userId)
+            .Returns((CipherDetails)null!);
+
+        await sutProvider.Sut.PushSyncCipherUserFieldsAsync(userId, [cipher.Id, missingCipherId], false);
+
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushAsync(Arg.Any<PushNotification<SyncCipherUserFieldsPushNotification>>());
+        await sutProvider.GetDependency<IPushNotificationService>().Received(1)
+            .PushAsync(Arg.Is<PushNotification<SyncCipherUserFieldsPushNotification>>(n =>
+                n.Payload.Id == cipher.Id &&
+                n.Payload.FolderId == cipher.FolderId &&
+                n.ExcludeCurrentContext));
+        await sutProvider.GetDependency<IPushNotificationService>().DidNotReceiveWithAnyArgs()
+            .PushAsync(Arg.Any<PushNotification<UserPushNotification>>());
+    }
+
+    private static void EnableUserFieldsPush(SutProvider<CipherSyncPushService> sutProvider)
+        => sutProvider.GetDependency<IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM46336_SyncCipherUserFieldsPush)
+            .Returns(true);
 }
