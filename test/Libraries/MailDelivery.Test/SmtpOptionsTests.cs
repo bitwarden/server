@@ -1,4 +1,4 @@
-using Bit.Core.Platform.Mail.Delivery;
+﻿using Bit.Core.Platform.Mail.Delivery;
 
 namespace Bit.MailDelivery.Test;
 
