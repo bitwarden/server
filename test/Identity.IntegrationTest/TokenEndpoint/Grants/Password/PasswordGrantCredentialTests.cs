@@ -87,7 +87,8 @@ public class PasswordGrantCredentialTests
 
     /// <summary>
     /// A user without a master password, such as a user who logs in with SSO and trusted devices, cannot log in with
-    /// a password.
+    /// a password. The test removes the master password from a registered user and does not create the user through
+    /// SSO, so it covers only the password check.
     /// </summary>
     [Fact]
     public async Task PasswordGrant_UserWithoutMasterPassword_IsRejected()
