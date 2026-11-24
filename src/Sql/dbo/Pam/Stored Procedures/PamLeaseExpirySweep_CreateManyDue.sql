@@ -6,8 +6,10 @@ BEGIN
     SET NOCOUNT ON
     SET XACT_ABORT ON
 
-    -- Expiry is derived, not stored; stamping [SweptDate] decides which run owns a lease. A concurrent sweep blocks
-    -- on the row lock and re-checks [SweptDate] IS NULL afterwards, so it skips what the winner stamped.
+    -- Expiry is derived, not stored; stamping [SweptDate] decides which run owns a lease. The due leases are read
+    -- first and stamped by [Id], so the sweep locks each lease row before its index entries, in the same order as
+    -- the writers that revoke or extend a lease.
+    DECLARE @Due TABLE ([Id] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY)
     DECLARE @Swept TABLE (
         [Id]                UNIQUEIDENTIFIER    NOT NULL PRIMARY KEY,
         [OrganizationId]    UNIQUEIDENTIFIER    NOT NULL,
@@ -18,13 +20,26 @@ BEGIN
         [NotAfter]          DATETIME2(7)        NOT NULL
     )
 
+    INSERT INTO @Due ([Id])
+    SELECT
+        [Id]
+    FROM
+        [dbo].[AccessLease]
+    WHERE
+        [Action] = 0 -- None: no early end recorded, so the closed window is a natural expiry
+        AND [SweptDate] IS NULL
+        AND [NotAfter] <= @Now
+        AND [NotAfter] > @Since -- keeps the read from growing with lease history
+
     BEGIN TRY
         BEGIN TRANSACTION
 
+        -- Re-checked under the row lock, so a lease that a concurrent sweep stamped first, or that a revoke or
+        -- extension changed after the read, is left out.
         UPDATE
-            [dbo].[AccessLease]
+            AL
         SET
-            [SweptDate] = @Now
+            AL.[SweptDate] = @Now
         OUTPUT
             inserted.[Id],
             inserted.[OrganizationId],
@@ -34,11 +49,14 @@ BEGIN
             inserted.[NotBefore],
             inserted.[NotAfter]
         INTO @Swept
+        FROM
+            [dbo].[AccessLease] AL
+        INNER JOIN
+            @Due D ON D.[Id] = AL.[Id]
         WHERE
-            [Action] = 0 -- None: no early end recorded, so the closed window is a natural expiry
-            AND [SweptDate] IS NULL
-            AND [NotAfter] <= @Now
-            AND [NotAfter] > @Since -- keeps the read from growing with lease history
+            AL.[Action] = 0
+            AND AL.[SweptDate] IS NULL
+            AND AL.[NotAfter] <= @Now
 
         -- The caller runs the access-end trigger after commit; this row lets the rotation sweep retry it if it fails.
         INSERT INTO [dbo].[PamPendingAccessEnd]
