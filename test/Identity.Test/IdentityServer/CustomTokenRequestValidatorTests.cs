@@ -1,11 +1,11 @@
 ﻿using System.Reflection;
 using System.Security.Claims;
-using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -77,7 +77,8 @@ public class CustomTokenRequestValidatorTests
             Substitute.For<IMailService>(),
             Substitute.For<IUserAccountKeysQuery>(),
             Substitute.For<IClientVersionValidator>(),
-            _updateDeviceLastActivityCommand);
+            _updateDeviceLastActivityCommand,
+            Substitute.For<IIssueTwoFactorRememberTokenCommand>());
     }
 
     private CustomTokenRequestValidationContext CreateRefreshTokenContext(ClaimsPrincipal subject)
@@ -100,7 +101,6 @@ public class CustomTokenRequestValidatorTests
         };
     }
 
-    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
     public async Task TryUpdateDeviceLastActivityForRefreshAsync_NullSubject_SkipsUpdate()
     {
@@ -108,7 +108,6 @@ public class CustomTokenRequestValidatorTests
         var context = CreateRefreshTokenContext(subject: null);
 
         _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
-        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
 
         // Act
         await _sut.ValidateAsync(context);
@@ -120,7 +119,6 @@ public class CustomTokenRequestValidatorTests
             .UpdateByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>());
     }
 
-    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
     public async Task TryUpdateDeviceLastActivityForRefreshAsync_NoDeviceClaim_SkipsUpdate()
     {
@@ -133,7 +131,6 @@ public class CustomTokenRequestValidatorTests
         var context = CreateRefreshTokenContext(subject);
 
         _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
-        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
 
         // Act
         await _sut.ValidateAsync(context);
@@ -145,7 +142,6 @@ public class CustomTokenRequestValidatorTests
             .UpdateByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>());
     }
 
-    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
     public async Task TryUpdateDeviceLastActivityForRefreshAsync_InvalidUserIdGuid_SkipsUpdate()
     {
@@ -159,7 +155,6 @@ public class CustomTokenRequestValidatorTests
         var context = CreateRefreshTokenContext(subject);
 
         _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
-        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
 
         // Act
         await _sut.ValidateAsync(context);
@@ -171,7 +166,6 @@ public class CustomTokenRequestValidatorTests
             .UpdateByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>());
     }
 
-    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
     public async Task ValidateAsync_UpdateByIdentifierThrows_RefreshTokenSucceeds()
     {
@@ -188,7 +182,6 @@ public class CustomTokenRequestValidatorTests
         var context = CreateRefreshTokenContext(subject);
 
         _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
-        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
         _updateDeviceLastActivityCommand
             .UpdateByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>())
             .Returns<Task>(_ => throw new Exception("Transient failure"));
@@ -206,7 +199,6 @@ public class CustomTokenRequestValidatorTests
             l.Message.Contains("Failed to update device last activity for device with identifier"));
     }
 
-    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
     public async Task TryUpdateDeviceLastActivityForRefreshAsync_Succeeds_UpdateCalledWithCorrectArgsAsync()
     {
@@ -223,7 +215,6 @@ public class CustomTokenRequestValidatorTests
         var context = CreateRefreshTokenContext(subject);
 
         _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
-        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
 
         // Act
         await _sut.ValidateAsync(context);
@@ -237,7 +228,6 @@ public class CustomTokenRequestValidatorTests
             .UpdateByIdentifierAndUserIdAsync(deviceIdentifier, userId, null);
     }
 
-    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Fact]
     public async Task TryUpdateDeviceLastActivityForRefreshAsync_PassesClientVersionFromContext()
     {
@@ -261,6 +251,7 @@ public class CustomTokenRequestValidatorTests
             Substitute.For<ILogger<UserManager<User>>>());
 
         var updateCmd = Substitute.For<IUpdateDeviceLastActivityCommand>();
+        var issueRememberCmd = Substitute.For<IIssueTwoFactorRememberTokenCommand>();
 
         var sut = new CustomTokenRequestValidator(
             userManager,
@@ -282,7 +273,8 @@ public class CustomTokenRequestValidatorTests
             Substitute.For<IMailService>(),
             Substitute.For<IUserAccountKeysQuery>(),
             Substitute.For<IClientVersionValidator>(),
-            updateCmd);
+            updateCmd,
+            issueRememberCmd);
 
         var subject = new ClaimsPrincipal(new ClaimsIdentity(
         [
@@ -292,7 +284,6 @@ public class CustomTokenRequestValidatorTests
         var context = CreateRefreshTokenContext(subject);
 
         _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
-        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
 
         // Act
         await sut.ValidateAsync(context);
@@ -303,132 +294,29 @@ public class CustomTokenRequestValidatorTests
             .UpdateByIdentifierAndUserIdAsync(deviceIdentifier, userId, "2026.5.1");
     }
 
-    // TODO: PM-34091 - remove this test when cleaning up feature flag (disabled case will no longer exist)
-    [Fact]
-    public async Task TryUpdateDeviceLastActivityForRefreshAsync_FeatureFlagDisabled_UpdateNotCalledAsync()
-    {
-        // Arrange
-        var subject = new ClaimsPrincipal(new ClaimsIdentity(
-        [
-            new Claim(JwtClaimTypes.Subject, Guid.NewGuid().ToString()),
-            new Claim(Claims.Device, "test-device-identifier"),
-        ], "test"));
-
-        var context = CreateRefreshTokenContext(subject);
-
-        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
-        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(false);
-
-        // Act
-        await _sut.ValidateAsync(context);
-
-        // Assert: update is skipped — no call made
-        Assert.False(context.Result.IsError);
-        await _updateDeviceLastActivityCommand
-            .DidNotReceive()
-            .UpdateByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>());
-    }
-
-    // CurrentContextMiddleware runs before IdentityServer has parsed the refresh token,
-    // so DeviceIdentifier and UserId are unset on CurrentContext when this validator runs.
-    // The validator must back-fill them from the refresh-token subject before any feature
-    // flag evaluation, so progressive (percentage/targeted) rollouts at /connect/token
-    // bucket reliably by device and user.
-    // TODO: PM-34091 - delete this test and the next when cleaning up the feature flag;
-    // they assert against the ??= back-fill that disappears alongside the IsEnabled check.
-    [Fact]
-    public async Task ValidateAsync_RefreshToken_BackfillsCurrentContextFromSubjectClaims()
-    {
-        // Arrange — refresh-token subject carries the user id (sub) and device claim.
-        // NSubstitute returns string.Empty for unconfigured string properties so set
-        // DeviceIdentifier to null explicitly to simulate the middleware-blind state.
-        _currentContext.DeviceIdentifier = null;
-        var userId = Guid.NewGuid();
-        const string deviceIdentifier = "refresh-token-device-id";
-
-        var subject = new ClaimsPrincipal(new ClaimsIdentity(
-        [
-            new Claim(JwtClaimTypes.Subject, userId.ToString()),
-            new Claim(Claims.Device, deviceIdentifier),
-        ], "test"));
-
-        var context = CreateRefreshTokenContext(subject);
-
-        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
-
-        // Act
-        await _sut.ValidateAsync(context);
-
-        // Assert — CurrentContext was populated from the subject claims, so any feature
-        // flag evaluation downstream gets a properly-keyed LaunchDarkly context.
-        Assert.Equal(userId, _currentContext.UserId);
-        Assert.Equal(deviceIdentifier, _currentContext.DeviceIdentifier);
-    }
-
-    [Fact]
-    public async Task ValidateAsync_RefreshToken_DoesNotOverwriteCurrentContext_WhenAlreadyPopulated()
-    {
-        // Arrange — middleware managed to populate CurrentContext (e.g., the rare client
-        // that sends Device-Identifier as an HTTP header). The back-fill must not clobber it.
-        var middlewareUserId = Guid.NewGuid();
-        const string middlewareDeviceId = "middleware-populated-device-id";
-        _currentContext.UserId = middlewareUserId;
-        _currentContext.DeviceIdentifier = middlewareDeviceId;
-
-        // Subject claims are different values — they should NOT replace the middleware ones.
-        var subject = new ClaimsPrincipal(new ClaimsIdentity(
-        [
-            new Claim(JwtClaimTypes.Subject, Guid.NewGuid().ToString()),
-            new Claim(Claims.Device, "different-device-id-from-token"),
-        ], "test"));
-
-        var context = CreateRefreshTokenContext(subject);
-
-        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
-
-        // Act
-        await _sut.ValidateAsync(context);
-
-        // Assert — ??= semantics: middleware-populated values win.
-        Assert.Equal(middlewareUserId, _currentContext.UserId);
-        Assert.Equal(middlewareDeviceId, _currentContext.DeviceIdentifier);
-    }
-
-    // Defensive normalization: a whitespace-only `device` claim should not be back-filled
-    // and should not trigger a bump. The claim is server-signed at issuance from a non-empty
-    // string, so this guards an invariant rather than a known failure mode — but if a token
-    // ever surfaces with a blank device claim, we don't want to leak whitespace into
-    // CurrentContext.DeviceIdentifier or call the bump command with a blank identifier.
-    // TODO: PM-34091 - when cleaning up the feature flag, drop the CurrentContext
-    // back-fill assertions (UserId / DeviceIdentifier) and rename to drop "Backfill".
-    // The bump-skip assertion still holds — the whitespace normalization on `identifier`
-    // remains and continues to gate the unconditional bump.
+    // Defensive normalization: a whitespace-only `device` claim must not trigger a bump.
+    // The claim is server-signed at issuance from a non-empty string, so this guards an
+    // invariant rather than a known failure mode.
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public async Task ValidateAsync_RefreshToken_WhitespaceDeviceClaim_DoesNotBackfillOrBump(string deviceClaimValue)
+    public async Task ValidateAsync_RefreshToken_WhitespaceDeviceClaim_DoesNotBump(string deviceClaimValue)
     {
         // Arrange
-        _currentContext.DeviceIdentifier = null;
-        var userId = Guid.NewGuid();
         var subject = new ClaimsPrincipal(new ClaimsIdentity(
         [
-            new Claim(JwtClaimTypes.Subject, userId.ToString()),
+            new Claim(JwtClaimTypes.Subject, Guid.NewGuid().ToString()),
             new Claim(Claims.Device, deviceClaimValue),
         ], "test"));
         var context = CreateRefreshTokenContext(subject);
 
         _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
-        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
 
         // Act
         await _sut.ValidateAsync(context);
 
-        // Assert: refresh succeeds, UserId is back-filled, but DeviceIdentifier is NOT
-        // populated with the whitespace string, and the bump is skipped.
+        // Assert: refresh succeeds and the bump is skipped.
         Assert.False(context.Result.IsError);
-        Assert.Equal(userId, _currentContext.UserId);
-        Assert.Null(_currentContext.DeviceIdentifier);
         await _updateDeviceLastActivityCommand
             .DidNotReceive()
             .UpdateByIdentifierAndUserIdAsync(Arg.Any<string>(), Arg.Any<Guid>(), Arg.Any<string>());

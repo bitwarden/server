@@ -157,7 +157,6 @@ public class AccessPreCheckQueryTests
     {
         SetupCipher(sutProvider, userId, cipherId);
         SetupRule(sutProvider, userId, cipherId, orgId, collectionId, null, null);
-        SetupSingleActiveLease(sutProvider, userId, cipherId, applies: false);
 
         var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);
 
@@ -170,15 +169,27 @@ public class AccessPreCheckQueryTests
     }
 
     [Theory, BitAutoData]
+    public async Task PreCheckAsync_ResolvesTheGoverningRuleOnce(
+        SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupRule(sutProvider, userId, cipherId, orgId, collectionId, null, null, singleActiveLease: true);
+
+        await sutProvider.Sut.PreCheckAsync(userId, cipherId);
+
+        await sutProvider.GetDependency<IGoverningRuleResolver>().Received(1)
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>());
+    }
+
+    [Theory, BitAutoData]
     public async Task PreCheckAsync_SingletonBindsAndSlotFree_ReportsStartable(
         SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         SetupCipher(sutProvider, userId, cipherId);
-        SetupRule(sutProvider, userId, cipherId, orgId, collectionId, null, null);
-        SetupSingleActiveLease(sutProvider, userId, cipherId, applies: true);
+        SetupRule(sutProvider, userId, cipherId, orgId, collectionId, null, null, singleActiveLease: true);
         sutProvider.GetDependency<IAccessLeaseRepository>()
-            .GetActiveByCipherIdAsync(cipherId, Arg.Any<DateTime>())
-            .Returns((AccessLease?)null);
+    .GetActiveByCipherIdAsync(cipherId, Arg.Any<DateTime>())
+    .Returns((AccessLease?)null);
 
         var result = await sutProvider.Sut.PreCheckAsync(userId, cipherId);
 
@@ -192,8 +203,7 @@ public class AccessPreCheckQueryTests
         AccessLease blockingLease)
     {
         SetupCipher(sutProvider, userId, cipherId);
-        SetupRule(sutProvider, userId, cipherId, orgId, collectionId, null, null);
-        SetupSingleActiveLease(sutProvider, userId, cipherId, applies: true);
+        SetupRule(sutProvider, userId, cipherId, orgId, collectionId, null, null, singleActiveLease: true);
         blockingLease.NotAfter = new DateTime(2026, 8, 31, 10, 52, 0, DateTimeKind.Utc);
         sutProvider.GetDependency<IAccessLeaseRepository>()
             .GetActiveByCipherIdAsync(cipherId, Arg.Any<DateTime>())
@@ -220,17 +230,9 @@ public class AccessPreCheckQueryTests
         // The early return reveals the credential instead of rendering a form, so the field has nothing to qualify.
         Assert.True(result.CanStartLease);
         Assert.Null(result.SlotFreesAt);
-        await sutProvider.GetDependency<ISingleActiveLeaseEvaluator>()
-            .DidNotReceive()
-            .AppliesAsync(Arg.Any<Guid>(), Arg.Any<Guid>());
-    }
-
-    private static void SetupSingleActiveLease(SutProvider<AccessPreCheckQuery> sutProvider, Guid userId,
-        Guid cipherId, bool applies)
-    {
-        sutProvider.GetDependency<ISingleActiveLeaseEvaluator>()
-            .AppliesAsync(userId, cipherId)
-            .Returns(applies);
+        await sutProvider.GetDependency<IGoverningRuleResolver>()
+            .DidNotReceiveWithAnyArgs()
+            .ResolveAsync(default, default, default!);
     }
 
     private static void SetupCipher(SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId)
@@ -241,7 +243,7 @@ public class AccessPreCheckQueryTests
     }
 
     private static void SetupRule(SutProvider<AccessPreCheckQuery> sutProvider, Guid userId, Guid cipherId,
-        Guid orgId, Guid collectionId, int? defaultLeaseDurationSeconds, int? maxLeaseDurationSeconds)
+        Guid orgId, Guid collectionId, int? defaultLeaseDurationSeconds, int? maxLeaseDurationSeconds, bool singleActiveLease = false)
     {
         sutProvider.GetDependency<IGoverningRuleResolver>()
             .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
@@ -250,6 +252,7 @@ public class AccessPreCheckQueryTests
             {
                 DefaultLeaseDurationSeconds = defaultLeaseDurationSeconds,
                 MaxLeaseDurationSeconds = maxLeaseDurationSeconds,
+                SingleActiveLease = singleActiveLease,
             });
     }
 }

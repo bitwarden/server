@@ -40,6 +40,7 @@ public class OrganizationExportController : Controller
     }
 
     [HttpGet("export")]
+    [ProducesResponseType<OrganizationExportResponseModel>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Export(Guid organizationId)
     {
         var canExportAll = await _authorizationService.AuthorizeAsync(User, new OrganizationScope(organizationId),

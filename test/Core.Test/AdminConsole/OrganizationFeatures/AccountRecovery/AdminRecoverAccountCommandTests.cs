@@ -76,6 +76,9 @@ public class AdminRecoverAccountCommandTests
             Arg.Any<OrganizationUser>(),
             Arg.Is(EventType.OrganizationUser_AdminResetTwoFactor));
 
+        await sutProvider.GetDependency<IResetUserTwoFactorCommand>().DidNotReceiveWithAnyArgs()
+            .ResetAsync(default!);
+
         await sutProvider.GetDependency<IPushNotificationService>().Received(1)
             .PushAsync(Arg.Is<PushNotification<LogOutPushNotification>>(n => n.Type == PushType.LogOut && n.TargetId == user.Id));
     }

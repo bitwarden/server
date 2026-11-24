@@ -40,17 +40,6 @@ public interface IAccessLeaseRepository
     Task<ICollection<AccessLease>> GetManyActiveByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime now);
 
     /// <summary>
-    /// Returns the ended leases (Expired, Revoked, or Cancelled) on the given collections that ended on or after
-    /// <paramref name="since"/>.
-    /// </summary>
-    /// <remarks>
-    /// Expiry is never stored, so ended-ness is derived by composing the recorded action with a clock comparison
-    /// against <paramref name="now"/>.
-    /// </remarks>
-    Task<ICollection<AccessLease>> GetManyEndedByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since,
-        DateTime now);
-
-    /// <summary>
     /// Race-safely mints the lease for an approved request, copying its window. Returns
     /// <see cref="AccessLeaseMintOutcome.PreconditionFailed"/> for a stale precondition, or
     /// <see cref="AccessLeaseMintOutcome.SingleActiveLeaseConflict"/> when <paramref name="enforceSingleActiveLease"/>
@@ -68,8 +57,9 @@ public interface IAccessLeaseRepository
 
     /// <summary>
     /// Returns each lease whose window closed on its own after <paramref name="since"/> and that no earlier sweep
-    /// returned. A lease that closed before <paramref name="since"/> is never returned, so pass a window far longer
-    /// than any sweep outage.
+    /// returned, stamping each as swept in the same call so concurrent sweeps never return the same lease. A lease
+    /// that closed before <paramref name="since"/> is never returned, so pass a window far longer than any sweep
+    /// outage.
     /// </summary>
     Task<IReadOnlyList<PamExpiredLease>> ExpireDueAsync(DateTime now, DateTime since);
 }

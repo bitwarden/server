@@ -1785,6 +1785,10 @@ namespace Bit.MySqlMigrations.Migrations
                         .HasMaxLength(300)
                         .HasColumnType("varchar(300)");
 
+                    b.Property<string>("ExternalName")
+                        .HasMaxLength(300)
+                        .HasColumnType("varchar(300)");
+
                     b.Property<DateTime?>("InviteReminderDueDate")
                         .HasColumnType("datetime(6)");
 
@@ -2384,6 +2388,13 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("Detail")
                         .HasColumnType("longtext");
 
+                    b.Property<byte?>("DeviceType")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
                     b.Property<byte>("Kind")
                         .HasColumnType("tinyint unsigned");
 
@@ -2526,6 +2537,9 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<DateTime?>("RevokedDate")
                         .HasColumnType("datetime(6)");
 
+                    b.Property<DateTime?>("SweptDate")
+                        .HasColumnType("datetime(6)");
+
                     b.HasKey("Id");
 
                     b.HasIndex("AccessRequestId")
@@ -2533,14 +2547,14 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("OrganizationId");
 
-                    b.HasIndex("NotAfter", "Action");
-
                     b.HasIndex("CipherId", "Action", "NotAfter")
                         .IsDescending(false, false, true);
 
                     b.HasIndex("CollectionId", "Action", "NotAfter");
 
-                    b.HasIndex("RequesterId", "CipherId", "Action");
+                    b.HasIndex("RequesterId", "Action", "NotAfter");
+
+                    b.HasIndex("SweptDate", "Action", "NotAfter");
 
                     b.ToTable("AccessLease", (string)null);
                 });
@@ -2600,7 +2614,7 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasIndex("CollectionId", "Action", "NotAfter");
 
-                    b.HasIndex("RequesterId", "CipherId", "Action");
+                    b.HasIndex("RequesterId", "CipherId", "Action", "NotAfter");
 
                     b.ToTable("AccessRequest", (string)null);
                 });
@@ -2725,19 +2739,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsUnique();
 
                     b.ToTable("PamAccessConnectorTargetAssignment", (string)null);
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamLeaseExpirySweep", b =>
-                {
-                    b.Property<Guid>("AccessLeaseId")
-                        .HasColumnType("char(36)");
-
-                    b.Property<DateTime>("SweptDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.HasKey("AccessLeaseId");
-
-                    b.ToTable("PamLeaseExpirySweep", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationAttempt", b =>
@@ -2878,6 +2879,8 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("ClaimedByAccessConnectorId", "Action");
 
                     b.HasIndex("RotationConfigId", "Action");
+
+                    b.HasIndex("RotationConfigId", "CreationDate", "Id");
 
                     b.ToTable("PamRotationJob", (string)null);
                 });
@@ -4251,15 +4254,6 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("Organization");
-                });
-
-            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamLeaseExpirySweep", b =>
-                {
-                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.AccessLease", null)
-                        .WithMany()
-                        .HasForeignKey("AccessLeaseId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationAttempt", b =>

@@ -49,13 +49,13 @@ public class AccessRuleEndpointsTests
     }
 
     [Fact]
-    public void MapPamEndpoints_RegistersTheSixAccessRuleRoutes_InTheInternalDoc()
+    public void MapPamEndpoints_RegistersTheFiveAccessRuleRoutes_InTheInternalDoc()
     {
         var endpoints = MaterializeEndpoints()
             .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRules"))
             .ToList();
 
-        Assert.Equal(6, endpoints.Count);
+        Assert.Equal(5, endpoints.Count);
         Assert.All(endpoints, endpoint =>
             Assert.Equal("internal", endpoint.Metadata.GetMetadata<IEndpointGroupNameMetadata>()?.EndpointGroupName));
     }
@@ -66,7 +66,6 @@ public class AccessRuleEndpointsTests
     [InlineData("Pam_AccessRules_Post", "POST", "organizations/{orgId:guid}/access-rules")]
     [InlineData("Pam_AccessRules_Put", "PUT", "organizations/{orgId:guid}/access-rules/{id:guid}")]
     [InlineData("Pam_AccessRules_Delete", "DELETE", "organizations/{orgId:guid}/access-rules/{id:guid}")]
-    [InlineData("Pam_AccessRules_GetBypassableCiphers", "GET", "organizations/{orgId:guid}/access-rules/{id:guid}/bypassable-ciphers")]
     public void MapPamEndpoints_RegistersExpectedRoute(string name, string method, string route)
     {
         var endpoints = MaterializeEndpoints();
@@ -98,43 +97,22 @@ public class AccessRuleEndpointsTests
     ];
 
     [Theory]
-    [InlineData("Pam_AccessRules_GetAll", typeof(MemberRequirement))]
-    [InlineData("Pam_AccessRules_Get", typeof(MemberRequirement))]
-    [InlineData("Pam_AccessRules_Post", typeof(ManageAccessRulesRequirement))]
-    [InlineData("Pam_AccessRules_Put", typeof(ManageAccessRulesRequirement))]
-    [InlineData("Pam_AccessRules_Delete", typeof(ManageAccessRulesRequirement))]
-    // Restricted to rule managers, since it names credentials a rule fails to protect.
-    [InlineData("Pam_AccessRules_GetBypassableCiphers", typeof(ManageAccessRulesRequirement))]
-    public void MapPamEndpoints_AuthorizesRouteWithRequirement(string name, Type requirementType)
+    [InlineData("Pam_AccessRules_GetAll")]
+    [InlineData("Pam_AccessRules_Get")]
+    [InlineData("Pam_AccessRules_Post")]
+    [InlineData("Pam_AccessRules_Put")]
+    [InlineData("Pam_AccessRules_Delete")]
+    public void MapPamEndpoints_AuthorizesRouteWithManageAccessRules(string name)
     {
         var endpoint = Assert.Single(
             MaterializeEndpoints(),
             e => e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName == name);
 
-        Assert.Contains(RequirementsFor(endpoint), r => r.GetType() == requirementType);
+        Assert.Contains(RequirementsFor(endpoint), r => r is ManageAccessRulesRequirement);
 
-        // The per-route requirement adds to the group's policy rather than replacing it.
+        // The group requirement adds to the application policy rather than replacing it.
         Assert.Contains(endpoint.Metadata.GetOrderedMetadata<IAuthorizeData>(),
             data => data.Policy == Policies.Application);
-    }
-
-    [Fact]
-    public void MapPamEndpoints_AccessRuleWritesRequireMembershipBesidesThePermission()
-    {
-        // The endpoint policy adds to the group's, so a write is never reachable on weaker terms than a read.
-        var writeRoutes = new[] { "Pam_AccessRules_Post", "Pam_AccessRules_Put", "Pam_AccessRules_Delete" };
-
-        var endpoints = MaterializeEndpoints()
-            .Where(e => writeRoutes.Contains(e.Metadata.GetMetadata<IEndpointNameMetadata>()?.EndpointName))
-            .ToList();
-
-        Assert.Equal(writeRoutes.Length, endpoints.Count);
-        Assert.All(endpoints, endpoint =>
-        {
-            var requirements = RequirementsFor(endpoint);
-            Assert.Contains(requirements, r => r is MemberRequirement);
-            Assert.Contains(requirements, r => r is ManageAccessRulesRequirement);
-        });
     }
 
     [Fact]
@@ -145,13 +123,9 @@ public class AccessRuleEndpointsTests
             .Where(e => e.Metadata.GetMetadata<ITagsMetadata>()!.Tags.Contains("AccessRules"))
             .ToList();
 
-        Assert.Equal(6, endpoints.Count);
+        Assert.Equal(5, endpoints.Count);
         Assert.All(endpoints, endpoint =>
-        {
-            var requirements = RequirementsFor(endpoint);
-            Assert.Contains(requirements, r => r is MemberRequirement);
-            Assert.DoesNotContain(requirements, r => r is MemberOrProviderRequirement);
-        });
+            Assert.DoesNotContain(RequirementsFor(endpoint), r => r is MemberOrProviderRequirement));
     }
 
     [Theory]
@@ -160,7 +134,6 @@ public class AccessRuleEndpointsTests
     [InlineData(nameof(AccessRuleEndpointsHandler.Post), typeof(Task<AccessRuleResponseModel>))]
     [InlineData(nameof(AccessRuleEndpointsHandler.Put), typeof(Task<AccessRuleResponseModel>))]
     [InlineData(nameof(AccessRuleEndpointsHandler.Delete), typeof(Task))]
-    [InlineData(nameof(AccessRuleEndpointsHandler.GetBypassableCiphers), typeof(Task<RuleBypassableCiphersResponseModel>))]
     public void Handler_HasExpectedReturnType(string methodName, Type expectedReturnType)
     {
         var method = typeof(AccessRuleEndpointsHandler).GetMethod(methodName);

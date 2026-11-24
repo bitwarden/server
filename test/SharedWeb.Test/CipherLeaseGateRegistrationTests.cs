@@ -62,10 +62,16 @@ public class CipherLeaseGateRegistrationTests
         public Task<FullCipherAccess> AuthorizeReadManyAsync(Guid userId, IEnumerable<Cipher> ciphers) =>
             throw new NotSupportedException();
 
-        public Task<FullCipherAccess?> AuthorizeWriteReturnAsync(Guid userId, Cipher cipher) =>
+        public Task<FullCipherAccess> AuthorizeReadManyAsync(
+            Guid userId,
+            IEnumerable<Cipher> ciphers,
+            IDictionary<Guid, IGrouping<Guid, CollectionCipher>>? collectionCiphersByCipher) =>
             throw new NotSupportedException();
 
-        public Task<FullCipherAccess?> AuthorizeAdminWriteReturnAsync(
+        public Task<FullCipherAccess?> AuthorizeIgnoringLeaseAsync(Guid userId, Cipher cipher) =>
+            throw new NotSupportedException();
+
+        public Task<FullCipherAccess?> AuthorizeAdminIgnoringLeaseAsync(
             Guid userId, Guid organizationId, Cipher cipher) =>
             throw new NotSupportedException();
 

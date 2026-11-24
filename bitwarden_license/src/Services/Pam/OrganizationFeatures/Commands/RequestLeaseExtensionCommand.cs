@@ -136,6 +136,7 @@ public class RequestLeaseExtensionCommand : IRequestLeaseExtensionCommand
         {
             AccessRequestId = request.Id,
             DeciderKind = AccessDeciderKind.Automatic,
+            ConditionKind = governingRule.AutomatedConditionKind,
             Verdict = AccessDecisionVerdict.Approve,
             CreationDate = now,
         };

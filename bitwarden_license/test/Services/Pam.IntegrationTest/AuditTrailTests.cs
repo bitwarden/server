@@ -149,6 +149,30 @@ public class AuditTrailTests(ApiApplicationFactory factory)
     }
 
     [Fact]
+    public async Task Audit_AnEventRecordedInARequest_CarriesTheRequestsIpAddressAndDeviceType()
+    {
+        using var create = new HttpRequestMessage(HttpMethod.Post, $"organizations/{Organization.Id}/access-rules")
+        {
+            Content = JsonContent.Create(new
+            {
+                name = "Production database",
+                enabled = true,
+                conditions = JsonNode.Parse("""[{"kind":"human_approval","approverCount":1}]"""),
+                collections = Array.Empty<Guid>(),
+            }),
+        };
+        create.Headers.Add("X-Connecting-IP", "203.0.113.7");
+        create.Headers.Add("Device-Type", ((int)DeviceType.ChromeBrowser).ToString(System.Globalization.CultureInfo.InvariantCulture));
+        (await Client.SendAsync(create)).EnsureSuccessStatusCode();
+
+        var row = Assert.Single((await GetJsonAsync(AuditUrl))["data"]!.AsArray())!;
+
+        Assert.Equal("ruleCreated", row["kind"]!.GetValue<string>());
+        Assert.Equal("203.0.113.7", row["ipAddress"]!.GetValue<string>());
+        Assert.Equal((int)DeviceType.ChromeBrowser, row["deviceType"]!.GetValue<int>());
+    }
+
+    [Fact]
     public async Task Audit_AnOrganizationTheCallerIsNotIn_ReturnsForbidden()
     {
         var response = await Client.GetAsync($"organizations/{Guid.NewGuid()}/audit");

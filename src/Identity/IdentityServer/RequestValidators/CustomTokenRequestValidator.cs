@@ -6,6 +6,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.KeyManagement.Queries.Interfaces;
@@ -47,7 +48,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand)
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand,
+        IIssueTwoFactorRememberTokenCommand issueTwoFactorRememberTokenCommand)
         : base(
             userManager,
             userService,
@@ -67,7 +69,8 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             mailService,
             userAccountKeysQuery,
             clientVersionValidator,
-            updateDeviceLastActivityCommand)
+            updateDeviceLastActivityCommand,
+            issueTwoFactorRememberTokenCommand)
     {
         _userManager = userManager;
         _updateInstallationCommand = updateInstallationCommand;
@@ -75,12 +78,9 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
 
     // NOTE: Feature flags with progressive rollout (device-keyed or user-keyed) cannot be
     // evaluated from inside this validator without first populating CurrentContext.UserId /
-    // CurrentContext.DeviceIdentifier. CurrentContextMiddleware only sees /connect/token
-    // headers, which do not carry either value. For refresh, populate CurrentContext inline
-    // immediately before the flag check from the server-signed Subject claims (see
-    // TryUpdateDeviceLastActivityForRefreshAsync below). Do not populate CurrentContext
-    // from raw form-body input before validation — pre-validation client values would become
-    // visible to any downstream reader in the same request.
+    // CurrentContext.DeviceIdentifier. CurrentContextMiddleware reads only /connect/token
+    // headers, which carry neither value, so LaunchDarkly cannot bucket these flags unless code
+    // first sets both values manually from the validated refresh-token Subject claims.
     public async Task ValidateAsync(CustomTokenRequestValidationContext context)
     {
         Debug.Assert(context.Result is not null);
@@ -253,25 +253,6 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             var identifier = string.IsNullOrWhiteSpace(rawIdentifier) ? null : rawIdentifier;
             var userIdString = subject?.FindFirstValue(JwtClaimTypes.Subject);
             Guid.TryParse(userIdString, out var userId);
-
-            // Populate CurrentContext for the LD bucketing decision below. Both values come
-            // from the server-signed refresh-token Subject claims.
-            // TODO: PM-34091 - delete when cleaning up the feature flag; the bump call reads
-            // userId / identifier directly.
-            if (userId != Guid.Empty)
-            {
-                CurrentContext.UserId ??= userId;
-            }
-            if (identifier is not null)
-            {
-                CurrentContext.DeviceIdentifier ??= identifier;
-            }
-
-            // TODO: PM-34091 - remove feature flag check when cleaning up
-            if (!_featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
-            {
-                return;
-            }
 
             if (identifier is null || userId == Guid.Empty)
             {

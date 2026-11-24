@@ -29,6 +29,8 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
     {
         // Arrange
         user.Key = null;
+        user.PublicKey = null;
+        user.PrivateKey = null;
         var model = CreateValidModel(user, accountKeys, kdfSettings, org.Identifier, masterPasswordHint);
 
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -83,6 +85,29 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
     }
 
     [Theory]
+    [BitAutoData(true, false)]
+    [BitAutoData(false, true)]
+    [BitAutoData(true, true)]
+    public async Task FinishProvisionAsync_AccountKeysAlreadyInitialized_ThrowsBadRequestException(
+        bool hasPublicKey, bool hasPrivateKey,
+        SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
+        User user, UserAccountKeysData accountKeys, KdfSettings kdfSettings, string orgSsoIdentifier, string masterPasswordHint)
+    {
+        // Arrange - e.g. a TDE user: keypair set, no master password.
+        user.Key = null;
+        user.PublicKey = hasPublicKey ? "existingPublicKey" : null;
+        user.PrivateKey = hasPrivateKey ? "existingPrivateKey" : null;
+        var model = CreateValidModel(user, accountKeys, kdfSettings, orgSsoIdentifier, masterPasswordHint);
+
+        // Act & Assert
+        var exception = await Assert.ThrowsAsync<BadRequestException>(
+            async () => await sutProvider.Sut.FinishProvisionAsync(user, model));
+        Assert.Equal("User account keys are already initialized.", exception.Message);
+        await sutProvider.GetDependency<IUserRepository>().DidNotReceiveWithAnyArgs()
+            .SetV2AccountCryptographicStateAsync(default, default!, default!);
+    }
+
+    [Theory]
     [BitAutoData]
     public async Task FinishProvisionAsync_AccountKeysNull_ThrowsBadRequestException(
         SutProvider<FinishSsoJitProvisionMasterPasswordCommand> sutProvider,
@@ -90,6 +115,8 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
     {
         // Arrange
         user.Key = null;
+        user.PublicKey = null;
+        user.PrivateKey = null;
         var model = CreateValidModel(user, null, kdfSettings, orgSsoIdentifier, masterPasswordHint);
 
         // Act & Assert
@@ -106,6 +133,8 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
     {
         // Arrange
         user.Key = null;
+        user.PublicKey = null;
+        user.PrivateKey = null;
         var model = CreateValidModel(user, accountKeys, kdfSettings, orgSsoIdentifier, masterPasswordHint);
 
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -126,6 +155,8 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
     {
         // Arrange
         user.Key = null;
+        user.PublicKey = null;
+        user.PrivateKey = null;
         var model = CreateValidModel(user, accountKeys, kdfSettings, org.Identifier, masterPasswordHint);
 
         sutProvider.GetDependency<IOrganizationRepository>()
@@ -151,6 +182,8 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
     {
         // Arrange - this flow provisions the user key, so the supplied key id is authoritative
         user.Key = null;
+        user.PublicKey = null;
+        user.PrivateKey = null;
         var keyId = KeyId.FromHexEncodedString("0123456789abcdef0123456789abcdef")!;
         var model = CreateValidModel(user, accountKeys, kdfSettings, org.Identifier, masterPasswordHint, keyId);
 
@@ -199,6 +232,8 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
     {
         // Arrange
         user.Key = null;
+        user.PublicKey = null;
+        user.PrivateKey = null;
         orgUser.Status = OrganizationUserStatusType.Invited;
         var model = CreateValidModel(user, accountKeys, kdfSettings, org.Identifier, masterPasswordHint);
         ArrangeOrgAndOrgUser(sutProvider, user, org, orgUser);
@@ -220,6 +255,8 @@ public class FinishSsoJitProvisionMasterPasswordCommandTests
     {
         // Arrange
         user.Key = null;
+        user.PublicKey = null;
+        user.PrivateKey = null;
         orgUser.Status = OrganizationUserStatusType.Invited;
         var model = CreateValidModel(user, accountKeys, kdfSettings, org.Identifier, masterPasswordHint);
         ArrangeOrgAndOrgUser(sutProvider, user, org, orgUser);

@@ -136,11 +136,13 @@ public static partial class FeatureFlagKeys
     public const string GenerateInviteLink = "pm-32497-generate-invite-link";
     public const string InviteLinkAutoConfirm = "pm-34429-invite-link-auto-confirm";
     public const string AutoReinviteUsers = "pm-39473-auto-reinvite-users";
+    public const string AutoConfirmDelayAcceptedEmail = "pm-46755-auto-confirm-delay-accepted-email";
     public const string PM43375CollectionsDecryptListFailures = "pm-43375-collections-decrypt-list-failures";
     public const string PoliciesInAcceptedState = "pm-34145-policies-in-accepted-state";
     public const string MembersTableV2 = "pm-37463-members-table-v2";
     public const string OrganizationMembershipSdk = "pm-41568-org-memberships-v2";
     public const string GroupsTableV2 = "pm-43419-groups-table-v2";
+    public const string AccountRecoveryMultiOrgCheck = "pm-47148-account-recovery-multi-org-check";
 
     /* Architecture */
     public const string DesktopMigrationMilestone1 = "desktop-ui-migration-milestone-1";
@@ -237,13 +239,13 @@ public static partial class FeatureFlagKeys
     /* Platform Team */
     public const string WebPush = "web-push";
     public const string ContentScriptIpcFramework = "content-script-ipc-channel-framework";
-    public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
     public const string ElectronStorageCache = "pm-32783-electron-storage-cache";
     public const string AttachmentUploadProgress = "pm-34410-attachment-upload-progress";
     public const string OrgCipherPushFanout = "pm-35168-org-cipher-push-fanout";
     public const string FedRampGovRegion = "fedramp-gov-region";
     public const string ManagedDeviceFramework = "pm-27719-managed-device-framework";
     public const string FlightRecorderTsLogging = "pm-30935-flight-recorder-ts-logging";
+    public const string DesktopJsonFileStorage = "pm-47525-desktop-json-file-storage";
 
     /* Tools Team */
     public const string SendControls = "pm-31885-send-controls";

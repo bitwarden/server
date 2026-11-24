@@ -127,7 +127,7 @@ public class RedeemAnnualUpgradeOfferCommandTests
     }
 
     [Fact]
-    public async Task Run_HappyPath_CreatesAnnualUpgradeScheduleWithOneYearPhase2()
+    public async Task Run_HappyPath_CreatesAnnualUpgradeScheduleStartingAtPeriodEnd()
     {
         var organization = CreateOrganization(PlanType.TeamsMonthly);
         var monthlyPlan = new TeamsPlan(false);
@@ -152,9 +152,9 @@ public class RedeemAnnualUpgradeOfferCommandTests
         await _subscriptionScheduleCreator.Received(1).CreateWithPhasesAsync(
             Arg.Is(subscription),
             Arg.Is<SubscriptionSchedulePhaseOptions>(phase2 =>
-                // Phase 2 starts at the subscription's current period end and runs exactly one annual term.
+                // Phase 2 starts at the subscription's current period end; the creator sets its end date.
                 phase2.StartDate == _phase1End &&
-                phase2.EndDate == _phase1End.AddYears(1) &&
+                phase2.EndDate == null &&
                 phase2.Items.Count == 1 &&
                 phase2.Items[0].Price == annualPlan.PasswordManager.StripeSeatPlanId &&
                 phase2.Items[0].Quantity == 10 &&

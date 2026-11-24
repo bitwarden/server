@@ -53,20 +53,6 @@ public class LeaseEndpointsHandlerTests
     }
 
     [Theory, BitAutoData]
-    public async Task GetHistory_ReturnsMappedLeases(Guid userId, AccessLease lease)
-    {
-        var sutProvider = Setup(userId);
-        lease.Action = AccessLeaseAction.Revoked;
-        sutProvider.GetDependency<IListLeaseHistoryQuery>().GetHistoryAsync(userId, _now).Returns([lease]);
-
-        var result = (await sutProvider.Sut.GetHistory(_user)).Data.ToList();
-
-        Assert.Single(result);
-        Assert.Equal(lease.Id, result[0].Id);
-        Assert.Equal(AccessLeaseStatus.Revoked, result[0].Status);
-    }
-
-    [Theory, BitAutoData]
     public async Task GetMine_DerivesStatusAgainstTheClockThatFilteredTheRead(Guid userId, AccessLease lease)
     {
         var sutProvider = Setup(userId);

@@ -1,4 +1,5 @@
-﻿using Bit.Services.Pam.Models.Conditions;
+﻿using Bit.Pam.Enums;
+using Bit.Services.Pam.Models.Conditions;
 
 namespace Bit.Services.Pam.Models;
 
@@ -38,8 +39,22 @@ public sealed record GoverningRule(
     /// </summary>
     public int? MaxLeaseDurationSeconds { get; init; }
 
+    /// <summary>
+    /// True when every path to the cipher is governed by an enabled rule that allows only one active lease at a
+    /// time. Set by <c>ResolveAsync</c> across all paths, not just the chosen rule; always false on a pinned
+    /// resolve, which sees a single collection.
+    /// </summary>
+    public bool SingleActiveLease { get; init; }
+
     public IReadOnlyList<AccessCondition> AutomatedConditions =>
         Conditions.Where(condition => condition is not HumanApprovalCondition).ToList();
+
+    /// <summary>
+    /// The kind of condition an automatic decision under this rule is made on. Null when the rule has no automated
+    /// condition, or more than one kind of them, since a decision records a single kind.
+    /// </summary>
+    public AccessConditionKind? AutomatedConditionKind =>
+        AutomatedConditions.Select(condition => condition.Kind).Distinct().ToList() is [var kind] ? kind : null;
 
     /// <summary>
     /// True if the stored conditions could not be parsed and <see cref="Conditions"/> holds the resolver's

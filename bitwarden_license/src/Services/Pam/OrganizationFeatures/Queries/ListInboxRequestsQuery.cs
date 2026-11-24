@@ -28,4 +28,15 @@ public class ListInboxRequestsQuery : IListInboxRequestsQuery
 
         return await _accessRequestRepository.GetManyInboxPendingByCollectionIdsAsync(manageableCollectionIds, now);
     }
+
+    public async Task<ICollection<AccessRequestDetails>> GetApprovedAsync(Guid userId, DateTime now)
+    {
+        var manageableCollectionIds = await _approverCollectionAccessQuery.GetManageableCollectionIdsAsync(userId);
+        if (manageableCollectionIds.Count == 0)
+        {
+            return new List<AccessRequestDetails>();
+        }
+
+        return await _accessRequestRepository.GetManyInboxApprovedByCollectionIdsAsync(manageableCollectionIds, now);
+    }
 }

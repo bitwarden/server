@@ -1,5 +1,4 @@
-﻿using Bit.Core;
-using Bit.Core.AdminConsole.Entities;
+﻿using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
@@ -8,6 +7,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -60,6 +60,7 @@ public class BaseRequestValidatorTests
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly IClientVersionValidator _clientVersionValidator;
     private readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
+    private readonly IIssueTwoFactorRememberTokenCommand _issueTwoFactorRememberTokenCommand;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -84,6 +85,7 @@ public class BaseRequestValidatorTests
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _clientVersionValidator = Substitute.For<IClientVersionValidator>();
         _updateDeviceLastActivityCommand = Substitute.For<IUpdateDeviceLastActivityCommand>();
+        _issueTwoFactorRememberTokenCommand = Substitute.For<IIssueTwoFactorRememberTokenCommand>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -104,7 +106,8 @@ public class BaseRequestValidatorTests
             _mailService,
             _userAccountKeysQuery,
             _clientVersionValidator,
-            _updateDeviceLastActivityCommand);
+            _updateDeviceLastActivityCommand,
+            _issueTwoFactorRememberTokenCommand);
 
         // Default client version validator behavior: allow to pass unless a test overrides.
         _clientVersionValidator
@@ -397,7 +400,7 @@ public class BaseRequestValidatorTests
         // 4 -> set up 2FA verification to fail
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Email, "invalid_token", "requesting-device")
-            .Returns(Task.FromResult(false));
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(false)));
 
         // 5 -> set up SSO required verification to succeed
         _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
@@ -450,7 +453,7 @@ public class BaseRequestValidatorTests
         // 5 -> set up remember token verification to fail
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Remember, "expired_remember_token", Arg.Any<string>())
-            .Returns(Task.FromResult(false));
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(false)));
 
         // 6 -> set up dummy BuildTwoFactorResultAsync
         var twoFactorResultDict = new Dictionary<string, object>
@@ -987,7 +990,7 @@ public class BaseRequestValidatorTests
         // 5. Recovery code is valid (UserService.RecoverTwoFactorAsync will be called internally)
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "valid-recovery-code-12345", Arg.Any<string>())
-            .Returns(Task.FromResult(true));
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(true)));
 
         // Act
         await _sut.ValidateAsync(context);
@@ -1051,7 +1054,7 @@ public class BaseRequestValidatorTests
         // 5. Recovery code is INVALID
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "INVALID-recovery-code", Arg.Any<string>())
-            .Returns(Task.FromResult(false));
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(false)));
 
         // Act
         await _sut.ValidateAsync(context);
@@ -1130,7 +1133,7 @@ public class BaseRequestValidatorTests
         // 5. Recovery code is valid
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "valid-recovery-code-67890", Arg.Any<string>())
-            .Returns(Task.FromResult(true));
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(true)));
 
         // 6. Device validation passes
         _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
@@ -1166,6 +1169,79 @@ public class BaseRequestValidatorTests
         // Recovery flag should be set for audit purposes
         Assert.True(requestContext.TwoFactorRecoveryRequested,
             "TwoFactorRecoveryRequested flag should be set for audit/logging");
+    }
+
+    /// <summary>
+    /// A successful 2FA login that asks for a 2FA remember token (TwoFactorRemember = "1") is only issued one
+    /// when the provider allows it. A <c>Remember</c> login must not renew itself, and a <c>RecoveryCode</c>
+    /// login removes 2FA, so neither mints a new token. <c>Email</c> is the control: it proves that the
+    /// request really would have been issued a token, so the other two cases can fail.
+    /// </summary>
+    [Theory]
+    [BitAutoData(TwoFactorProviderType.RecoveryCode, false)]
+    [BitAutoData(TwoFactorProviderType.Remember, false)]
+    [BitAutoData(TwoFactorProviderType.Email, true)]
+    public async Task ValidateAsync_TwoFactorRememberRequested_IssuesTwoFactorRememberTokenOnlyForAllowedProviders(
+        TwoFactorProviderType providerType,
+        bool expectTokenIssued,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext]
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        var user = requestContext.User;
+        const string twoFactorToken = "valid-two-factor-token";
+
+        _sut.isValid = true;
+
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(user, tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
+
+        // The user asks for a 2FA remember token and completes 2FA with the provider under test
+        tokenRequest.Raw["TwoFactorRemember"] = "1";
+        tokenRequest.Raw["TwoFactorProvider"] = ((int)providerType).ToString();
+        tokenRequest.Raw["TwoFactorToken"] = twoFactorToken;
+
+        _twoFactorAuthenticationValidator
+            .VerifyTwoFactorAsync(user, null, providerType, twoFactorToken, Arg.Any<string>())
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(true)));
+
+        _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        _userService.IsLegacyUser(Arg.Any<string>())
+            .Returns(false);
+
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                "test-private-key",
+                "test-public-key"
+            )
+        });
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError, "Authentication should succeed for the provider under test");
+
+        if (expectTokenIssued)
+        {
+            await _issueTwoFactorRememberTokenCommand.Received(1)
+                .IssueAsync(Arg.Any<User>(), Arg.Any<Device>());
+        }
+        else
+        {
+            await _issueTwoFactorRememberTokenCommand.DidNotReceive()
+                .IssueAsync(Arg.Any<User>(), Arg.Any<Device>());
+        }
     }
 
     [Theory]
@@ -1275,7 +1351,7 @@ public class BaseRequestValidatorTests
 
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(requestContext.User, null, TwoFactorProviderType.RecoveryCode, "valid-recovery-code", Arg.Any<string>())
-            .Returns(Task.FromResult(true));
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(true)));
 
         // SsoRequestValidator handles the recovery + SSO scenario
         requestContext.TwoFactorRecoveryRequested = true;
@@ -1308,7 +1384,6 @@ public class BaseRequestValidatorTests
         Assert.Equal(SsoConstants.RequestErrors.SsoTwoFactorRecoveryDescription, errorResponse.Message);
     }
 
-    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_UpdateDeviceLastActivityThrows_LoginStillSucceeds(
@@ -1339,9 +1414,6 @@ public class BaseRequestValidatorTests
             )
         });
 
-        // Feature flag enabled so the update is attempted
-        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
-
         // The update command throws a transient exception
         _updateDeviceLastActivityCommand
             .UpdateAsync(Arg.Any<Device>(), Arg.Any<string>())
@@ -1360,50 +1432,6 @@ public class BaseRequestValidatorTests
             l.Message.Contains("Failed to update device last activity for device"));
     }
 
-    // TODO: PM-34091 - remove this test when cleaning up feature flag (disabled case will no longer exist)
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_UpdateDeviceLastActivity_FeatureFlagDisabled_UpdateNotCalled(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        [AuthFixtures.CustomValidatorRequestContext]
-        CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
-    {
-        // Arrange
-        var context = CreateContext(tokenRequest, requestContext, grantResult);
-        _sut.isValid = true;
-
-        _twoFactorAuthenticationValidator
-            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
-            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
-        _deviceValidator
-            .ValidateRequestDeviceAsync(tokenRequest, requestContext)
-            .Returns(Task.FromResult(true));
-        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
-        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
-            .Returns(Task.FromResult(true));
-        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
-        {
-            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
-                "test-private-key",
-                "test-public-key"
-            )
-        });
-
-        // Feature flag is disabled (NSubstitute default: false) — no update expected
-        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(false);
-
-        // Act
-        await _sut.ValidateAsync(context);
-
-        // Assert: login succeeds and update is never attempted
-        Assert.False(context.GrantResult.IsError);
-        await _updateDeviceLastActivityCommand
-            .DidNotReceive()
-            .UpdateAsync(Arg.Any<Device>(), Arg.Any<string>());
-    }
-
-    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_UpdateDeviceLastActivity_NullDevice_UpdateNotCalled(
@@ -1435,8 +1463,6 @@ public class BaseRequestValidatorTests
             )
         });
 
-        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
-
         // Act
         await _sut.ValidateAsync(context);
 
@@ -1447,7 +1473,6 @@ public class BaseRequestValidatorTests
             .UpdateAsync(Arg.Any<Device>(), Arg.Any<string>());
     }
 
-    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_UpdateDeviceLastActivity_Succeeds_UpdateCalledAndLoginSucceeds(
@@ -1477,8 +1502,6 @@ public class BaseRequestValidatorTests
             )
         });
 
-        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
-
         // Act
         await _sut.ValidateAsync(context);
 
@@ -1490,7 +1513,6 @@ public class BaseRequestValidatorTests
             .UpdateAsync(requestContext.Device, null);
     }
 
-    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_UpdateDeviceLastActivity_Succeeds_PassesClientVersionFromContext(
@@ -1520,7 +1542,6 @@ public class BaseRequestValidatorTests
             )
         });
 
-        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
         // Configure the CurrentContext to return a specific version
         _currentContext.ClientVersion.Returns(new Version("2026.5.1"));
 
@@ -1534,7 +1555,6 @@ public class BaseRequestValidatorTests
             .UpdateAsync(requestContext.Device, "2026.5.1");
     }
 
-    // TODO: PM-34091 - remove feature flag mock setup when cleaning up feature flag
     [Theory]
     [BitAutoData]
     public async Task ValidateAsync_UpdateDeviceLastActivity_NullClientVersion_PassesNull(
@@ -1564,7 +1584,6 @@ public class BaseRequestValidatorTests
             )
         });
 
-        _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate).Returns(true);
         // CurrentContext.ClientVersion is null (substituted default)
 
         // Act
@@ -1575,99 +1594,6 @@ public class BaseRequestValidatorTests
         await _updateDeviceLastActivityCommand
             .Received(1)
             .UpdateAsync(requestContext.Device, null);
-    }
-
-    // CurrentContextMiddleware runs before IdentityServer parses /connect/token, so for
-    // login flows (password / webauthn / auth_code) the middleware can't populate UserId
-    // or DeviceIdentifier — they're not on headers and the body hasn't been read.
-    // BuildSuccessResultAsync back-fills CurrentContext from the post-validation User and
-    // Device entities so the DevicesLastActivityDate flag eval immediately below buckets
-    // by device. These tests lock in that the back-fill happens at the right place.
-    // TODO: PM-34091 - delete these two tests when cleaning up the feature flag; they
-    // assert against the ??= back-fill that disappears alongside the IsEnabled check.
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_Success_BackfillsCurrentContextFromUserAndDevice(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        [AuthFixtures.CustomValidatorRequestContext]
-        CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
-    {
-        // Arrange — simulate the middleware-blind state. NSubstitute returns string.Empty
-        // for unconfigured string properties so set DeviceIdentifier explicitly to null.
-        _currentContext.DeviceIdentifier = null;
-
-        var context = CreateContext(tokenRequest, requestContext, grantResult);
-        _sut.isValid = true;
-
-        _twoFactorAuthenticationValidator
-            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
-            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
-        _deviceValidator
-            .ValidateRequestDeviceAsync(tokenRequest, requestContext)
-            .Returns(Task.FromResult(true));
-        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
-        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
-            .Returns(Task.FromResult(true));
-        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
-        {
-            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
-                "test-private-key",
-                "test-public-key"
-            )
-        });
-
-        // Act
-        await _sut.ValidateAsync(context);
-
-        // Assert — CurrentContext was populated from the resolved user and device.
-        Assert.False(context.GrantResult.IsError);
-        Assert.Equal(requestContext.User.Id, _currentContext.UserId);
-        Assert.Equal(requestContext.Device.Identifier, _currentContext.DeviceIdentifier);
-    }
-
-    [Theory]
-    [BitAutoData]
-    public async Task ValidateAsync_Success_DoesNotOverwriteCurrentContext_WhenAlreadyPopulated(
-        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
-        [AuthFixtures.CustomValidatorRequestContext]
-        CustomValidatorRequestContext requestContext,
-        GrantValidationResult grantResult)
-    {
-        // Arrange — middleware managed to populate CurrentContext (e.g., a request that
-        // somehow exposes UserId/DeviceIdentifier upstream). The back-fill must not clobber it.
-        var middlewareUserId = Guid.NewGuid();
-        const string middlewareDeviceId = "middleware-populated-device-id";
-        _currentContext.UserId = middlewareUserId;
-        _currentContext.DeviceIdentifier = middlewareDeviceId;
-
-        var context = CreateContext(tokenRequest, requestContext, grantResult);
-        _sut.isValid = true;
-
-        _twoFactorAuthenticationValidator
-            .RequiresTwoFactorAsync(Arg.Any<User>(), tokenRequest)
-            .Returns(Task.FromResult(new Tuple<bool, Organization>(false, null)));
-        _deviceValidator
-            .ValidateRequestDeviceAsync(tokenRequest, requestContext)
-            .Returns(Task.FromResult(true));
-        _userService.IsLegacyUser(Arg.Any<string>()).Returns(false);
-        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
-            .Returns(Task.FromResult(true));
-        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
-        {
-            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
-                "test-private-key",
-                "test-public-key"
-            )
-        });
-
-        // Act
-        await _sut.ValidateAsync(context);
-
-        // Assert — ??= semantics: middleware-populated values win over BuildSuccessResultAsync's.
-        Assert.False(context.GrantResult.IsError);
-        Assert.Equal(middlewareUserId, _currentContext.UserId);
-        Assert.Equal(middlewareDeviceId, _currentContext.DeviceIdentifier);
     }
 
     /* Logic path

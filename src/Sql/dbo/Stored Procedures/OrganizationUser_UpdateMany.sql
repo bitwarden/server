@@ -26,7 +26,8 @@ BEGIN
         [AccessPam] BIT,
         [V2UpgradeToken] VARCHAR(MAX) NULL,
         [InviteReminderDueDate] DATETIME2(7) NULL,
-        [InviteRemindersSentCount] TINYINT NULL
+        [InviteRemindersSentCount] TINYINT NULL,
+        [ExternalName] NVARCHAR(300) NULL
     )
 
     INSERT INTO @OrganizationUserInput
@@ -49,7 +50,8 @@ BEGIN
         [AccessPam],
         [V2UpgradeToken],
         [InviteReminderDueDate],
-        [InviteRemindersSentCount]
+        [InviteRemindersSentCount],
+        [ExternalName]
     FROM OPENJSON(@jsonData)
     WITH (
         [Id] UNIQUEIDENTIFIER '$.Id',
@@ -70,7 +72,8 @@ BEGIN
         [AccessPam] BIT '$.AccessPam',
         [V2UpgradeToken] VARCHAR(MAX) '$.V2UpgradeToken',
         [InviteReminderDueDate] DATETIME2(7) '$.InviteReminderDueDate',
-        [InviteRemindersSentCount] TINYINT '$.InviteRemindersSentCount'
+        [InviteRemindersSentCount] TINYINT '$.InviteRemindersSentCount',
+        [ExternalName] NVARCHAR(300) '$.ExternalName'
     )
 
     -- Perform the update
@@ -94,7 +97,8 @@ BEGIN
         [AccessPam] = ISNULL(OUI.[AccessPam], 0),
         [V2UpgradeToken] = OUI.[V2UpgradeToken],
         [InviteReminderDueDate] = OUI.[InviteReminderDueDate],
-        [InviteRemindersSentCount] = OUI.[InviteRemindersSentCount]
+        [InviteRemindersSentCount] = OUI.[InviteRemindersSentCount],
+        [ExternalName] = OUI.[ExternalName]
     FROM
         [dbo].[OrganizationUser] OU
     INNER JOIN

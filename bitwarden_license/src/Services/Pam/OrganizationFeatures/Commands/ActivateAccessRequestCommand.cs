@@ -5,6 +5,7 @@ using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
 using Bit.Services.Pam.Engine;
+using Bit.Services.Pam.Models;
 using Bit.Services.Pam.OrganizationFeatures.Commands.Interfaces;
 using Bit.Services.Pam.Services;
 using Bit.Services.Pam.Utilities;
@@ -17,7 +18,6 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
     private readonly IAccessLeaseRepository _accessLeaseRepository;
     private readonly IApproverInboxNotifier _approverInboxNotifier;
     private readonly IRequesterNotifier _requesterNotifier;
-    private readonly ISingleActiveLeaseEvaluator _singleActiveLeaseEvaluator;
     private readonly IGoverningRuleResolver _resolver;
     private readonly IAccessRuleEngine _ruleEngine;
     private readonly ICurrentContext _currentContext;
@@ -28,7 +28,6 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         IAccessLeaseRepository accessLeaseRepository,
         IApproverInboxNotifier approverInboxNotifier,
         IRequesterNotifier requesterNotifier,
-        ISingleActiveLeaseEvaluator singleActiveLeaseEvaluator,
         IGoverningRuleResolver resolver,
         IAccessRuleEngine ruleEngine,
         ICurrentContext currentContext,
@@ -38,7 +37,6 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         _accessLeaseRepository = accessLeaseRepository;
         _approverInboxNotifier = approverInboxNotifier;
         _requesterNotifier = requesterNotifier;
-        _singleActiveLeaseEvaluator = singleActiveLeaseEvaluator;
         _resolver = resolver;
         _ruleEngine = ruleEngine;
         _currentContext = currentContext;
@@ -107,7 +105,9 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         lease.SetNewId();
 
         // Binds only where every cipher path is singleton-governed; enforced under a range lock in the mint proc.
-        var enforceSingleActiveLease = await _singleActiveLeaseEvaluator.AppliesAsync(userId, request.CipherId);
+        var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
+        var currentRule = await _resolver.ResolveAsync(userId, request.CipherId, signals);
+        var enforceSingleActiveLease = currentRule?.SingleActiveLease == true;
 
         // Attempt before the mint, outcome after. A race lost to another activation leaves the attempt without one.
         var audit = new AccessAuditEventData
@@ -127,7 +127,7 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
         // Automated conditions (e.g. an IP allowlist) must still hold at activation.
-        var denial = await FindConditionDenialAsync(userId, request, now);
+        var denial = await FindConditionDenialAsync(request, currentRule, signals);
         if (denial is not null)
         {
             await _accessAuditEventEmitter.EmitAsync(
@@ -176,13 +176,12 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
     /// Re-evaluates the automated conditions of the rule pinned on the request, falling back to the cipher's current
     /// rule only when none is pinned.
     /// </summary>
-    private async Task<AccessEvaluation?> FindConditionDenialAsync(Guid userId, AccessRequest request, DateTime now)
+    private async Task<AccessEvaluation?> FindConditionDenialAsync(
+        AccessRequest request, GoverningRule? currentRule, AccessSignals signals)
     {
-        var signals = AccessSignals.From(_currentContext.IpAddress, new DateTimeOffset(now, TimeSpan.Zero));
-
         var governingRule = request.RuleId is { } ruleId
             ? await _resolver.ResolvePinnedAsync(ruleId, request.CollectionId)
-            : await _resolver.ResolveAsync(userId, request.CipherId, signals);
+            : currentRule;
 
         // No rule left to enforce, so the approved request activates unconditionally.
         if (governingRule is null)

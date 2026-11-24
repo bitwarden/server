@@ -34,6 +34,18 @@ public abstract class BaseAdminConsoleController : Controller
         );
 
     /// <summary>
+    /// Maps a <see cref="Result{T, TError}"/> whose error is an <see cref="IValidationError"/> to an HTTP response.
+    /// On success, delegates to <paramref name="success"/> so the caller can choose the response shape.
+    /// On failure, returns an RFC 7807 validation problem using the error's status code.
+    /// </summary>
+    protected static IResult Handle<T, TError>(Result<T, TError> result, Func<T, IResult> success)
+        where TError : CommandError, IValidationError =>
+        result.Match<IResult>(
+            error => TypedResults.BitwardenValidationProblem(error),
+            success
+        );
+
+    /// <summary>
     /// Maps a <see cref="CommandResult{T}"/> to an HTTP response for the public api endpoints.
     /// On success, delegates to <paramref name="success"/> so the caller can use an async func.
     /// On failure, returns the appropriate error status code.

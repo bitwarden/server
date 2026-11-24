@@ -12,6 +12,7 @@ using Bit.Core.Auth.Identity;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -22,7 +23,6 @@ using Bit.Core.Models.Api.Response;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
 using Bit.Core.Settings;
-using Bit.Core.Utilities;
 using Duende.IdentityServer.Validation;
 using Microsoft.AspNetCore.Identity;
 
@@ -42,6 +42,7 @@ public abstract class BaseRequestValidator<T> where T : class
     private readonly IMailService _mailService;
     private readonly IClientVersionValidator _clientVersionValidator;
     protected readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
+    private readonly IIssueTwoFactorRememberTokenCommand _issueTwoFactorRememberTokenCommand;
 
     protected ICurrentContext CurrentContext { get; }
     protected Bitwarden.Server.Sdk.Features.IFeatureService _featureService { get; }
@@ -70,7 +71,8 @@ public abstract class BaseRequestValidator<T> where T : class
         IMailService mailService,
         IUserAccountKeysQuery userAccountKeysQuery,
         IClientVersionValidator clientVersionValidator,
-        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand
+        IUpdateDeviceLastActivityCommand updateDeviceLastActivityCommand,
+        IIssueTwoFactorRememberTokenCommand issueTwoFactorRememberTokenCommand
     )
     {
         _userManager = userManager;
@@ -92,16 +94,14 @@ public abstract class BaseRequestValidator<T> where T : class
         _accountKeysQuery = userAccountKeysQuery;
         _clientVersionValidator = clientVersionValidator;
         _updateDeviceLastActivityCommand = updateDeviceLastActivityCommand;
+        _issueTwoFactorRememberTokenCommand = issueTwoFactorRememberTokenCommand;
     }
 
     // NOTE: Feature flags with progressive rollout (device-keyed or user-keyed) cannot be
     // evaluated from inside this validator without first populating CurrentContext.UserId /
-    // CurrentContext.DeviceIdentifier. CurrentContextMiddleware only sees /connect/token
-    // headers, which do not carry either value. Prefer flag-gating in BuildSuccessResultAsync
-    // (where validation is complete and User/Device entities are available) and populate
-    // CurrentContext inline immediately before the flag check. Do not populate CurrentContext
-    // from raw form-body input before the grant-specific validator finishes — pre-validation
-    // client values would become visible to any downstream reader in the same request.
+    // CurrentContext.DeviceIdentifier. CurrentContextMiddleware reads only /connect/token
+    // headers, which carry neither value, so LaunchDarkly cannot bucket these flags unless code
+    // first sets both values manually from the validated User and Device entities.
     protected async Task ValidateAsync(T context, ValidatedTokenRequest request,
         CustomValidatorRequestContext validatorContext)
     {
@@ -113,8 +113,12 @@ public abstract class BaseRequestValidator<T> where T : class
             return;
         }
 
+        // A 2FA remember token is issued either because the user asked for one, or because they
+        // presented one in the previous format and it is being replaced. The second condition is
+        // set only on a successful previous-format validation — never merely because the request
+        // used the Remember provider, which would let an active user's 2FA remember token renew forever.
         await BuildSuccessResultAsync(validatorContext.User, context, validatorContext.Device,
-            validatorContext.RememberMeRequested);
+            validatorContext.RememberMeRequested || validatorContext.RememberUpgradeRequired);
     }
 
     protected async Task FailAuthForLegacyUserAsync(User user, T context)
@@ -321,10 +325,12 @@ public abstract class BaseRequestValidator<T> where T : class
             return false;
         }
 
-        var twoFactorTokenValid =
+        var twoFactorResult =
             await _twoFactorAuthenticationValidator
                 .VerifyTwoFactorAsync(validatorContext.User, twoFactorOrganization, twoFactorProviderType,
                     twoFactorToken, request.Raw["DeviceIdentifier"]);
+        var twoFactorTokenValid = twoFactorResult.Succeeded;
+        validatorContext.RememberUpgradeRequired = twoFactorResult.LegacyRememberUpgradeRequired;
 
         // 3b. Response for 2FA required but request is not valid or remember token expired state.
         if (!twoFactorTokenValid)
@@ -358,13 +364,15 @@ public abstract class BaseRequestValidator<T> where T : class
             validatorContext.TwoFactorRecoveryRequested = true;
         }
 
-        // 3d. When the 2FA authentication is successful, we can check if the user wants a
-        // rememberMe token.
+        // 3d. When the 2FA authentication is successful, we can check if the user wants a TwoFactorRememberToken
         var twoFactorRemember = request.Raw["TwoFactorRemember"] == "1";
-        // Check if the user wants a rememberMe token.
-        if (twoFactorRemember
-            // if the 2FA auth was rememberMe do not send another token.
-            && twoFactorProviderType != TwoFactorProviderType.Remember)
+
+        // A `Remember` login must not renew itself, so don't mint a new token.
+        // A `RecoveryCode` login removes 2FA, so don't mint a new token.
+        var providerAllowsNewRememberToken =
+            twoFactorProviderType is not (TwoFactorProviderType.Remember or TwoFactorProviderType.RecoveryCode);
+
+        if (twoFactorRemember && providerAllowsNewRememberToken)
         {
             validatorContext.RememberMeRequested = true;
         }
@@ -447,15 +455,7 @@ public abstract class BaseRequestValidator<T> where T : class
 
         await ResetFailedAuthDetailsAsync(user);
 
-        // Populate CurrentContext for the LD bucketing decision below. user.Id and
-        // device.Identifier are post-validation Bitwarden entities — not raw client input.
-        // TODO: PM-34091 - delete when cleaning up the feature flag; the bump call reads
-        // user.Id / device.Identifier directly.
-        CurrentContext.UserId ??= user.Id;
-        CurrentContext.DeviceIdentifier ??= device?.Identifier;
-
-        // TODO: PM-34091 - remove feature flag check when cleaning up
-        if (device != null && _featureService.IsEnabled(FeatureFlagKeys.DevicesLastActivityDate))
+        if (device != null)
         {
             try
             {
@@ -654,9 +654,9 @@ public abstract class BaseRequestValidator<T> where T : class
 
         if (sendRememberToken)
         {
-            var token = await _userManager.GenerateTwoFactorTokenAsync(user,
-                CoreHelpers.CustomProviderName(TwoFactorProviderType.Remember));
-            customResponse.Add("TwoFactorToken", token);
+            // The device is non-null here because this runs only after DeviceValidator succeeded
+            var rememberToken = await _issueTwoFactorRememberTokenCommand.IssueAsync(user, device);
+            customResponse.Add("TwoFactorToken", rememberToken);
         }
 
         return customResponse;

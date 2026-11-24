@@ -9,6 +9,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Organizations;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Entities;
@@ -806,6 +807,51 @@ public class InviteStagedOrganizationUsersCommandTests
             .AdjustSeatsAsync(organization.Id, -(organizationUsers.Count - 1));
         Assert.All(organizationUsers, organizationUser =>
             Assert.Equal(OrganizationUserStatusType.Staged, organizationUser.Status));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_PrivilegedControlsValidationRejects_ReturnsItsErrorWithoutAdjustingSeats(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        organization.MaxAutoscaleSeats = 100;
+        var request = ArrangeWithSecretsManager(sutProvider, organization, organizationUsers, performedBy,
+            seats: 10, occupiedSeats: 9);
+        ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2);
+        sutProvider.GetDependency<IValidatePrivilegedControlsSeatReservationQuery>()
+            .RunAsync(organization, Arg.Any<int>(), Arg.Any<int>())
+            .Returns(new PrivilegedControlsSeatLimitReachedError());
+
+        var result = await sutProvider.Sut.RunAsync(request);
+
+        Assert.IsType<PrivilegedControlsSeatLimitReachedError>(result.AsError);
+        var organizationService = sutProvider.GetDependency<IOrganizationService>();
+        await organizationService.DidNotReceiveWithAnyArgs().AutoAddSeatsAsync(default!, default);
+        await organizationService.DidNotReceiveWithAnyArgs().AdjustSeatsAsync(default, default);
+        var updateSecretsManagerSubscriptionCommand = sutProvider.GetDependency<IUpdateSecretsManagerSubscriptionCommand>();
+        await updateSecretsManagerSubscriptionCommand.DidNotReceiveWithAnyArgs().ValidateUpdateAsync(default!);
+        await updateSecretsManagerSubscriptionCommand.DidNotReceiveWithAnyArgs().UpdateSubscriptionAsync(default!);
+        await sutProvider.GetDependency<IReservePrivilegedControlsSeatsCommand>()
+            .DidNotReceiveWithAnyArgs()
+            .RunAsync(default!, default);
+        Assert.All(organizationUsers, organizationUser =>
+            Assert.Equal(OrganizationUserStatusType.Staged, organizationUser.Status));
+    }
+
+    [Theory, BitAutoData]
+    public async Task RunAsync_ValidatesPrivilegedControlsWithThePasswordManagerSeatsAboutToBeBought(
+        Organization organization, List<OrganizationUser> organizationUsers, Guid performedBy)
+    {
+        var sutProvider = GetSutProvider();
+        organization.MaxAutoscaleSeats = 100;
+        var request = Arrange(sutProvider, organization, organizationUsers, performedBy, seats: 10, occupiedSeats: 9);
+        ArrangePrivilegedControls(organization, organizationUsers, membersWithAccess: 2);
+
+        await sutProvider.Sut.RunAsync(request);
+
+        await sutProvider.GetDependency<IValidatePrivilegedControlsSeatReservationQuery>()
+            .Received(1)
+            .RunAsync(organization, 2, organizationUsers.Count - 1);
     }
 
     [Theory, BitAutoData]
