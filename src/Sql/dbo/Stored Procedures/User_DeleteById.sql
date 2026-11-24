@@ -142,7 +142,14 @@ BEGIN
         [dbo].[Notification]
     WHERE
         [UserId] = @Id
-    
+
+    -- Delete Connected Apps
+    DELETE
+    FROM
+        [dbo].[ConnectedApp]
+    WHERE
+        [UserId] = @Id
+
     -- Finally, delete the user
     DELETE
     FROM

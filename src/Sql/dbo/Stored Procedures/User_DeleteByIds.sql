@@ -156,7 +156,14 @@ BEGIN
         [dbo].[Notification]
     WHERE
         [UserId] IN (SELECT * FROM @ParsedIds)
-    
+
+    -- Delete Connected Apps
+    DELETE
+    FROM
+        [dbo].[ConnectedApp]
+    WHERE
+        [UserId] IN (SELECT * FROM @ParsedIds)
+
     -- Finally, delete the user
     DELETE
     FROM

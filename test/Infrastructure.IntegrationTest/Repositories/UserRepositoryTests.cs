@@ -1,5 +1,7 @@
 ﻿using Bit.Core;
 using Bit.Core.AdminConsole.Repositories;
+using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.UserMasterPassword;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -31,6 +33,36 @@ public class UserRepositoryTests
 
         var deletedUser = await userRepository.GetByIdAsync(user.Id);
         Assert.Null(deletedUser);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task DeleteAsync_WithConnectedApp_DeletesUserAndConnectedApp(
+        IUserRepository userRepository, IConnectedAppRepository connectedAppRepository)
+    {
+        var user = await userRepository.CreateAsync(new User
+        {
+            Name = "Connected App User",
+            Email = $"connectedapp+{Guid.NewGuid()}@example.com",
+            ApiKey = "TEST",
+            SecurityStamp = "stamp",
+        });
+
+        await connectedAppRepository.CreateAsync(new ConnectedApp
+        {
+            UserId = user.Id,
+            PartnerClientId = "partner.test",
+            Name = "Test Partner",
+            Key = "encrypted-psk",
+            CreationDate = DateTime.UtcNow,
+            RevisionDate = DateTime.UtcNow,
+        });
+        Assert.NotEmpty(await connectedAppRepository.GetManyByUserIdAsync(user.Id));
+
+        // The ConnectedApp -> User FK is non-cascading, so before this fix deleting the user failed.
+        await userRepository.DeleteAsync(user);
+
+        Assert.Null(await userRepository.GetByIdAsync(user.Id));
+        Assert.Empty(await connectedAppRepository.GetManyByUserIdAsync(user.Id));
     }
 
     [Theory, DatabaseData]
