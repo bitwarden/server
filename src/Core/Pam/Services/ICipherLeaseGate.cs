@@ -166,4 +166,11 @@ public interface ICipherLeaseGate
     /// auditing, not for authorization.
     /// </summary>
     Task<IReadOnlySet<Guid>> GetOrganizationGatedCipherIdsAsync(Guid organizationId, IEnumerable<Guid> cipherIds);
+
+    /// <summary>
+    /// Every gated cipher in the organization, by the same rule as
+    /// <see cref="GetOrganizationGatedCipherIdsAsync(Guid, IEnumerable{Guid})"/>. A whole-vault export asks about
+    /// every cipher, and one read of the organization's links costs less than sending every cipher id.
+    /// </summary>
+    Task<IReadOnlySet<Guid>> GetOrganizationGatedCipherIdsForExportAsync(Guid organizationId);
 }

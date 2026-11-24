@@ -108,5 +108,8 @@ public class CipherLeaseGateRegistrationTests
             Guid organizationId,
             IEnumerable<Guid> cipherIds) =>
             throw new NotSupportedException();
+
+        public Task<IReadOnlySet<Guid>> GetOrganizationGatedCipherIdsForExportAsync(Guid organizationId) =>
+            throw new NotSupportedException();
     }
 }

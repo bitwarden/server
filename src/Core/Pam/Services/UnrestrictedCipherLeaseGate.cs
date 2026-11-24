@@ -67,4 +67,7 @@ public class UnrestrictedCipherLeaseGate : ICipherLeaseGate
 
     public Task<IReadOnlySet<Guid>> GetOrganizationGatedCipherIdsAsync(Guid organizationId, IEnumerable<Guid> cipherIds)
         => Task.FromResult<IReadOnlySet<Guid>>(new HashSet<Guid>());
+
+    public Task<IReadOnlySet<Guid>> GetOrganizationGatedCipherIdsForExportAsync(Guid organizationId)
+        => Task.FromResult<IReadOnlySet<Guid>>(new HashSet<Guid>());
 }

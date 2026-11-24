@@ -1562,6 +1562,44 @@ public class CipherLeaseGateTests
             .GetManyByOrganizationIdAsync(default);
     }
 
+    [Fact]
+    public async Task GetOrganizationGatedCipherIdsForExportAsync_FlagOff_ReturnsNoneWithoutQuerying()
+    {
+        var (sutProvider, _, _) = Setup(enabled: false);
+
+        var gated = await sutProvider.Sut.GetOrganizationGatedCipherIdsForExportAsync(_organizationId);
+
+        Assert.Empty(gated);
+        await sutProvider.GetDependency<IGatingCollectionResolver>().DidNotReceiveWithAnyArgs()
+            .GetGatingCollectionIdsAsync(default);
+    }
+
+    [Fact]
+    public async Task GetOrganizationGatedCipherIdsForExportAsync_OrganizationWithoutPam_ReturnsNoneWithoutResolving()
+    {
+        var (sutProvider, _, _) = Setup();
+        OrganizationAbilityIs(sutProvider, usePam: false);
+
+        var gated = await sutProvider.Sut.GetOrganizationGatedCipherIdsForExportAsync(_organizationId);
+
+        Assert.Empty(gated);
+        await sutProvider.GetDependency<IGatingCollectionResolver>().DidNotReceiveWithAnyArgs()
+            .GetGatingCollectionIdsAsync(default);
+    }
+
+    [Fact]
+    public async Task GetOrganizationGatedCipherIdsForExportAsync_ReadsTheOrganizationsLinksOnce()
+    {
+        var (sutProvider, _, gatedId) = Setup();
+        OrganizationGates(sutProvider, _organizationId, gatedId);
+
+        var gated = await sutProvider.Sut.GetOrganizationGatedCipherIdsForExportAsync(_organizationId);
+
+        Assert.Equal([gatedId], gated);
+        await sutProvider.GetDependency<ICollectionCipherRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyByCipherIdsAsync(default!);
+    }
+
     /// <summary>
     /// Sets the cached ability of the organization every fixture belongs to.
     /// </summary>

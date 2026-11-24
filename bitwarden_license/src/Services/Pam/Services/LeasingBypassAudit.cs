@@ -78,8 +78,8 @@ public class LeasingBypassAudit : ILeasingBypassAudit
     public async Task AuditWholeVaultExportAsync(Guid organizationId, Guid actingUserId,
         IEnumerable<Guid> exportedCipherIds)
     {
-        var gatedCipherIds = await _cipherLeaseGate.GetOrganizationGatedCipherIdsAsync(organizationId, exportedCipherIds);
-        if (gatedCipherIds.Count == 0)
+        var gatedCipherIds = await _cipherLeaseGate.GetOrganizationGatedCipherIdsForExportAsync(organizationId);
+        if (!exportedCipherIds.Any(gatedCipherIds.Contains))
         {
             return;
         }

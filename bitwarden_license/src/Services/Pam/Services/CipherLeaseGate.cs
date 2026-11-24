@@ -322,6 +322,16 @@ public class CipherLeaseGate : ICipherLeaseGate
             .ToHashSet();
     }
 
+    public async Task<IReadOnlySet<Guid>> GetOrganizationGatedCipherIdsForExportAsync(Guid organizationId)
+    {
+        if (!Enabled || !CanGate(await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId)))
+        {
+            return new HashSet<Guid>();
+        }
+
+        return (await GetOrganizationGatedCipherIdsAsync(organizationId)).ToHashSet();
+    }
+
     /// <summary>
     /// Whether the "/admin" decisions need no lease: the organization gates nothing, or the caller is an Owner or
     /// Admin of an organization that lets admins access all collection items, on a client that can hold partials.

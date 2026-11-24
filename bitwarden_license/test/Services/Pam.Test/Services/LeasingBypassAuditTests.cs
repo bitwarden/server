@@ -161,9 +161,10 @@ public class LeasingBypassAuditTests
     {
         var sutProvider = Setup();
         var actingUserId = Guid.NewGuid();
-        GatedBeforeAndAfter(sutProvider, before: [Guid.NewGuid()], after: []);
+        var gatedId = Guid.NewGuid();
+        OrganizationGated(sutProvider, gatedId);
 
-        await sutProvider.Sut.AuditWholeVaultExportAsync(_organizationId, actingUserId, [Guid.NewGuid()]);
+        await sutProvider.Sut.AuditWholeVaultExportAsync(_organizationId, actingUserId, [gatedId, Guid.NewGuid()]);
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
             Arg.Is<AccessAuditEventData>(e =>
@@ -179,11 +180,14 @@ public class LeasingBypassAuditTests
     public async Task AuditWholeVaultExportAsync_CarryingNoGatedCipher_RecordsNothing()
     {
         var sutProvider = Setup();
-        GatedBeforeAndAfter(sutProvider, before: [], after: []);
+        // The organization gates a cipher the export doesn't carry.
+        OrganizationGated(sutProvider, Guid.NewGuid());
 
         await sutProvider.Sut.AuditWholeVaultExportAsync(_organizationId, Guid.NewGuid(), [Guid.NewGuid()]);
 
         await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
+        await sutProvider.GetDependency<ICipherLeaseGate>().DidNotReceiveWithAnyArgs()
+            .GetOrganizationGatedCipherIdsAsync(default, default!);
     }
 
     private static SutProvider<LeasingBypassAudit> Setup()
@@ -202,6 +206,10 @@ public class LeasingBypassAuditTests
         sutProvider.GetDependency<ICipherLeaseGate>()
             .GetOrganizationGatedCipherIdsAsync(_organizationId, Arg.Any<IEnumerable<Guid>>())
             .Returns(before.ToHashSet(), after.ToHashSet());
+
+    private static void OrganizationGated(SutProvider<LeasingBypassAudit> sutProvider, params Guid[] gatedCipherIds) =>
+        sutProvider.GetDependency<ICipherLeaseGate>().GetOrganizationGatedCipherIdsForExportAsync(_organizationId)
+            .Returns(gatedCipherIds.ToHashSet());
 
     private static void Links(SutProvider<LeasingBypassAudit> sutProvider,
         params (Guid CipherId, Guid CollectionId)[] links) =>
