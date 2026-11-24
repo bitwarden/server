@@ -714,6 +714,12 @@ public static class ServiceCollectionExtensions
             {
                 options.Configuration = globalSettings.DistributedCache.Redis.ConnectionString;
             });
+
+            // Expose a shared multiplexer so code needing atomic Redis operations (e.g. the OAuth
+            // consent nonce store's single-use DEL) can use them. AddStackExchangeRedisCache keeps its
+            // multiplexer internal, so register one here. TryAdd coexists with the ExtendedCache one.
+            services.TryAddSingleton<IConnectionMultiplexer>(_ =>
+                ConnectionMultiplexer.Connect(globalSettings.DistributedCache.Redis.ConnectionString));
         }
         else
         {
