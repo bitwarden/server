@@ -2394,6 +2394,13 @@ namespace Bit.PostgresMigrations.Migrations
                     b.Property<string>("Detail")
                         .HasColumnType("text");
 
+                    b.Property<byte?>("DeviceType")
+                        .HasColumnType("smallint");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
                     b.Property<byte>("Kind")
                         .HasColumnType("smallint");
 
@@ -2878,6 +2885,8 @@ namespace Bit.PostgresMigrations.Migrations
                     b.HasIndex("ClaimedByAccessConnectorId", "Action");
 
                     b.HasIndex("RotationConfigId", "Action");
+
+                    b.HasIndex("RotationConfigId", "CreationDate", "Id");
 
                     b.ToTable("PamRotationJob", (string)null);
                 });

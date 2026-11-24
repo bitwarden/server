@@ -1,4 +1,6 @@
 ﻿using System.Net;
+using System.Text.Json.Serialization;
+using Bit.Pam.Enums;
 using Bit.Services.Pam.Engine;
 
 namespace Bit.Services.Pam.Models.Conditions;
@@ -13,6 +15,9 @@ namespace Bit.Services.Pam.Models.Conditions;
 public sealed class IpAllowlistCondition : AccessCondition
 {
     private readonly IReadOnlyList<string> _cidrs = [];
+
+    [JsonIgnore]
+    public override AccessConditionKind Kind => AccessConditionKind.IpAllowlist;
 
     /// <summary>
     /// The allowed source ranges in CIDR notation. An explicit <c>"cidrs": null</c> is coalesced to an empty list,

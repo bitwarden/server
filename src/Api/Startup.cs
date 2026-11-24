@@ -75,6 +75,7 @@ public class Startup
 
         // Settings
         var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
+        services.AddGlobalSettingsBridge();
         if (!globalSettings.SelfHosted)
         {
             services.Configure<IpRateLimitOptions>(Configuration.GetSection("IpRateLimitOptions"));

@@ -2377,6 +2377,13 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("Detail")
                         .HasColumnType("TEXT");
 
+                    b.Property<byte?>("DeviceType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<byte>("Kind")
                         .HasColumnType("INTEGER");
 
@@ -2861,6 +2868,8 @@ namespace Bit.SqliteMigrations.Migrations
                     b.HasIndex("ClaimedByAccessConnectorId", "Action");
 
                     b.HasIndex("RotationConfigId", "Action");
+
+                    b.HasIndex("RotationConfigId", "CreationDate", "Id");
 
                     b.ToTable("PamRotationJob", (string)null);
                 });

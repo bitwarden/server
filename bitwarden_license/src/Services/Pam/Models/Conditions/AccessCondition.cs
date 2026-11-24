@@ -1,4 +1,5 @@
 ﻿using System.Text.Json.Serialization;
+using Bit.Pam.Enums;
 using Bit.Services.Pam.Engine;
 
 namespace Bit.Services.Pam.Models.Conditions;
@@ -9,6 +10,13 @@ namespace Bit.Services.Pam.Models.Conditions;
 [JsonDerivedType(typeof(IpAllowlistCondition), "ip_allowlist")]
 public abstract class AccessCondition
 {
+    /// <summary>
+    /// The kind recorded on an automatic decision made on this condition. Each override needs
+    /// <see cref="JsonIgnoreAttribute"/>, since the attribute is not inherited and the property would otherwise
+    /// clash with the <c>kind</c> discriminator.
+    /// </summary>
+    public abstract AccessConditionKind Kind { get; }
+
     /// <summary>
     /// Evaluates this condition against the request-time <paramref name="signals"/>. The engine folds each
     /// condition's result into the rule's decision without knowing how any kind decides.

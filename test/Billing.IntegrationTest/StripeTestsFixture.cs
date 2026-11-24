@@ -55,7 +55,7 @@ public class StripeTestsFixture : IAsyncLifetime
     public StripeTestsFixture()
     {
         Api = CreateApi();
-        Admin = new AdminApplicationFactory(Api.TestDatabase);
+        Admin = new AdminApplicationFactory(Api.TestDatabase, dataProtectionProvider: Api.DataProtectionProvider);
     }
 
     /// <summary>

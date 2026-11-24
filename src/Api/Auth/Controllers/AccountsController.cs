@@ -294,7 +294,7 @@ public class AccountsController : Controller
         }
 
         // Modern-shape request (MPAD + MPUD set). Try the specialized branches below — TDE
-        // set-password (no keypair) and V2 MP JIT (AccountKeys + flag on). If neither matches,
+        // set-password (no keypair) and V2 MP JIT (AccountKeys). If neither matches,
         // fall through to SetInitialPasswordV1Async, which uses the V1 command to handle modern
         // V1 MP JIT requests and all legacy-shape requests (TDE and MP JIT). See its doc comment
         // for the full list of scenarios.
@@ -315,13 +315,9 @@ public class AccountsController : Controller
                 return;
             }
 
-            // V2 encryption - MP JIT.
-            // We require AccountKeys (the new key shape) here, not legacy Keys — otherwise
-            // a modern V1 MP JIT request (MPAD + MPUD + legacy Keys) would be incorrectly routed here
-            // when the flag is on, and `model.ToData().AccountKeys` would be null, breaking the V2 MP
-            // JIT command (which requires AccountKeys per FinishSsoJitProvisionMasterPasswordCommand).
-            if (model.AccountKeys != null &&
-                _featureService.IsEnabled(FeatureFlagKeys.EnableAccountEncryptionV2JitPasswordRegistration))
+            // V2 encryption - MP JIT. AccountKeys (the new key shape) selects V2; a modern V1 MP JIT
+            // request (MPAD + MPUD + legacy Keys) falls through to V1.
+            if (model.AccountKeys != null)
             {
                 await _finishSsoJitProvisionMasterPasswordCommand.FinishProvisionAsync(user, model.ToData());
                 return;
@@ -345,23 +341,12 @@ public class AccountsController : Controller
     ///    and have aged out according to the Bitwarden release support policy. This covers scenarios
     ///    #1-2 above (legacy TDE and legacy MP JIT).
     /// 
-    /// 2. The EnableAccountEncryptionV2JitPasswordRegistration feature flag has been unwound in
-    ///    https://bitwarden.atlassian.net/browse/PM-27327 and the client-side portion of the flag removal has
+    /// 2. Clients without V2 MP JIT registration (https://bitwarden.atlassian.net/browse/PM-27327) have
     ///    aged out according to the Bitwarden release support policy. This covers scenarios #2-3 above (legacy
     ///    and modern MP JIT).
     /// </remarks>
     private async Task SetInitialPasswordV1Async(User user, SetInitialPasswordRequestModel model)
     {
-        // Defensive: V1 cannot consume AccountKeys (the new key shape). If a request carries
-        // AccountKeys we'd silently drop the keypair, so fail loudly. This can only happen if
-        // the V2 MP JIT flag is off (otherwise the V2 branch above would have handled it) — i.e.,
-        // a client/server flag-state mismatch or a non-Angular caller.
-        if (model.AccountKeys != null)
-        {
-            throw new BadRequestException(
-                "Request includes V2 AccountKeys but V2 encryption is not enabled.");
-        }
-
         try
         {
             // Stage 1 (PM-27044) compatibility: the client MUST send salt == email.lower.trim

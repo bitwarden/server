@@ -233,6 +233,11 @@
           "LaunchDarkly.ServerSdk": "8.14.1"
         }
       },
+      "Bitwarden.Server.Sdk.PasswordHashing": {
+        "type": "Transitive",
+        "resolved": "0.1.0",
+        "contentHash": "oFMsRz8FIo9ax0k1HOalOliZX0u9WfJTQ88advpEJBhzXsudEM53UjYFMoydsEKLDcfn5G+D3QVwaCmT9Jo2BQ=="
+      },
       "BouncyCastle.Cryptography": {
         "type": "Transitive",
         "resolved": "2.7.0",
@@ -1045,7 +1050,7 @@
         "dependencies": {
           "AutoFixture.AutoNSubstitute": "[4.18.1, )",
           "AutoFixture.Xunit2": "[4.18.1, )",
-          "Core": "[2026.11.0, )",
+          "Core": "[2026.11.1, )",
           "Kralizek.AutoFixture.Extensions.MockHttp": "[2.2.1, 2.2.1]",
           "Microsoft.Extensions.TimeProvider.Testing": "[10.11.0, 10.11.0]",
           "Microsoft.NET.Test.Sdk": "[18.0.1, )",
@@ -1068,6 +1073,7 @@
           "BitPay.Light": "[1.0.1907, 1.0.1907]",
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
+          "Bitwarden.Server.Sdk.PasswordHashing": "[0.1.0, 0.1.0]",
           "Braintree": "[5.36.0, 5.36.0]",
           "Clients": "[0.0.1, )",
           "CsvHelper": "[33.1.0, 33.1.0]",
@@ -1121,7 +1127,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.11.0, )"
+          "HttpExtensions": "[2026.11.1, )"
         }
       },
       "httpextensions": {
@@ -1132,7 +1138,7 @@
         "dependencies": {
           "Bitwarden.Server.Sdk.Environment": "[0.1.0, )",
           "Bitwarden.Server.Sdk.Features": "[1.5.0, )",
-          "Core": "[2026.11.0, )",
+          "Core": "[2026.11.1, )",
           "Stripe.net": "[52.1.0, 52.1.0]"
         }
       },
@@ -1147,7 +1153,7 @@
       "organizationauthorization": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.11.0, )",
+          "Core": "[2026.11.1, )",
           "CurrentUser": "[0.0.1, )"
         }
       },
@@ -1166,7 +1172,7 @@
       "subscriptions.organization": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.11.0, )",
+          "Core": "[2026.11.1, )",
           "ExceptionHandling": "[0.0.1, )",
           "Invoicing": "[0.0.1, )",
           "OrganizationAuthorization": "[0.0.1, )"

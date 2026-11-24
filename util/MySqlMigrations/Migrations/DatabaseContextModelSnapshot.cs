@@ -2388,6 +2388,13 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("Detail")
                         .HasColumnType("longtext");
 
+                    b.Property<byte?>("DeviceType")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
                     b.Property<byte>("Kind")
                         .HasColumnType("tinyint unsigned");
 
@@ -2872,6 +2879,8 @@ namespace Bit.MySqlMigrations.Migrations
                     b.HasIndex("ClaimedByAccessConnectorId", "Action");
 
                     b.HasIndex("RotationConfigId", "Action");
+
+                    b.HasIndex("RotationConfigId", "CreationDate", "Id");
 
                     b.ToTable("PamRotationJob", (string)null);
                 });

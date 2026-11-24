@@ -121,7 +121,25 @@ public class SubmitAccessRequestCommandTests
                 Arg.Is<AccessRequest>(r => r.Action == AccessRequestAction.Approved && r.NotBefore == _now
                     && r.NotAfter == _now.AddSeconds(3600) && r.RuleId == ruleId),
                 Arg.Is<AccessDecision>(d => d.DeciderKind == AccessDeciderKind.Automatic
+                    && d.ConditionKind == AccessConditionKind.IpAllowlist
                     && d.Verdict == AccessDecisionVerdict.Approve));
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_AutomaticUnderARuleWithNoConditions_RecordsNoConditionKind(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        sutProvider.GetDependency<IGoverningRuleResolver>()
+            .ResolveAsync(userId, cipherId, Arg.Any<AccessSignals>())
+            .Returns(new GoverningRule(orgId, collectionId, RequiresHumanApproval: false, []));
+        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
+
+        await sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 });
+
+        await sutProvider.GetDependency<IAccessRequestRepository>().Received(1)
+            .CreateAutoApprovedAsync(Arg.Any<AccessRequest>(), Arg.Is<AccessDecision>(d => d.ConditionKind == null));
     }
 
     [Theory, BitAutoData]

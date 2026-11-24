@@ -30,8 +30,8 @@ operations can resolve the command, and this library implements it.
 `ISendPrivilegedControlsSeatNeededEmailCommand` follow the same split: their contracts live in `Core` and this
 library implements them. A host that resolves any of these commands without mapping the endpoints calls
 `AddPrivilegedControlsSeatAutoscaling()`, which registers the reserve, autoscale, revert, and seat-needed email
-commands, the trial query, and the seat change set factory. `AddOrganizationSubscriptions()` calls it, so the Api host
-needs only that one.
+commands, the seat reservation validation query, the trial query, and the seat change set factory.
+`AddOrganizationSubscriptions()` calls it, so the Api host needs only that one.
 
 `MapOrganizationSubscriptionEndpoints()` attaches the group's cross-cutting chain and maps its
 endpoints to an empty group; the host owns the route prefix and mounts it at
@@ -333,7 +333,8 @@ This library depends on `Core` as a documented deviation from the rule restricti
 | `IAutoscalePrivilegedControlsSeatsCommand` (`Bit.Core.Billing.Organizations.Commands`), `AutoscalePrivilegedControlsSeatsResult` (`Bit.Core.Billing.Organizations.Models`) | The autoscale command contract and its result, which Core owns so hosts and Admin Console can resolve the command; this library implements it |
 | `IRevertPrivilegedControlsSeatsCommand` (`Bit.Core.Billing.Organizations.Commands`) | The contract for handing back autoscaled Privileged Controls seats, which Core owns so Admin Console can undo a reservation when the rest of an action fails; this library implements it |
 | `IReservePrivilegedControlsSeatsCommand`, `ISendPrivilegedControlsSeatNeededEmailCommand` (`Bit.Core.Billing.Organizations.Commands`), `PrivilegedControlsSeatReservationResult` (`Bit.Core.Billing.Organizations.Models`) | The reserve and seat-needed email command contracts and the reservation result, which Core owns so Admin Console member actions can reserve seats before granting access and email Owners when a joining member is left without one; this library implements them |
-| `PrivilegedControlsSeatLimitReachedError`, `CannotAutoscalePrivilegedControlsSeatsOnSelfHostError`, `NotEnoughPrivilegedControlsSeatsError`, `PrivilegedControlsSeatExpansionFailedError`, `PrivilegedControlsSeatReservationUnexpectedError` (`Bit.Core.Billing.Organizations`), `Error` (`Bit.Core.AdminConsole.Utilities.v2`) | The errors a reservation returns, which Admin Console member actions pass straight to the client |
+| `IValidatePrivilegedControlsSeatReservationQuery` (`Bit.Core.Billing.Organizations.Queries`) | The check-only counterpart of the reserve command, which Core owns so Admin Console member actions can learn whether Privileged Controls seats can be reserved before they buy Password Manager seats; it returns the error a reservation would fail with, or null, and changes nothing; this library implements it |
+| `PrivilegedControlsSeatLimitReachedError`, `CannotAutoscalePrivilegedControlsSeatsOnSelfHostError`, `NotEnoughPrivilegedControlsSeatsError`, `PrivilegedControlsSeatExpansionFailedError`, `PrivilegedControlsSeatReservationUnexpectedError` (`Bit.Core.Billing.Organizations`), `PrivilegedControlsSeatsMustNotExceedPasswordManagerSeatsError` (`Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers`), `Error` (`Bit.Core.AdminConsole.Utilities.v2`) | The errors a reservation returns, which Admin Console member actions pass straight to the client |
 | `ICountNewPamSeatsRequiredQuery` (`Bit.Core.Billing.Organizations.Queries`) | Checking an organization has the Privileged Controls seats a reservation needs where the seat count is a hard limit: on self-hosted, and on cloud with `PM39883_Pam_Billing_Support` off |
 | `IGlobalSettings` (`Bit.Core.Settings`), `CoreHelpers` (`Bit.Core.Utilities`) | Building the Owner email links and preventing auto-linking in email content |
 | `IReplaceOrganizationAndUpdateCacheCommand` (`Bit.Core.AdminConsole.OrganizationFeatures.Organizations.Interfaces`) | Saving the organization's Privileged Controls seats and flags after the first purchase, a seat change, an autoscale, a revert, or removal |

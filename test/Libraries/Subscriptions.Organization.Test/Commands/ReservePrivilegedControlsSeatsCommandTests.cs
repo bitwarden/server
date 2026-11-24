@@ -16,8 +16,8 @@ namespace Bit.Subscriptions.Organization.Test.Commands;
 
 public class ReservePrivilegedControlsSeatsCommandTests
 {
-    private readonly ICountNewPamSeatsRequiredQuery _countNewPamSeatsRequiredQuery =
-        Substitute.For<ICountNewPamSeatsRequiredQuery>();
+    private readonly IValidatePrivilegedControlsSeatReservationQuery _validateSeatReservationQuery =
+        Substitute.For<IValidatePrivilegedControlsSeatReservationQuery>();
     private readonly IAutoscalePrivilegedControlsSeatsCommand _autoscalePrivilegedControlsSeatsCommand =
         Substitute.For<IAutoscalePrivilegedControlsSeatsCommand>();
     private readonly IBitwardenEnvironment _environment = Substitute.For<IBitwardenEnvironment>();
@@ -29,52 +29,11 @@ public class ReservePrivilegedControlsSeatsCommandTests
     {
         _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(true);
         _sut = new ReservePrivilegedControlsSeatsCommand(
-            _countNewPamSeatsRequiredQuery,
+            _validateSeatReservationQuery,
             _autoscalePrivilegedControlsSeatsCommand,
             _environment,
             _featureService,
             _logger);
-    }
-
-    [Theory]
-    [InlineData(5)]
-    [InlineData(0)]
-    public async Task RunAsync_Cloud_FlagOff_Shortfall_ReturnsNotEnoughSeatsWithoutCallingAutoscale(int pamSeats)
-    {
-        var organization = CreateOrganization(pamSeats: pamSeats);
-        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
-        _countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, 2).Returns(1);
-
-        var result = await _sut.RunAsync(organization, 2);
-
-        Assert.IsType<NotEnoughPrivilegedControlsSeatsError>(result.Error);
-        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
-    }
-
-    [Fact]
-    public async Task RunAsync_Cloud_FlagOff_NoShortfall_SucceedsWithoutCallingAutoscale()
-    {
-        var organization = CreateOrganization();
-        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
-        _countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, 2).Returns(0);
-
-        var result = await _sut.RunAsync(organization, 2);
-
-        Assert.True(result.Success);
-        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
-    }
-
-    [Fact]
-    public async Task RunAsync_SelfHosted_FlagOff_Shortfall_ReturnsSelfHostedShortfall()
-    {
-        var organization = CreateOrganization();
-        _environment.SelfHosted.Returns(true);
-        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
-        _countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, 2).Returns(1);
-
-        var result = await _sut.RunAsync(organization, 2);
-
-        Assert.IsType<CannotAutoscalePrivilegedControlsSeatsOnSelfHostError>(result.Error);
     }
 
     [Theory]
@@ -88,6 +47,7 @@ public class ReservePrivilegedControlsSeatsCommandTests
 
         Assert.True(result.Success);
         await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
+        await _validateSeatReservationQuery.DidNotReceiveWithAnyArgs().RunAsync(default!, default, default);
     }
 
     [Fact]
@@ -99,6 +59,7 @@ public class ReservePrivilegedControlsSeatsCommandTests
 
         Assert.True(result.Success);
         await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
+        await _validateSeatReservationQuery.DidNotReceiveWithAnyArgs().RunAsync(default!, default, default);
     }
 
     [Theory]
@@ -113,55 +74,7 @@ public class ReservePrivilegedControlsSeatsCommandTests
 
         Assert.True(result.Success);
         await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
-        await _countNewPamSeatsRequiredQuery.DidNotReceiveWithAnyArgs().CountNewPamSeatsRequiredAsync(default!, default);
-    }
-
-    [Fact]
-    public async Task RunAsync_Cloud_ZeroPrivilegedControlsSeats_ReturnsLimitReachedWithoutCallingAutoscale()
-    {
-        var organization = CreateOrganization(pamSeats: 0);
-
-        var result = await _sut.RunAsync(organization, 2);
-
-        Assert.IsType<PrivilegedControlsSeatLimitReachedError>(result.Error);
-        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
-    }
-
-    [Fact]
-    public async Task RunAsync_SelfHosted_ZeroPrivilegedControlsSeats_ReturnsSelfHostedShortfall()
-    {
-        var organization = CreateOrganization(pamSeats: 0);
-        _environment.SelfHosted.Returns(true);
-        _countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, 2).Returns(2);
-
-        var result = await _sut.RunAsync(organization, 2);
-
-        Assert.IsType<CannotAutoscalePrivilegedControlsSeatsOnSelfHostError>(result.Error);
-    }
-
-    [Fact]
-    public async Task RunAsync_SelfHosted_Shortfall_ReturnsSelfHostedShortfall()
-    {
-        var organization = CreateOrganization();
-        _environment.SelfHosted.Returns(true);
-        _countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, 2).Returns(1);
-
-        var result = await _sut.RunAsync(organization, 2);
-
-        Assert.IsType<CannotAutoscalePrivilegedControlsSeatsOnSelfHostError>(result.Error);
-        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
-    }
-
-    [Fact]
-    public async Task RunAsync_SelfHosted_NoShortfall_Succeeds()
-    {
-        var organization = CreateOrganization();
-        _environment.SelfHosted.Returns(true);
-        _countNewPamSeatsRequiredQuery.CountNewPamSeatsRequiredAsync(organization, 2).Returns(0);
-
-        var result = await _sut.RunAsync(organization, 2);
-
-        Assert.True(result.Success);
+        await _validateSeatReservationQuery.DidNotReceiveWithAnyArgs().RunAsync(default!, default, default);
     }
 
     [Fact]
@@ -218,6 +131,66 @@ public class ReservePrivilegedControlsSeatsCommandTests
         Assert.Same(exception, result.Exception);
         Assert.Single(_logger.Errors);
         Assert.Empty(_logger.Warnings);
+    }
+
+    [Fact]
+    public async Task RunAsync_ValidationRejects_ReturnsItsErrorWithoutAutoscaling()
+    {
+        var organization = CreateOrganization();
+        _validateSeatReservationQuery.RunAsync(organization, 2, 0).Returns(new PrivilegedControlsSeatLimitReachedError());
+
+        var result = await _sut.RunAsync(organization, 2);
+
+        Assert.IsType<PrivilegedControlsSeatLimitReachedError>(result.Error);
+        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
+    }
+
+    [Fact]
+    public async Task RunAsync_ValidatesWithNoPasswordManagerSeatsAdded()
+    {
+        var organization = CreateOrganization();
+        _autoscalePrivilegedControlsSeatsCommand.RunAsync(organization, 2)
+            .Returns(new AutoscalePrivilegedControlsSeatsResult(true, null));
+
+        await _sut.RunAsync(organization, 2);
+
+        await _validateSeatReservationQuery.Received(1).RunAsync(organization, 2, 0);
+    }
+
+    [Fact]
+    public async Task RunAsync_Cloud_FlagOff_ValidationPasses_SucceedsWithoutAutoscaling()
+    {
+        var organization = CreateOrganization();
+        _featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support).Returns(false);
+
+        var result = await _sut.RunAsync(organization, 2);
+
+        Assert.True(result.Success);
+        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
+    }
+
+    [Fact]
+    public async Task RunAsync_SelfHosted_ValidationPasses_SucceedsWithoutAutoscaling()
+    {
+        var organization = CreateOrganization();
+        _environment.SelfHosted.Returns(true);
+
+        var result = await _sut.RunAsync(organization, 2);
+
+        Assert.True(result.Success);
+        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
+    }
+
+    [Fact]
+    public async Task RunAsync_ValidationThrows_ReturnsUnexpectedErrorWithoutAutoscaling()
+    {
+        var organization = CreateOrganization();
+        _validateSeatReservationQuery.RunAsync(organization, 2, 0).ThrowsAsync(new InvalidOperationException());
+
+        var result = await _sut.RunAsync(organization, 2);
+
+        Assert.IsType<PrivilegedControlsSeatReservationUnexpectedError>(result.Error);
+        await _autoscalePrivilegedControlsSeatsCommand.DidNotReceiveWithAnyArgs().RunAsync(default!, default);
     }
 
     private static OrganizationEntity CreateOrganization(bool usePam = true, int? pamSeats = 5) => new()
