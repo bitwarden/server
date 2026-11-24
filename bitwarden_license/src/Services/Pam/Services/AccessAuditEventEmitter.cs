@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
@@ -11,41 +12,64 @@ namespace Bit.Services.Pam.Services;
 /// <inheritdoc cref="IAccessAuditEventEmitter" />
 public class AccessAuditEventEmitter : IAccessAuditEventEmitter
 {
+    /// <summary>The width of <c>[AccessAuditEvent].[IpAddress]</c>.</summary>
+    private const int IpAddressMaxLength = 50;
+
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IAccessAuditEventRepository _accessAuditEventRepository;
     private readonly IEventService _eventService;
+    private readonly ICurrentContext _currentContext;
     private readonly ILogger<AccessAuditEventEmitter> _logger;
 
     public AccessAuditEventEmitter(
         Bitwarden.Server.Sdk.Features.IFeatureService featureService,
         IAccessAuditEventRepository accessAuditEventRepository,
         IEventService eventService,
+        ICurrentContext currentContext,
         ILogger<AccessAuditEventEmitter> logger)
     {
         _featureService = featureService;
         _accessAuditEventRepository = accessAuditEventRepository;
         _eventService = eventService;
+        _currentContext = currentContext;
         _logger = logger;
     }
 
     public async Task EmitAsync(AccessAuditEventData auditEvent)
     {
+        var enrichedEvent = WithRequestSource(auditEvent);
+
         // Gates the PAM store only, not the organization event log fan-out.
         if (!_featureService.IsEnabled(FeatureFlagKeys.PamDisableSqlAuditLogging))
         {
             try
             {
-                await _accessAuditEventRepository.CreateAsync(auditEvent);
+                await _accessAuditEventRepository.CreateAsync(enrichedEvent);
             }
-            catch (Exception ex) when (auditEvent.Phase == AccessAuditEventPhase.Outcome)
+            catch (Exception ex) when (enrichedEvent.Phase == AccessAuditEventPhase.Outcome)
             {
                 _logger.LogError(ex,
                     "Failed to record the outcome of PAM audit event {Kind} ({CorrelationId}). The trail shows the action as incomplete.",
-                    auditEvent.Kind, auditEvent.CorrelationId);
+                    enrichedEvent.Kind, enrichedEvent.CorrelationId);
             }
         }
 
-        await FanOutToOrganizationEventLogAsync(auditEvent);
+        await FanOutToOrganizationEventLogAsync(enrichedEvent);
+    }
+
+    /// <summary>
+    /// Stamps the IP address and device type of the current request. A background job has no request, so both stay
+    /// null. An automatic decision made inside a request, such as an auto-approval, records the IP it was evaluated
+    /// on. The IP is cut to the column width, since an oversized value would fail the write and block the action.
+    /// </summary>
+    private AccessAuditEventData WithRequestSource(AccessAuditEventData auditEvent)
+    {
+        var ipAddress = _currentContext.IpAddress;
+        return auditEvent with
+        {
+            IpAddress = ipAddress is { Length: > IpAddressMaxLength } ? ipAddress[..IpAddressMaxLength] : ipAddress,
+            DeviceType = _currentContext.DeviceType,
+        };
     }
 
     /// <summary>

@@ -2377,6 +2377,13 @@ namespace Bit.SqliteMigrations.Migrations
                     b.Property<string>("Detail")
                         .HasColumnType("TEXT");
 
+                    b.Property<byte?>("DeviceType")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("TEXT");
+
                     b.Property<byte>("Kind")
                         .HasColumnType("INTEGER");
 

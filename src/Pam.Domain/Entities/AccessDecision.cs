@@ -19,7 +19,10 @@ public class AccessDecision : ITableObject<Guid>
     /// <summary>Null for an automatic decision.</summary>
     public Guid? ApproverId { get; set; }
 
-    /// <summary>Null for a human decision, and not yet populated for automatic ones.</summary>
+    /// <summary>
+    /// The kind of condition an automatic approval was made on. Null for a human decision, and for an automatic one
+    /// that no condition decided.
+    /// </summary>
     public AccessConditionKind? ConditionKind { get; set; }
 
     public AccessDecisionVerdict Verdict { get; set; }

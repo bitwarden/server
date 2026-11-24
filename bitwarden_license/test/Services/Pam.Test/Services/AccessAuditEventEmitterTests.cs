@@ -1,4 +1,5 @@
 ﻿using Bit.Core;
+using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Services;
@@ -29,6 +30,71 @@ public class AccessAuditEventEmitterTests
         OrganizationId = organizationId,
     };
 
+    /// <summary>The event as the emitter writes it, stamped with the current request's source.</summary>
+    private static AccessAuditEventData AsWritten(
+        SutProvider<AccessAuditEventEmitter> sutProvider, AccessAuditEventData auditEvent)
+    {
+        var currentContext = sutProvider.GetDependency<ICurrentContext>();
+        return auditEvent with { IpAddress = currentContext.IpAddress, DeviceType = currentContext.DeviceType };
+    }
+
+    [Theory, BitAutoData]
+    public async Task EmitAsync_RecordsTheRequestsIpAddressAndDeviceType(
+        Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns("203.0.113.7");
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeExtension);
+
+        await sutProvider.Sut.EmitAsync(AnEvent(organizationId));
+
+        await sutProvider.GetDependency<IAccessAuditEventRepository>().Received(1).CreateAsync(
+            Arg.Is<AccessAuditEventData>(e =>
+                e.IpAddress == "203.0.113.7" && e.DeviceType == DeviceType.ChromeExtension));
+    }
+
+    [Theory, BitAutoData]
+    public async Task EmitAsync_OverwritesASourceTheCallerSet(
+        Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns("203.0.113.7");
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
+        var auditEvent = AnEvent(organizationId) with { IpAddress = "198.51.100.1", DeviceType = DeviceType.Android };
+
+        await sutProvider.Sut.EmitAsync(auditEvent);
+
+        await sutProvider.GetDependency<IAccessAuditEventRepository>().Received(1).CreateAsync(
+            Arg.Is<AccessAuditEventData>(e =>
+                e.IpAddress == "203.0.113.7" && e.DeviceType == DeviceType.ChromeBrowser));
+    }
+
+    // A background job has no request, so its events carry no source.
+    [Theory, BitAutoData]
+    public async Task EmitAsync_OutsideARequest_RecordsNoSource(
+        Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns((string?)null);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns((DeviceType?)null);
+
+        await sutProvider.Sut.EmitAsync(AnEvent(organizationId));
+
+        await sutProvider.GetDependency<IAccessAuditEventRepository>().Received(1).CreateAsync(
+            Arg.Is<AccessAuditEventData>(e => e.IpAddress == null && e.DeviceType == null));
+    }
+
+    // An oversized value would fail the write, and a failed Attempt blocks the action.
+    [Theory, BitAutoData]
+    public async Task EmitAsync_OversizedIpAddress_IsCutToTheColumnWidth(
+        Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
+    {
+        sutProvider.GetDependency<ICurrentContext>().IpAddress.Returns(new string('1', 51));
+        var expected = new string('1', 50);
+
+        await sutProvider.Sut.EmitAsync(AnEvent(organizationId));
+
+        await sutProvider.GetDependency<IAccessAuditEventRepository>().Received(1).CreateAsync(
+            Arg.Is<AccessAuditEventData>(e => e.IpAddress == expected));
+    }
+
     [Theory, BitAutoData]
     public async Task EmitAsync_PersistsEventToTheStore(
         Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
@@ -38,7 +104,7 @@ public class AccessAuditEventEmitterTests
 
         await sutProvider.Sut.EmitAsync(auditEvent);
 
-        await sutProvider.GetDependency<IAccessAuditEventRepository>().Received(1).CreateAsync(auditEvent);
+        await sutProvider.GetDependency<IAccessAuditEventRepository>().Received(1).CreateAsync(AsWritten(sutProvider, auditEvent));
     }
 
     [Theory, BitAutoData]
@@ -65,7 +131,7 @@ public class AccessAuditEventEmitterTests
         Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
     {
         var auditEvent = AnEvent(organizationId) with { Phase = AccessAuditEventPhase.Attempt };
-        sutProvider.GetDependency<IAccessAuditEventRepository>().CreateAsync(auditEvent)
+        sutProvider.GetDependency<IAccessAuditEventRepository>().CreateAsync(AsWritten(sutProvider, auditEvent))
             .ThrowsAsync(new InvalidOperationException());
 
         await Assert.ThrowsAsync<InvalidOperationException>(() => sutProvider.Sut.EmitAsync(auditEvent));
@@ -77,7 +143,7 @@ public class AccessAuditEventEmitterTests
         Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
     {
         var auditEvent = AnEvent(organizationId) with { Phase = AccessAuditEventPhase.Outcome };
-        sutProvider.GetDependency<IAccessAuditEventRepository>().CreateAsync(auditEvent)
+        sutProvider.GetDependency<IAccessAuditEventRepository>().CreateAsync(AsWritten(sutProvider, auditEvent))
             .ThrowsAsync(new InvalidOperationException());
 
         await sutProvider.Sut.EmitAsync(auditEvent);
@@ -215,7 +281,7 @@ public class AccessAuditEventEmitterTests
 
         await sutProvider.Sut.EmitAsync(auditEvent);
 
-        await sutProvider.GetDependency<IAccessAuditEventRepository>().Received(1).CreateAsync(auditEvent);
+        await sutProvider.GetDependency<IAccessAuditEventRepository>().Received(1).CreateAsync(AsWritten(sutProvider, auditEvent));
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
             .LogPamAccessEventAsync(default, default!);
     }
@@ -235,7 +301,7 @@ public class AccessAuditEventEmitterTests
 
         await sutProvider.Sut.EmitAsync(auditEvent);
 
-        await sutProvider.GetDependency<IAccessAuditEventRepository>().Received(1).CreateAsync(auditEvent);
+        await sutProvider.GetDependency<IAccessAuditEventRepository>().Received(1).CreateAsync(AsWritten(sutProvider, auditEvent));
         await sutProvider.GetDependency<IEventService>().DidNotReceiveWithAnyArgs()
             .LogPamAccessEventAsync(default, default!);
     }
@@ -252,7 +318,7 @@ public class AccessAuditEventEmitterTests
 
         await sutProvider.Sut.EmitAsync(auditEvent);
 
-        await sutProvider.GetDependency<IAccessAuditEventRepository>().Received(1).CreateAsync(auditEvent);
+        await sutProvider.GetDependency<IAccessAuditEventRepository>().Received(1).CreateAsync(AsWritten(sutProvider, auditEvent));
     }
 
     [Theory, BitAutoData]
@@ -260,7 +326,7 @@ public class AccessAuditEventEmitterTests
         Guid organizationId, SutProvider<AccessAuditEventEmitter> sutProvider)
     {
         var auditEvent = AnEventOfKind(organizationId, AccessAuditEventKind.RequestApproved);
-        sutProvider.GetDependency<IAccessAuditEventRepository>().CreateAsync(auditEvent)
+        sutProvider.GetDependency<IAccessAuditEventRepository>().CreateAsync(AsWritten(sutProvider, auditEvent))
             .ThrowsAsync(new InvalidOperationException());
 
         await sutProvider.Sut.EmitAsync(auditEvent);
