@@ -1,4 +1,5 @@
-﻿using Bit.Core.Entities;
+﻿using Bit.Core.Auth.Utilities;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Api.Request;
@@ -205,9 +206,9 @@ public class RegisterFinishRequestModel : IValidatableObject
             }
         }
 
-        // 2.5 A salt that contains '@' is an email-derived salt. Clients derive it as the trimmed,
-        //     lowercased email, so any other email-derived value gives a salt that clients cannot
-        //     reproduce. A salt without '@' is not email-derived and is accepted as sent.
+        // 2.5 A salt that contains '@' is an email-derived salt. Clients derive it as the trimmed email
+        //     with the Unicode full lowercase mapping, so any other email-derived value gives a salt that
+        //     clients cannot reproduce. A salt without '@' is not email-derived and is accepted as sent.
         if (IsEmailDerivedSaltThatDoesNotMatchEmail(MasterPasswordUnlock?.Salt))
         {
             yield return new ValidationResult(
@@ -361,6 +362,6 @@ public class RegisterFinishRequestModel : IValidatableObject
     {
         return salt is not null &&
                salt.Contains('@') &&
-               !string.Equals(salt, Email.ToLowerInvariant().Trim(), StringComparison.Ordinal);
+               !string.Equals(salt, EmailMasterPasswordSalt.FromEmail(Email), StringComparison.Ordinal);
     }
 }
