@@ -65,12 +65,14 @@ public class GoverningRuleResolver : IGoverningRuleResolver
             return null;
         }
 
-        return candidates
+        var governing = candidates
             .OrderBy(c => TierOf(c.Governing, signals))
             .ThenBy(c => c.Rule.CreationDate)
             .ThenBy(c => c.Rule.Id)
             .First()
             .Governing;
+
+        return governing with { SingleActiveLease = candidates.All(c => c.Rule.SingleActiveLease) };
     }
 
     public async Task<GoverningRule?> ResolvePinnedAsync(Guid ruleId, Guid collectionId)

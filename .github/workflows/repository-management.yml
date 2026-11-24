@@ -202,6 +202,7 @@ jobs:
       - bump_version
     runs-on: ubuntu-24.04
     permissions:
+      actions: write
       contents: write
 
     steps:
@@ -228,6 +229,15 @@ jobs:
         run: |
           git switch --quiet --create "$BRANCH_NAME"
           git push --quiet --set-upstream origin "$BRANCH_NAME"
+
+      # Pushes made with github.token don't trigger the push-based build, but workflow_dispatch is allowed
+      - name: Trigger build on ${{ needs.setup.outputs.branch }}
+        env:
+          BRANCH_NAME: ${{ needs.setup.outputs.branch }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh workflow run build.yml --ref "$BRANCH_NAME"
+          echo "Triggered build.yml on $BRANCH_NAME" >> "$GITHUB_STEP_SUMMARY"
 
   move_edd_db_scripts:
     name: Move EDD database scripts

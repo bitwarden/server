@@ -46,10 +46,17 @@ public interface IAccessRequestRepository
     Task<ICollection<AccessRequestDetails>> GetManyInboxPendingByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime now);
 
     /// <summary>
-    /// The complement of the pending read (an action recorded, or a lapsed window), created on or after
-    /// <paramref name="since"/>.
+    /// One page of the requests that have ended, newest request first, with the requesters and collections the whole
+    /// history names. An applied extension has no row of its own: it only moves its lease's end.
     /// </summary>
-    Task<ICollection<AccessRequestDetails>> GetManyInboxHistoryByCollectionIdsAsync(IEnumerable<Guid> collectionIds, DateTime since, DateTime now);
+    Task<AccessRequestHistoryPage> GetHistoryPageAsync(AccessRequestHistoryFilter filter);
+
+    /// <summary>
+    /// The approved requests that can still give access: not started and inside their window, or behind a live
+    /// lease, with that lease's extension. An empty <paramref name="collectionIds"/> yields an empty result.
+    /// </summary>
+    Task<ICollection<AccessRequestDetails>> GetManyInboxApprovedByCollectionIdsAsync(IEnumerable<Guid> collectionIds,
+        DateTime now);
 
     /// <summary>
     /// Atomically records <paramref name="action"/> and the approver's <paramref name="decision"/> on an open,

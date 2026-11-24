@@ -20,6 +20,7 @@ using Bit.Core.Billing.Enums;
 using Bit.Core.Billing.Extensions;
 using Bit.Core.Billing.Organizations.Commands;
 using Bit.Core.Billing.Organizations.Models;
+using Bit.Core.Billing.Organizations.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Billing.Services;
 using Bit.Core.Context;
@@ -65,6 +66,7 @@ public class OrganizationService : IOrganizationService
     private readonly IReplaceOrganizationAndUpdateCacheCommand _replaceOrganizationAndUpdateCacheCommand;
     private readonly IReservePrivilegedControlsSeatsCommand _reservePrivilegedControlsSeatsCommand;
     private readonly IRevertPrivilegedControlsSeatsCommand _revertPrivilegedControlsSeatsCommand;
+    private readonly IValidatePrivilegedControlsSeatReservationQuery _validatePrivilegedControlsSeatReservationQuery;
 
     public OrganizationService(
         IOrganizationRepository organizationRepository,
@@ -91,7 +93,8 @@ public class OrganizationService : IOrganizationService
         TimeProvider timeProvider,
         IReplaceOrganizationAndUpdateCacheCommand replaceOrganizationAndUpdateCacheCommand,
         IReservePrivilegedControlsSeatsCommand reservePrivilegedControlsSeatsCommand,
-        IRevertPrivilegedControlsSeatsCommand revertPrivilegedControlsSeatsCommand)
+        IRevertPrivilegedControlsSeatsCommand revertPrivilegedControlsSeatsCommand,
+        IValidatePrivilegedControlsSeatReservationQuery validatePrivilegedControlsSeatReservationQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -118,6 +121,7 @@ public class OrganizationService : IOrganizationService
         _replaceOrganizationAndUpdateCacheCommand = replaceOrganizationAndUpdateCacheCommand;
         _reservePrivilegedControlsSeatsCommand = reservePrivilegedControlsSeatsCommand;
         _revertPrivilegedControlsSeatsCommand = revertPrivilegedControlsSeatsCommand;
+        _validatePrivilegedControlsSeatReservationQuery = validatePrivilegedControlsSeatReservationQuery;
     }
 
     public async Task<string> AdjustStorageAsync(Guid organizationId, short storageAdjustmentGb)
@@ -712,6 +716,13 @@ public class OrganizationService : IOrganizationService
             ? stagedInvitations.Values.Count(s => s.OrgUser.AccessPam)
             : 0;
         var initialPrivilegedControlsSeats = organization.PamSeats;
+
+        var validationError = await _validatePrivilegedControlsSeatReservationQuery.RunAsync(
+            organization, privilegedControlsSeatsToReserve, Math.Max(0, newSeatsRequired));
+        if (validationError != null)
+        {
+            throw new BadRequestException(validationError.Message);
+        }
 
         // Staged rows whose promotion has actually committed, and so must be put back if the batch fails.
         var promotedStagedUsers = new List<OrganizationUser>();

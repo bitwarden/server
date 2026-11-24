@@ -37,6 +37,12 @@ public class FinishSsoJitProvisionMasterPasswordCommand(
             throw new BadRequestException("User already has a master password set.");
         }
 
+        // SSO JIT provisioned users have no keypair. A TDE user already has one; never replace it.
+        if (!string.IsNullOrWhiteSpace(user.PublicKey) || !string.IsNullOrWhiteSpace(user.PrivateKey))
+        {
+            throw new BadRequestException("User account keys are already initialized.");
+        }
+
         if (masterPasswordDataModel.AccountKeys == null)
         {
             throw new BadRequestException("Account keys are required.");
