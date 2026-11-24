@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.IntegrationTest.Auth.Helpers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
@@ -9,8 +10,6 @@ using Bit.Core.AdminConsole.Entities.Provider;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Repositories;
-using Bit.Core.Auth.Entities;
-using Bit.Core.Auth.Repositories;
 using Bit.Core.Billing.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -545,9 +544,8 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
             _factory, _organization.Id, OrganizationUserType.User);
         await SetResetPasswordKeyAsync(targetOrgUser);
 
-        var userRepository = _factory.GetService<IUserRepository>();
-        var targetUser = (await userRepository.GetByEmailAsync(targetEmail))!;
-        var (device, _) = await SeedTwoFactorRememberTokenAsync(targetUser, "stamp-before-reset");
+        var device = await TwoFactorIntegrationTestHelpers.SeedTwoFactorRememberTokenAsync(
+            _factory, targetEmail, "stamp-before-reset");
 
         // Act
         var response = await _client.PutAsJsonAsync(
@@ -561,10 +559,8 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
-        var rememberTokenRepository = _factory.GetService<ITwoFactorRememberTokenRepository>();
-        var row = await rememberTokenRepository.GetByUserIdDeviceIdAsync(targetUser.Id, device.Id);
-        Assert.NotNull(row);
-        Assert.NotEqual("stamp-before-reset", row.Stamp);
+        await TwoFactorIntegrationTestHelpers.AssertTwoFactorRememberTokenRotatedAsync(
+            _factory, targetEmail, device, "stamp-before-reset");
     }
 
     /// <summary>
@@ -584,9 +580,8 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
             _factory, _organization.Id, OrganizationUserType.User);
         await SetResetPasswordKeyAsync(targetOrgUser);
 
-        var userRepository = _factory.GetService<IUserRepository>();
-        var targetUser = (await userRepository.GetByEmailAsync(targetEmail))!;
-        var (device, _) = await SeedTwoFactorRememberTokenAsync(targetUser, "stamp-untouched");
+        var device = await TwoFactorIntegrationTestHelpers.SeedTwoFactorRememberTokenAsync(
+            _factory, targetEmail, "stamp-untouched");
 
         // Act
         var response = await _client.PutAsJsonAsync(
@@ -602,10 +597,8 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
-        var rememberTokenRepository = _factory.GetService<ITwoFactorRememberTokenRepository>();
-        var row = await rememberTokenRepository.GetByUserIdDeviceIdAsync(targetUser.Id, device.Id);
-        Assert.NotNull(row);
-        Assert.Equal("stamp-untouched", row.Stamp);
+        await TwoFactorIntegrationTestHelpers.AssertTwoFactorRememberTokenUnchangedAsync(
+            _factory, targetEmail, device, "stamp-untouched");
     }
 
     [Fact]
@@ -620,9 +613,8 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
             _factory, _organization.Id, OrganizationUserType.User);
         await SetResetPasswordKeyAsync(targetOrgUser);
 
-        var userRepository = _factory.GetService<IUserRepository>();
-        var targetUser = (await userRepository.GetByEmailAsync(targetEmail))!;
-        var (device, _) = await SeedTwoFactorRememberTokenAsync(targetUser, "stamp-before-reset");
+        var device = await TwoFactorIntegrationTestHelpers.SeedTwoFactorRememberTokenAsync(
+            _factory, targetEmail, "stamp-before-reset");
 
         // Act
         var response = await _client.PutAsJsonAsync(
@@ -638,34 +630,7 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         // Assert
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
 
-        var rememberTokenRepository = _factory.GetService<ITwoFactorRememberTokenRepository>();
-        var row = await rememberTokenRepository.GetByUserIdDeviceIdAsync(targetUser.Id, device.Id);
-        Assert.NotNull(row);
-        Assert.NotEqual("stamp-before-reset", row.Stamp);
-    }
-
-    private async Task<(Device Device, TwoFactorRememberToken Row)> SeedTwoFactorRememberTokenAsync(
-        User user, string stamp)
-    {
-        var device = await _factory.GetService<IDeviceRepository>().CreateAsync(new Device
-        {
-            UserId = user.Id,
-            Name = "chrome-test",
-            Type = DeviceType.ChromeBrowser,
-            Identifier = Guid.NewGuid().ToString(),
-            Active = true,
-            LastActivityDate = DateTime.UtcNow,
-        });
-
-        var row = await _factory.GetService<ITwoFactorRememberTokenRepository>()
-            .UpsertAsync(new TwoFactorRememberToken
-            {
-                UserId = user.Id,
-                DeviceId = device.Id,
-                Stamp = stamp,
-                ExpirationDate = DateTime.UtcNow.AddDays(30),
-            });
-
-        return (device, row);
+        await TwoFactorIntegrationTestHelpers.AssertTwoFactorRememberTokenRotatedAsync(
+            _factory, targetEmail, device, "stamp-before-reset");
     }
 }
