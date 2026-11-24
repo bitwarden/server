@@ -47,7 +47,7 @@ public class PasswordGrantCredentialTests
         using var factory = new IdentityApplicationFactory();
         await RegisterUserAsync(factory);
 
-        var context = await factory.Server.PostAsync("/connect/token", GetDefaultFormUrlEncodedContentWithoutDevice());
+        var context = await factory.ContextFromPasswordAsync(DefaultUsername, DefaultPassword, includeDevice: false);
 
         await AssertErrorModelAsync(context, "no device information provided", expectedError: "device_error");
     }
@@ -181,17 +181,5 @@ public class PasswordGrantCredentialTests
             clientId: BitwardenClient.Send);
 
         await AssertErrorAsync(context, "unauthorized_client");
-    }
-
-    private FormUrlEncodedContent GetDefaultFormUrlEncodedContentWithoutDevice()
-    {
-        return new FormUrlEncodedContent(new Dictionary<string, string>
-        {
-            { "scope", "api offline_access" },
-            { "client_id", "web" },
-            { "grant_type", "password" },
-            { "username", DefaultUsername },
-            { "password", DefaultPassword },
-        });
     }
 }
