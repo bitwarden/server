@@ -69,7 +69,7 @@ public class IssueTwoFactorRememberTokenCommandTests
     }
 
     /// <summary>
-    /// Re-remembering a device writes a different stamp, which is what orphans the token that
+    /// Re-issuing a 2FA remember token for a device writes a different stamp, which is what orphans the token that
     /// device was holding.
     /// </summary>
     [Theory, BitAutoData]

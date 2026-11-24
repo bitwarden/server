@@ -160,7 +160,7 @@ public class TwoFactorAuthenticationValidator(
         // null and the lookup below would reject it. It is validated on its own terms here instead.
         if (type is TwoFactorProviderType.Remember)
         {
-            // TODO: PM-44171 - Remove the legacy token path. PM-40673 introduced a new remember token format and stopped
+            // TODO: PM-44171 - Remove the legacy token path. PM-40673 introduced a new 2FA remember token format and stopped
             // issuing legacy format tokens. Legacy tokens have a 30 day expiration, so we must wait until more than 30 days
             // have passed after the release of PM-40673 before we remove this legacy path.
             var isLegacyFormat = token is null || !token.StartsWith(TwoFactorRememberTokenable.ClearTextPrefix, StringComparison.Ordinal);
