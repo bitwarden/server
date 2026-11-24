@@ -1,5 +1,4 @@
-﻿using Bit.Core.Auth.Utilities;
-using Bit.Core.Entities;
+﻿using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.KeyManagement.Models.Api.Request;
@@ -206,9 +205,9 @@ public class RegisterFinishRequestModel : IValidatableObject
             }
         }
 
-        // 2.5 A salt that contains '@' is an email-derived salt. Clients derive it as the trimmed email
-        //     with the Unicode full lowercase mapping, so any other email-derived value gives a salt that
-        //     clients cannot reproduce. A salt without '@' is not email-derived and is accepted as sent.
+        // 2.5 A salt that contains '@' is an email-derived salt. Clients derive it as the trimmed,
+        //     lowercased email, so any other email-derived value gives a salt that clients cannot
+        //     reproduce. A salt without '@' is not email-derived and is accepted as sent.
         if (IsEmailDerivedSaltThatDoesNotMatchEmail(MasterPasswordUnlock?.Salt))
         {
             yield return new ValidationResult(
@@ -358,10 +357,28 @@ public class RegisterFinishRequestModel : IValidatableObject
         }
     }
 
+    /// <summary>
+    /// Compares an email-derived salt with <see cref="string.ToLowerInvariant"/> of the trimmed email. Clients
+    /// lowercase with the Unicode full lowercase mapping, which differs from <see cref="string.ToLowerInvariant"/>
+    /// in two places:
+    /// <list type="number">
+    ///   <item>İ (U+0130): clients give i followed by U+0307, and <see cref="string.ToLowerInvariant"/> does not
+    ///   change İ. A salt that keeps İ matches the comparison but is not the salt that clients derive keys from, so
+    ///   every email-derived salt is rejected when the email contains İ.</item>
+    ///   <item>Σ (U+03A3) at the end of a word: clients give ς, and <see cref="string.ToLowerInvariant"/> gives σ.
+    ///   The salt that clients send for such an email is rejected.</item>
+    /// </list>
+    /// A user can avoid both by typing the email in lowercase, except when İ is in the top-level domain: the lowercase
+    /// form contains U+0307, which the email check does not allow there.
+    /// </summary>
     private bool IsEmailDerivedSaltThatDoesNotMatchEmail(string? salt)
     {
         return salt is not null &&
                salt.Contains('@') &&
-               !string.Equals(salt, EmailMasterPasswordSalt.FromEmail(Email), StringComparison.Ordinal);
+               // ToLowerInvariant does not change İ (U+0130), but clients lowercase it to i + U+0307. A salt that
+               // keeps İ would pass the comparison below without being the salt that clients derive keys from, so
+               // an email with İ gets no email-derived salt.
+               (Email.Contains('\u0130') ||
+                !string.Equals(salt, Email.ToLowerInvariant().Trim(), StringComparison.Ordinal));
     }
 }

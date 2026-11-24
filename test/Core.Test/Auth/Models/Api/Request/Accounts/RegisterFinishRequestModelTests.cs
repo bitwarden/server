@@ -642,17 +642,15 @@ public class RegisterFinishRequestModelTests
     }
 
     /// <summary>
-    /// For a non-ASCII domain, the rule accepts the email trimmed and lowercased with the Unicode full lowercase
-    /// mapping.
+    /// For these non-ASCII domains, <see cref="string.ToLowerInvariant"/> gives the same salt that clients derive, so
+    /// the rule accepts it.
     /// </summary>
     [Theory]
     [InlineData("user@ÜBER.de", "user@über.de")]
-    [InlineData("user@ΟΔΟΣ.gr", "user@οδοσ.gr")] // Σ before '.' and a letter.
+    [InlineData("user@ΟΔΟΣ.gr", "user@οδοσ.gr")] // Σ before '.' and a letter is not at the end of a word.
     [InlineData("user@ΣΟΦΙΑ.gr", "user@σοφια.gr")]
-    [InlineData("user@Σ-net.gr", "user@σ-net.gr")] // No letter before Σ.
-    [InlineData("user@ΟΔΟΣ-net.gr", "user@οδος-net.gr")] // Word-final Σ.
-    [InlineData("user@example.ΑΣ", "user@example.ας")]
-    [InlineData("user@İzmir.com.tr", "user@i\u0307zmir.com.tr")]
+    [InlineData("user@Σ-net.gr", "user@σ-net.gr")] // No letter comes before Σ.
+    [InlineData("user@οδος-net.gr", "user@οδος-net.gr")] // ς typed in lowercase.
     [InlineData("user@I\u0307zmir.com.tr", "user@i\u0307zmir.com.tr")] // Decomposed İ: I + U+0307.
     public void Validate_EmailSaltForNonAsciiDomain_IsValid(string email, string salt)
     {
@@ -662,21 +660,78 @@ public class RegisterFinishRequestModelTests
     }
 
     /// <summary>
-    /// <see cref="string.ToLowerInvariant"/> differs from the Unicode full lowercase mapping for a word-final Σ (σ, not
-    /// ς) and for İ (unchanged, not i + U+0307). Clients do not derive the master key from these salts, so the rule
-    /// rejects them.
+    /// For a capital Σ at the end of a word, clients give ς and <see cref="string.ToLowerInvariant"/> gives σ, so the
+    /// rule rejects the salt that clients send. The user can register by typing the email in lowercase: the email then
+    /// equals the client salt, and <see cref="string.ToLowerInvariant"/> does not change it.
     /// </summary>
     [Theory]
-    [InlineData("user@ΟΔΟΣ-net.gr", "user@οδοσ-net.gr")]
-    [InlineData("user@example.ΑΣ", "user@example.ασ")]
+    [InlineData("user@ΟΔΟΣ-net.gr", "user@οδος-net.gr")] // Σ before '-'.
+    [InlineData("user@ΟΔΟΣ1.gr", "user@οδος1.gr")] // Σ before a digit.
+    [InlineData("user@ΟΔΟΣ.1x.gr", "user@οδος.1x.gr")] // Σ before '.' and a digit.
+    [InlineData("user@example.ΑΣ", "user@example.ας")] // Σ at the end of the email.
+    public void Validate_EmailWithWordFinalCapitalSigma_RejectsTheClientSalt_AcceptsItWhenTheEmailIsTypedInLowercase(
+        string email, string clientSalt)
+    {
+        var result = Assert.Single(Validate(BuildModelWithEmailAndSalt(email, clientSalt)));
+        Assert.Equal("Invalid master password salt.", result.ErrorMessage);
+
+        Assert.Empty(Validate(BuildModelWithEmailAndSalt(email: clientSalt, clientSalt)));
+    }
+
+    /// <summary>
+    /// For İ (U+0130), clients give i + U+0307, so the rule rejects the salt that clients send. The user can register
+    /// by typing the email in lowercase: the email then equals the client salt and contains no İ.
+    /// </summary>
+    [Theory]
+    [InlineData("user@İzmir.com.tr", "user@i\u0307zmir.com.tr")]
+    [InlineData("user@İZMİR.com.tr", "user@i\u0307zmi\u0307r.com.tr")]
+    public void Validate_EmailWithCapitalIWithDotAbove_RejectsTheClientSalt_AcceptsItWhenTheEmailIsTypedInLowercase(
+        string email, string clientSalt)
+    {
+        var result = Assert.Single(Validate(BuildModelWithEmailAndSalt(email, clientSalt)));
+        Assert.Equal("Invalid master password salt.", result.ErrorMessage);
+
+        Assert.Empty(Validate(BuildModelWithEmailAndSalt(email: clientSalt, clientSalt)));
+    }
+
+    /// <summary>
+    /// When İ (U+0130) is in the top-level domain, typing the email in lowercase does not help. The email check
+    /// requires a top-level domain of letters only, and U+0307 is a combining mark. Such an email cannot register with
+    /// an email-derived salt.
+    /// </summary>
+    [Fact]
+    public void Validate_EmailWithCapitalIWithDotAboveInTopLevelDomain_HasNoLowercaseWorkaround()
+    {
+        var result = Assert.Single(Validate(BuildModelWithEmailAndSalt("user@example.İ", "user@example.i\u0307")));
+        Assert.Equal("Invalid master password salt.", result.ErrorMessage);
+
+        var lowercaseResults = Validate(BuildModelWithEmailAndSalt("user@example.i\u0307", "user@example.i\u0307"));
+        Assert.Contains(lowercaseResults, r => r.MemberNames.Contains(nameof(RegisterFinishRequestModel.Email)));
+    }
+
+    /// <summary>
+    /// <see cref="string.ToLowerInvariant"/> does not change İ (U+0130), so a salt that keeps İ equals the lowercased
+    /// email. Clients do not derive keys from that salt, so the rule rejects it.
+    /// </summary>
+    [Theory]
     [InlineData("user@İzmir.com.tr", "user@İzmir.com.tr")]
     [InlineData("user@İZMİR.com.tr", "user@İzmİr.com.tr")]
-    public void Validate_EmailSaltLowercasedWithToLowerInvariant_WhenFullMappingDiffers_ReturnsInvalidSaltError(
-        string email, string salt)
+    [InlineData("user@example.İ", "user@example.İ")]
+    public void Validate_EmailWithCapitalIWithDotAbove_SaltThatKeepsIt_ReturnsInvalidSaltError(string email, string salt)
     {
+        Assert.Equal(salt, email.ToLowerInvariant());
+
         var result = Assert.Single(Validate(BuildModelWithEmailAndSalt(email, salt)));
 
         Assert.Equal("Invalid master password salt.", result.ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_EmailWithCapitalIWithDotAbove_SaltWithoutAtSign_IsValid()
+    {
+        var results = Validate(BuildModelWithEmailAndSalt("user@İzmir.com.tr", "dGhpcyBpcyBhIHNhbHQgdmFsdWU="));
+
+        Assert.Empty(results);
     }
 
     [Fact]
