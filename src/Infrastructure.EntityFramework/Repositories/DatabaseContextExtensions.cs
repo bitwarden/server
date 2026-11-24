@@ -89,7 +89,8 @@ public static class DatabaseContextExtensions
     /// through a group.
     /// </summary>
     /// <remarks>
-    /// Runs as a single <c>UPDATE</c> when called, not at the caller's <c>SaveChangesAsync</c>.
+    /// Runs when called, not at the caller's <c>SaveChangesAsync</c>: reads the member ids, then updates those
+    /// users by id.
     /// </remarks>
     public static async Task UserBumpAccountRevisionDateByCollectionIdsAsync(this DatabaseContext context, IEnumerable<Guid> collectionIds, Guid organizationId)
     {
@@ -113,9 +114,13 @@ public static class DatabaseContextExtensions
                                 && ou.Status == OrganizationUserStatusType.Confirmed
                             select ou.UserId!.Value;
 
-        var userIds = direct.Union(throughGroups);
-        var now = DateTime.UtcNow;
+        var userIds = await direct.Union(throughGroups).ToListAsync();
+        if (userIds.Count == 0)
+        {
+            return;
+        }
 
+        var now = DateTime.UtcNow;
         await context.Users
             .Where(u => userIds.Contains(u.Id))
             .ExecuteUpdateAsync(s => s.SetProperty(u => u.AccountRevisionDate, now));
