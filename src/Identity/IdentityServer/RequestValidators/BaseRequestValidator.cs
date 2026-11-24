@@ -501,7 +501,6 @@ public abstract class BaseRequestValidator<T> where T : class
                 CurrentContext.IpAddress);
         }
 
-        await Task.Delay(2000); // Delay for brute force.
         SetErrorResult(context,
             new Dictionary<string, object> { { "ErrorModel", new ErrorResponseModel(message) } });
     }
@@ -532,8 +531,6 @@ public abstract class BaseRequestValidator<T> where T : class
 
             _logger.LogWarning(Constants.BypassFiltersEventId, "{FailedLoginMessage}", formattedMessage);
         }
-
-        await Task.Delay(2000); // Delay for brute force.
     }
 
     [Obsolete("Consider using SetValidationErrorResult instead.")]

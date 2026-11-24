@@ -437,7 +437,7 @@ public class TwoFactorController : Controller
                     return;
                 }
 
-                await ThrowDelayedBadRequestExceptionAsync(
+                throw new BadRequestException(
                     "Cannot send two-factor email: a valid, non-expired SSO Email 2FA Session token is required to send 2FA emails.");
             }
             else if (await _userService.VerifySecretAsync(user, requestModel.Secret))
@@ -447,7 +447,7 @@ public class TwoFactorController : Controller
             }
         }
 
-        await ThrowDelayedBadRequestExceptionAsync("Cannot send two-factor email.");
+        throw new BadRequestException("Cannot send two-factor email.");
     }
 
     [HttpPut("email")]
@@ -557,7 +557,6 @@ public class TwoFactorController : Controller
         if (!await _userManager.VerifyTwoFactorTokenAsync(user,
                 CoreHelpers.CustomProviderName(TwoFactorProviderType.YubiKey), value))
         {
-            await Task.Delay(2000);
             throw new BadRequestException(name, $"{name} is invalid.");
         }
 
@@ -568,11 +567,5 @@ public class TwoFactorController : Controller
     {
         return _ssoEmailTwoFactorSessionDataProtector.TryUnprotect(ssoEmail2FaSessionToken, out var decryptedToken) &&
                decryptedToken.Valid && decryptedToken.TokenIsValid(user);
-    }
-
-    private async Task ThrowDelayedBadRequestExceptionAsync(string message, int delayTime = 2000)
-    {
-        await Task.Delay(delayTime);
-        throw new BadRequestException(message);
     }
 }

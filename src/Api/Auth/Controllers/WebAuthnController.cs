@@ -2,7 +2,6 @@
 using Bit.Api.Auth.Models.Request.WebAuthn;
 using Bit.Api.Auth.Models.Response.WebAuthn;
 using Bit.Api.Models.Response;
-using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Identity;
@@ -183,7 +182,6 @@ public class WebAuthnController : Controller
         var user = await GetUserAsync();
         if (!await _userService.VerifySecretAsync(user, model.Secret))
         {
-            await Task.Delay(Constants.FailedSecretVerificationDelay);
             throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
