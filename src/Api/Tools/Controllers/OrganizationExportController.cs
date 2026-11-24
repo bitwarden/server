@@ -22,6 +22,7 @@ public class OrganizationExportController : Controller
     private readonly IOrganizationCiphersQuery _organizationCiphersQuery;
     private readonly ICollectionRepository _collectionRepository;
     private readonly ICipherLeaseGate _cipherLeaseGate;
+    private readonly ILeasingBypassAudit _leasingBypassAudit;
 
     public OrganizationExportController(
         IUserService userService,
@@ -29,7 +30,8 @@ public class OrganizationExportController : Controller
         IAuthorizationService authorizationService,
         IOrganizationCiphersQuery organizationCiphersQuery,
         ICollectionRepository collectionRepository,
-        ICipherLeaseGate cipherLeaseGate)
+        ICipherLeaseGate cipherLeaseGate,
+        ILeasingBypassAudit leasingBypassAudit)
     {
         _userService = userService;
         _globalSettings = globalSettings;
@@ -37,6 +39,7 @@ public class OrganizationExportController : Controller
         _organizationCiphersQuery = organizationCiphersQuery;
         _collectionRepository = collectionRepository;
         _cipherLeaseGate = cipherLeaseGate;
+        _leasingBypassAudit = leasingBypassAudit;
     }
 
     [HttpGet("export")]
@@ -53,6 +56,10 @@ public class OrganizationExportController : Controller
             var collectionsTask = _collectionRepository
                 .GetManySharedCollectionsByOrganizationIdAsync(organizationId);
             await Task.WhenAll(ciphersTask, collectionsTask);
+
+            // The client logs its own export event, which a modified client can skip.
+            await _leasingBypassAudit.AuditWholeVaultExportAsync(organizationId,
+                _userService.GetProperUserId(User)!.Value, ciphersTask.Result.Select(c => c.Id));
 
             // Whole-vault export is the one context in which credential leasing is waived, so the export
             // carries every item in full, leasing-gated ones included.

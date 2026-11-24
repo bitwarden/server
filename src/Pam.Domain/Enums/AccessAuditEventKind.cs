@@ -23,6 +23,12 @@ public enum AccessAuditEventKind : byte
     CredentialAccessed = 20, // not emitted yet
     CredentialAccessDenied = 21, // not emitted yet
 
+    /// <summary>A collection change left a gated cipher in a collection no enabled rule gates, or in none.</summary>
+    CredentialUngated = 22,
+
+    /// <summary>A whole-vault export released gated ciphers without a lease.</summary>
+    VaultExported = 23,
+
     // Rule administration
     RuleCreated = 30,
     RuleUpdated = 31,
