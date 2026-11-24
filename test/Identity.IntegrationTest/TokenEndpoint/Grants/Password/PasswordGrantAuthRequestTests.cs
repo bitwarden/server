@@ -25,6 +25,11 @@ public class PasswordGrantAuthRequestTests
     private const string AccessCode = "auth_request_access_code";
 
     /// <summary>
+    /// How long after its creation an auth request can log a user in.
+    /// </summary>
+    private static readonly TimeSpan AuthRequestLifetime = TimeSpan.FromMinutes(15);
+
+    /// <summary>
     /// An approved, answered, unused auth request on a known device logs the user in with its access code, and the
     /// login marks the auth request as used.
     /// </summary>
@@ -61,7 +66,7 @@ public class PasswordGrantAuthRequestTests
     }
 
     /// <summary>
-    /// An auth request older than the 15 minute lifetime is rejected.
+    /// An auth request older than its lifetime is rejected.
     /// </summary>
     [Fact]
     public async Task ValidateAsync_ValidateContextAsync_Expired_AuthRequest_Failure()
@@ -69,11 +74,8 @@ public class PasswordGrantAuthRequestTests
         using var factory = new IdentityApplicationFactory();
         var user = await RegisterUserAsync(factory);
         await AddKnownDevice(factory, user.Id);
-        var authRequest = await CreateAuthRequestAsync(factory, user.Id, r =>
-        {
-            r.CreationDate = DateTime.UtcNow.AddMinutes(-16);
-            r.ResponseDate = DateTime.UtcNow.AddMinutes(-10);
-        });
+        var authRequest = await CreateAuthRequestAsync(factory, user.Id,
+            r => r.CreationDate = DateTime.UtcNow - AuthRequestLifetime - TimeSpan.FromMinutes(1));
 
         var context = await PostAuthRequestLoginAsync(factory, authRequest.Id, AccessCode);
 
