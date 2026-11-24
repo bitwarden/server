@@ -192,6 +192,41 @@ public class RefreshTokenGrantTests : IClassFixture<IdentityApplicationFactory>
         Assert.False(refreshedClaims.TryGetProperty(Claims.SecretsManagerAccess, out _));
     }
 
+    /// <summary>
+    /// A refresh token works only while its user exists. After the account is deleted, the token is rejected.
+    /// </summary>
+    [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
+    public async Task RefreshToken_AfterUserDeleted_IsRejected(RegisterFinishRequestModel requestModel)
+    {
+        requestModel.UserAsymmetricKeys = TEST_ACCOUNT_KEYS;
+        var localFactory = new IdentityApplicationFactory();
+        var user = await localFactory.RegisterNewIdentityFactoryUserAsync(requestModel);
+        var (_, refreshToken) = await localFactory.TokenFromPasswordAsync(
+            requestModel.Email, requestModel.MasterPasswordHash);
+        // The token works before the deletion, so only the deletion can cause the rejection.
+        var firstContext = await PostRefreshTokenAsync(localFactory, refreshToken);
+        using var firstBody = await AssertDefaultTokenBodyAsync(firstContext);
+        await localFactory.Services.GetRequiredService<IUserRepository>().DeleteAsync(user);
+
+        var context = await PostRefreshTokenAsync(localFactory, refreshToken);
+
+        Assert.Equal(StatusCodes.Status400BadRequest, context.Response.StatusCode);
+        using var body = await JsonDocument.ParseAsync(context.Response.Body);
+        Assert.Equal("invalid_grant", body.RootElement.GetProperty("error").GetString());
+    }
+
+    private static async Task<HttpContext> PostRefreshTokenAsync(
+        IdentityApplicationFactory factory, string refreshToken)
+    {
+        using var formContent = new FormUrlEncodedContent(new Dictionary<string, string>
+        {
+            { "grant_type", "refresh_token" },
+            { "client_id", "web" },
+            { "refresh_token", refreshToken },
+        });
+        return await factory.Server.PostAsync("/connect/token", formContent);
+    }
+
     private static async Task CreateOrganizationMembershipAsync(
         IdentityApplicationFactory localFactory,
         Guid organizationId,
