@@ -358,26 +358,21 @@ public class RegisterFinishRequestModel : IValidatableObject
     }
 
     /// <summary>
-    /// Compares an email-derived salt with <see cref="string.ToLowerInvariant"/> of the trimmed email. Clients
-    /// lowercase with the Unicode full lowercase mapping, which differs from <see cref="string.ToLowerInvariant"/>
-    /// in two places:
+    /// Clients lowercase with the Unicode full mapping, which differs from <see cref="string.ToLowerInvariant"/> in
+    /// two cases. Both reject the client salt:
     /// <list type="number">
-    ///   <item>İ (U+0130): clients give i followed by U+0307, and <see cref="string.ToLowerInvariant"/> does not
-    ///   change İ. A salt that keeps İ matches the comparison but is not the salt that clients derive keys from, so
-    ///   every email-derived salt is rejected when the email contains İ.</item>
-    ///   <item>Σ (U+03A3) at the end of a word: clients give ς, and <see cref="string.ToLowerInvariant"/> gives σ.
-    ///   The salt that clients send for such an email is rejected.</item>
+    ///   <item>İ (U+0130): clients give i + U+0307, and ToLowerInvariant keeps İ. Every email-derived salt is
+    ///   rejected when the email contains İ. A salt that keeps İ would match ToLowerInvariant, but clients derive
+    ///   the master key from its lowercase form, so later master password changes would fail.</item>
+    ///   <item>Σ at the end of a word: clients give ς, and ToLowerInvariant gives σ.</item>
     /// </list>
-    /// A user can avoid both by typing the email in lowercase, except when İ is in the top-level domain: the lowercase
-    /// form contains U+0307, which the email check does not allow there.
+    /// Typing the email in lowercase avoids both, except for İ in the top-level domain, where the email check does
+    /// not allow U+0307.
     /// </summary>
     private bool IsEmailDerivedSaltThatDoesNotMatchEmail(string? salt)
     {
         return salt is not null &&
                salt.Contains('@') &&
-               // ToLowerInvariant does not change İ (U+0130), but clients lowercase it to i + U+0307. A salt that
-               // keeps İ would pass the comparison below without being the salt that clients derive keys from, so
-               // an email with İ gets no email-derived salt.
                (Email.Contains('\u0130') ||
                 !string.Equals(salt, Email.ToLowerInvariant().Trim(), StringComparison.Ordinal));
     }
