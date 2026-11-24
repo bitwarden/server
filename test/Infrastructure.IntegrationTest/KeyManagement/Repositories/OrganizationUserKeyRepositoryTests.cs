@@ -112,8 +112,7 @@ public class OrganizationUserKeyRepositoryTests
         var organization = await organizationRepository.CreateTestOrganizationAsync();
         var (user, organizationUser) = await CreateMemberAsync(userRepository, organizationUserRepository, organization,
             _userKeyId, _v1AccountRecoveryKey, _v2UpgradeToken);
-        var before = (await userRepository.GetByIdAsync(user.Id))!.AccountRevisionDate;
-        // Ahead of the member's current account revision date, so the bump is visible
+        await userRepository.BackdateAccountRevisionDatesAsync(user);
         var revisionDate = DateTime.UtcNow.AddMinutes(1);
 
         // Act
@@ -128,8 +127,7 @@ public class OrganizationUserKeyRepositoryTests
         // Databases store fractions of a second with different precision
         Assert.Equal(revisionDate, written.RevisionDate, TimeSpan.FromSeconds(1));
         // The member's clients resync from this date, so they learn that their enrollment changed
-        var after = (await userRepository.GetByIdAsync(user.Id))!.AccountRevisionDate;
-        Assert.True(after > before);
+        await userRepository.AssertBumpedAsync(user);
     }
 
     [Theory, DatabaseData]
