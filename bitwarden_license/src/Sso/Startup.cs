@@ -32,6 +32,7 @@ public class Startup
 
         // Settings
         var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
+        services.AddGlobalSettingsBridge();
 
         // Stripe Billing
         StripeConfiguration.ApiKey = globalSettings.Stripe.ApiKey;

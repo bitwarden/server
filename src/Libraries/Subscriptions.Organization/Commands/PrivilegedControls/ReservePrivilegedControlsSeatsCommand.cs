@@ -12,7 +12,7 @@ using OrganizationEntity = Bit.Core.AdminConsole.Entities.Organization;
 namespace Bit.Subscriptions.Organization.Commands.PrivilegedControls;
 
 internal sealed class ReservePrivilegedControlsSeatsCommand(
-    ICountNewPamSeatsRequiredQuery countNewPamSeatsRequiredQuery,
+    IValidatePrivilegedControlsSeatReservationQuery validateSeatReservationQuery,
     IAutoscalePrivilegedControlsSeatsCommand autoscalePrivilegedControlsSeatsCommand,
     IBitwardenEnvironment environment,
     IFeatureService featureService,
@@ -48,32 +48,16 @@ internal sealed class ReservePrivilegedControlsSeatsCommand(
 
     private async Task<PrivilegedControlsSeatReservationResult> ReserveAsync(OrganizationEntity organization, int seatsRequested)
     {
-        if (environment.SelfHosted)
+        var error = await validateSeatReservationQuery.RunAsync(organization, seatsRequested, passwordManagerSeatsToAdd: 0);
+        if (error is not null)
         {
-            var seatsRequired = await countNewPamSeatsRequiredQuery
-                .CountNewPamSeatsRequiredAsync(organization, seatsRequested);
-
-            return seatsRequired > 0
-                ? new PrivilegedControlsSeatReservationResult(new CannotAutoscalePrivilegedControlsSeatsOnSelfHostError())
-                : new PrivilegedControlsSeatReservationResult();
+            return new PrivilegedControlsSeatReservationResult(error);
         }
 
-        // With the flag off, Privileged Controls is sales-assisted: seats are a hard limit and owners contact sales for
-        // more, so nothing autoscales.
-        if (!featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
+        // Self-hosted and sales-assisted (flag off) organizations never autoscale; the validation above is the whole check.
+        if (environment.SelfHosted || !featureService.IsEnabled(FeatureFlagKeys.PM39883_Pam_Billing_Support))
         {
-            var seatsRequired = await countNewPamSeatsRequiredQuery
-                .CountNewPamSeatsRequiredAsync(organization, seatsRequested);
-
-            return seatsRequired > 0
-                ? new PrivilegedControlsSeatReservationResult(new NotEnoughPrivilegedControlsSeatsError())
-                : new PrivilegedControlsSeatReservationResult();
-        }
-
-        // The autoscale command can't add seats to an organization that has none, so zero seats means none are free.
-        if (organization.PamSeats < 1)
-        {
-            return new PrivilegedControlsSeatReservationResult(new PrivilegedControlsSeatLimitReachedError());
+            return new PrivilegedControlsSeatReservationResult();
         }
 
         var result = await autoscalePrivilegedControlsSeatsCommand.RunAsync(organization, seatsRequested);

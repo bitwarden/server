@@ -245,10 +245,26 @@ jobs:
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           PROJECT_NAME: ${{ steps.setup.outputs.project_name }}
           SHA: ${{ github.sha }}
+          # Same condition as the Cosign steps: is_publish_branch alone is true for fork PRs under pull_request_target
+          IS_PUBLISH_BUILD: ${{ !github.event.pull_request && env.is_publish_branch == 'true' }}
+          BRANCH_NAME: ${{ github.ref_name }}
         run: |
           # Always push to ACR
           ACR_TAG="${_AZ_REGISTRY}/${PROJECT_NAME}:${IMAGE_TAG}"
           TAGS="${ACR_TAG}"
+
+          # Unique per-build tag for publish builds: <branch>-<version>-<short sha>, e.g. rc-2026.11.0-abc1234
+          # Uses the raw branch name (main, not dev) so deploy tooling can select builds by branch prefix
+          if [[ "${IS_PUBLISH_BUILD}" == "true" ]]; then
+            VERSION=$(grep -oPm1 '<Version>\K[^<]+' Directory.Build.props)
+            if [[ -z "${VERSION}" ]]; then
+              echo "::error::Could not read <Version> from Directory.Build.props"
+              exit 1
+            fi
+            BUILD_TAG="${BRANCH_NAME}-${VERSION}-${SHA::7}"
+            TAGS=$TAGS",${_AZ_REGISTRY}/${PROJECT_NAME}:${BUILD_TAG}"
+            echo "build_tag=$BUILD_TAG" >> "$GITHUB_OUTPUT"
+          fi
 
           # Additionally push rc and hotfix-rc tags to GHCR
           if [[ "${IMAGE_TAG}" == "rc" || "${IMAGE_TAG}" == "hotfix-rc" ]]; then
@@ -334,6 +350,7 @@ jobs:
           IMAGE_TAG: ${{ steps.tag.outputs.tag }}
           DIGEST: ${{ steps.build-artifacts.outputs.digest }}
           TAGS: ${{ steps.image-tags.outputs.tags }}
+          BUILD_TAG: ${{ steps.image-tags.outputs.build_tag }}
         run: |
           fragment='{}'
           IFS=',' read -r -a tags_array <<< "$TAGS"
@@ -348,6 +365,14 @@ jobs:
               --arg digest "$DIGEST" \
               '. + {($k): {type: "container_image", image: $image, tag: $tag, digest: $digest}}')
           done
+
+          # The build tag is only pushed to ACR
+          if [[ -n "${BUILD_TAG}" ]]; then
+            fragment=$(echo "$fragment" | jq \
+              --arg k "${PROJECT_NAME}-azurecr.io" \
+              --arg build_tag "$BUILD_TAG" \
+              '.[$k].build_tag = $build_tag')
+          fi
 
           mkdir -p image-manifest-fragments
           echo "$fragment" > "image-manifest-fragments/${PROJECT_NAME}.json"

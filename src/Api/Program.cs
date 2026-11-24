@@ -18,6 +18,7 @@ public class Program
             {
                 webBuilder.UseStartup<Startup>();
             })
-            .AddSerilogFileLogging();
+            .AddSerilogFileLogging()
+            .ConfigureDevSelfHostOverride();
     }
 }
