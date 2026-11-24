@@ -285,6 +285,7 @@ internal static class PresetLoader
         LimitItemDeletion = org.LimitItemDeletion,
         LimitCollectionCreation = org.LimitCollectionCreation,
         LimitCollectionDeletion = org.LimitCollectionDeletion,
+        UsePam = org.UsePam,
     };
 
     /// <summary>
