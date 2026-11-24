@@ -13,7 +13,28 @@ BEGIN
         U.[KdfParallelism],
         U.[MasterPasswordSalt],
         OU.[ResetPasswordKey],
-        O.[PrivateKey] AS EncryptedPrivateKey
+        O.[PrivateKey] AS EncryptedPrivateKey,
+        CAST(CASE WHEN EXISTS (
+            SELECT 1
+            FROM [dbo].[OrganizationUser] OtherOU
+            WHERE OtherOU.[UserId] = OU.[UserId]
+                AND OtherOU.[OrganizationId] <> @OrganizationId
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM [dbo].[OrganizationUser] OwnerOU
+                    WHERE OwnerOU.[OrganizationId] = OtherOU.[OrganizationId]
+                        AND OwnerOU.[Id] <> OtherOU.[Id]
+                        AND OwnerOU.[Type] = 0 -- Owner
+                        AND OwnerOU.[Status] = 2 -- Confirmed
+                )
+                AND NOT EXISTS (
+                    SELECT 1
+                    FROM [dbo].[ProviderOrganization] PO
+                    INNER JOIN [dbo].[ProviderUser] PU ON PU.[ProviderId] = PO.[ProviderId]
+                    WHERE PO.[OrganizationId] = OtherOU.[OrganizationId]
+                        AND PU.[Status] = 2 -- Confirmed
+                )
+        ) THEN 1 ELSE 0 END AS BIT) AS IsSoleOwnerOfOtherOrganization
     FROM
         @OrganizationUserIds AS OUIDs
     INNER JOIN

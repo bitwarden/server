@@ -100,6 +100,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IGetActingUserForOrganizationQuery _getActingUserForOrganizationQuery;
     private readonly IGlobalSettings _globalSettings;
     private readonly IInviteStagedOrganizationUsersCommand _inviteStagedOrganizationUsersCommand;
+    private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -138,7 +139,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         V2_UpdateUserCommand.IUpdateOrganizationUserCommand updateOrganizationUserCommandVNext,
         IGetActingUserForOrganizationQuery getActingUserForOrganizationQuery,
         IGlobalSettings globalSettings,
-        IInviteStagedOrganizationUsersCommand inviteStagedOrganizationUsersCommand)
+        IInviteStagedOrganizationUsersCommand inviteStagedOrganizationUsersCommand,
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -178,6 +180,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _getActingUserForOrganizationQuery = getActingUserForOrganizationQuery;
         _globalSettings = globalSettings;
         _inviteStagedOrganizationUsersCommand = inviteStagedOrganizationUsersCommand;
+        _featureService = featureService;
     }
 
     [HttpGet("{id}")]
@@ -301,7 +304,15 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new NotFoundException();
         }
 
-        return new OrganizationUserResetPasswordDetailsResponseModel(new OrganizationUserResetPasswordDetails(organizationUser, user, organization));
+        var details = new OrganizationUserResetPasswordDetails(organizationUser, user, organization);
+        if (_featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryMultiOrgCheck))
+        {
+            details.IsSoleOwnerOfOtherOrganization = (await _organizationUserRepository
+                    .GetManyAccountRecoveryDetailsByOrganizationUserAsync(organization.Id, [organizationUser.Id]))
+                .Any(d => d.IsSoleOwnerOfOtherOrganization);
+        }
+
+        return new OrganizationUserResetPasswordDetailsResponseModel(details);
     }
 
     [HttpPost("account-recovery-details")]
@@ -324,7 +335,12 @@ public class OrganizationUsersController : BaseAdminConsoleController
         }
 
         var responses = await _organizationUserRepository.GetManyAccountRecoveryDetailsByOrganizationUserAsync(orgId, authorizedIds);
-        return new ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>(responses.Select(r => new OrganizationUserResetPasswordDetailsResponseModel(r)));
+        var includeSoleOwnership = _featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryMultiOrgCheck);
+        return new ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>(responses.Select(r =>
+            new OrganizationUserResetPasswordDetailsResponseModel(r)
+            {
+                IsSoleOwnerOfOtherOrganization = includeSoleOwnership && r.IsSoleOwnerOfOtherOrganization,
+            }));
     }
 
     private async Task<bool> CanRecoverAccountAsync(OrganizationUser organizationUser) =>
