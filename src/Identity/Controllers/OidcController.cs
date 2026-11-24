@@ -39,7 +39,9 @@ public class OidcController : Controller
     /// the consent callback, so only the browser that started the authorize can complete it.
     /// </summary>
     private const string ConsentCsrfCookieName = "bw.oidc_consent_csrf";
-    private const string ConsentCsrfCookiePath = "/oidc";
+    // Root path so the cookie is sent back regardless of how Identity is hosted (a "/identity" path
+    // base in dev, a dedicated subdomain in production, or behind a path-rewriting proxy).
+    private const string ConsentCsrfCookiePath = "/";
 
     public OidcController(
         IIdentityServerInteractionService interaction,

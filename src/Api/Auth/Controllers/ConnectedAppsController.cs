@@ -6,6 +6,7 @@ using Bit.Api.Models.Response;
 using Bit.Core;
 using Bit.Core.Auth.ConnectedApps.Commands.Interfaces;
 using Bit.Core.Auth.Repositories;
+using Bit.Core.Exceptions;
 using Bit.Core.Services;
 using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
@@ -24,17 +25,20 @@ public class ConnectedAppsController : Controller
 {
     private readonly IConnectedAppRepository _connectedAppRepository;
     private readonly ICreateConnectedAppCommand _createConnectedAppCommand;
+    private readonly IUpdateConnectedAppCommand _updateConnectedAppCommand;
     private readonly IRevokeConnectedAppCommand _revokeConnectedAppCommand;
     private readonly IUserService _userService;
 
     public ConnectedAppsController(
         IConnectedAppRepository connectedAppRepository,
         ICreateConnectedAppCommand createConnectedAppCommand,
+        IUpdateConnectedAppCommand updateConnectedAppCommand,
         IRevokeConnectedAppCommand revokeConnectedAppCommand,
         IUserService userService)
     {
         _connectedAppRepository = connectedAppRepository;
         _createConnectedAppCommand = createConnectedAppCommand;
+        _updateConnectedAppCommand = updateConnectedAppCommand;
         _revokeConnectedAppCommand = revokeConnectedAppCommand;
         _userService = userService;
     }
@@ -48,12 +52,34 @@ public class ConnectedAppsController : Controller
             connections.Select(c => new ConnectedAppResponseModel(c)));
     }
 
+    [HttpGet("{id:guid}")]
+    public async Task<ConnectedAppResponseModel> Get(Guid id)
+    {
+        var userId = _userService.GetProperUserId(User)!.Value;
+        var connection = await _connectedAppRepository.GetByIdAsync(id);
+        if (connection == null || connection.UserId != userId)
+        {
+            throw new NotFoundException();
+        }
+
+        return new ConnectedAppResponseModel(connection);
+    }
+
     [HttpPost("")]
     public async Task<ConnectedAppResponseModel> Post([FromBody] ConnectedAppRequestModel model)
     {
         var userId = _userService.GetProperUserId(User)!.Value;
         var connection = await _createConnectedAppCommand.CreateAsync(
-            userId, model.PartnerClientId, model.Name, model.Key);
+            userId, model.Type, model.PartnerClientId, model.Name, model.Key);
+        return new ConnectedAppResponseModel(connection);
+    }
+
+    [HttpPut("{id:guid}")]
+    [HttpPost("{id:guid}")]
+    public async Task<ConnectedAppResponseModel> Put(Guid id, [FromBody] ConnectedAppUpdateRequestModel model)
+    {
+        var userId = _userService.GetProperUserId(User)!.Value;
+        var connection = await _updateConnectedAppCommand.UpdateAsync(userId, id, model.Name);
         return new ConnectedAppResponseModel(connection);
     }
 

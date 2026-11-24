@@ -2,6 +2,7 @@
 
 using Bit.Core.Auth.ConnectedApps.Commands.Interfaces;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Exceptions;
@@ -25,8 +26,8 @@ public class CreateConnectedAppCommand : ICreateConnectedAppCommand
         _pushNotificationService = pushNotificationService;
     }
 
-    public async Task<ConnectedApp> CreateAsync(Guid userId, string partnerClientId, string name,
-        string encryptedKey)
+    public async Task<ConnectedApp> CreateAsync(Guid userId, ConnectedAppType type, string partnerClientId,
+        string name, string encryptedKey)
     {
         // Bind to a known, vetted partner — never trust an arbitrary client-supplied id.
         var partner = _partnerStore.GetByClientId(partnerClientId)
@@ -36,6 +37,7 @@ public class CreateConnectedAppCommand : ICreateConnectedAppCommand
         var connection = new ConnectedApp
         {
             UserId = userId,
+            Type = type,
             PartnerClientId = partner.ClientId,
             Name = name,
             Key = encryptedKey,

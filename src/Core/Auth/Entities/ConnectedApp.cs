@@ -1,5 +1,6 @@
 ﻿#nullable enable
 
+using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
 using Bit.Core.Utilities;
 
@@ -17,6 +18,9 @@ public class ConnectedApp : ITableObject<Guid>
 
     /// <summary>The user that owns this connection.</summary>
     public Guid UserId { get; set; }
+
+    /// <summary>The kind of connected app this record is. Agent access is the only type today.</summary>
+    public ConnectedAppType Type { get; set; } = ConnectedAppType.AgentAccess;
 
     /// <summary>
     /// The registered partner's OAuth client id (e.g. <c>partner.acme</c>). Identifies which external

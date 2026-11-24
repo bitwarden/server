@@ -1,4 +1,5 @@
-﻿using Bit.Infrastructure.EntityFramework.Auth.Models;
+﻿using Bit.Core.Auth.Enums;
+using Bit.Infrastructure.EntityFramework.Auth.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
@@ -11,6 +12,11 @@ public class ConnectedAppEntityTypeConfiguration : IEntityTypeConfiguration<Conn
         builder
             .Property(c => c.Id)
             .ValueGeneratedNever();
+
+        // Agent access is the only type today; default existing/omitted rows to it.
+        builder
+            .Property(c => c.Type)
+            .HasDefaultValue(ConnectedAppType.AgentAccess);
 
         builder
             .HasIndex(c => c.UserId)

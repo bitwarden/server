@@ -49,6 +49,8 @@ public static class UserServiceCollectionExtensions
     {
         services.AddScoped<ConnectedApps.Commands.Interfaces.ICreateConnectedAppCommand,
             ConnectedApps.Commands.CreateConnectedAppCommand>();
+        services.AddScoped<ConnectedApps.Commands.Interfaces.IUpdateConnectedAppCommand,
+            ConnectedApps.Commands.UpdateConnectedAppCommand>();
         services.AddScoped<ConnectedApps.Commands.Interfaces.IRevokeConnectedAppCommand,
             ConnectedApps.Commands.RevokeConnectedAppCommand>();
     }

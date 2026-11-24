@@ -6,7 +6,8 @@ CREATE PROCEDURE [dbo].[ConnectedApp_Create]
     @Key VARCHAR(MAX),
     @CreationDate DATETIME2(7),
     @RevisionDate DATETIME2(7),
-    @RevokedDate DATETIME2(7) = NULL
+    @RevokedDate DATETIME2(7) = NULL,
+    @Type TINYINT = 1
 AS
 BEGIN
     SET NOCOUNT ON
@@ -20,7 +21,8 @@ BEGIN
         [Key],
         [CreationDate],
         [RevisionDate],
-        [RevokedDate]
+        [RevokedDate],
+        [Type]
     )
     VALUES
     (
@@ -31,7 +33,8 @@ BEGIN
         @Key,
         @CreationDate,
         @RevisionDate,
-        @RevokedDate
+        @RevokedDate,
+        @Type
     )
 
     EXEC [dbo].[User_BumpAccountRevisionDate] @UserId

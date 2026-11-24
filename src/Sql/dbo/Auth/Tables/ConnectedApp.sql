@@ -7,6 +7,7 @@ CREATE TABLE [dbo].[ConnectedApp] (
     [CreationDate]    DATETIME2(7)     NOT NULL,
     [RevisionDate]    DATETIME2(7)     NOT NULL,
     [RevokedDate]     DATETIME2(7)     NULL,
+    [Type]            TINYINT          NOT NULL CONSTRAINT [DF_ConnectedApp_Type] DEFAULT (1),
     CONSTRAINT [PK_ConnectedApp] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_ConnectedApp_User] FOREIGN KEY ([UserId]) REFERENCES [dbo].[User] ([Id])
 );

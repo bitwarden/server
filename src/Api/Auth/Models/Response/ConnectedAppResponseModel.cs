@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Models.Api;
 
 namespace Bit.Api.Auth.Models.Response;
@@ -13,6 +14,7 @@ public class ConnectedAppResponseModel : ResponseModel
         ArgumentNullException.ThrowIfNull(connection);
 
         Id = connection.Id;
+        Type = connection.Type;
         PartnerClientId = connection.PartnerClientId;
         Name = connection.Name;
         Key = connection.Key;
@@ -22,6 +24,7 @@ public class ConnectedAppResponseModel : ResponseModel
     }
 
     public Guid Id { get; set; }
+    public ConnectedAppType Type { get; set; }
     public string PartnerClientId { get; set; }
     public string Name { get; set; }
 

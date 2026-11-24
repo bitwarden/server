@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using System.ComponentModel.DataAnnotations;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Utilities;
 
 namespace Bit.Api.Auth.Models.Request;
@@ -16,6 +17,9 @@ public class ConnectedAppRequestModel
     [StringLength(200)]
     public required string Name { get; set; }
 
+    /// <summary>The kind of connected app. Defaults to agent access, the only type today.</summary>
+    public ConnectedAppType Type { get; set; } = ConnectedAppType.AgentAccess;
+
     /// <summary>
     /// The agent-access PSK encrypted with the user's key. Server-opaque ciphertext — the plaintext PSK
     /// never reaches the server.
@@ -24,4 +28,12 @@ public class ConnectedAppRequestModel
     [EncryptedString]
     [EncryptedStringLength(2000)]
     public required string Key { get; set; }
+}
+
+public class ConnectedAppUpdateRequestModel
+{
+    /// <summary>The user-chosen display name for the connection.</summary>
+    [Required]
+    [StringLength(200)]
+    public required string Name { get; set; }
 }

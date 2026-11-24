@@ -1,5 +1,6 @@
 ﻿using Bit.Core.Auth.ConnectedApps.Commands;
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.IdentityServer;
 using Bit.Core.Auth.Models;
 using Bit.Core.Auth.Repositories;
@@ -34,9 +35,11 @@ public class CreateConnectedAppCommandTests
             .PushAsync(Arg.Any<PushNotification<SyncConnectedAppPushNotification>>())
             .Returns(Task.CompletedTask);
 
-        var result = await sutProvider.Sut.CreateAsync(userId, "partner.acme", "My bot", "2.encryptedPsk==");
+        var result = await sutProvider.Sut.CreateAsync(
+            userId, ConnectedAppType.AgentAccess, "partner.acme", "My bot", "2.encryptedPsk==");
 
         Assert.Equal(userId, result.UserId);
+        Assert.Equal(ConnectedAppType.AgentAccess, result.Type);
         Assert.Equal("partner.acme", result.PartnerClientId);
         Assert.Equal("My bot", result.Name);
         Assert.Equal("2.encryptedPsk==", result.Key);
@@ -57,7 +60,7 @@ public class CreateConnectedAppCommandTests
             .GetByClientId(Arg.Any<string>()).Returns((OpenIdConnectPartner)null);
 
         await Assert.ThrowsAsync<BadRequestException>(() =>
-            sutProvider.Sut.CreateAsync(userId, "partner.unknown", "x", "2.key=="));
+            sutProvider.Sut.CreateAsync(userId, ConnectedAppType.AgentAccess, "partner.unknown", "x", "2.key=="));
 
         await sutProvider.GetDependency<IConnectedAppRepository>()
             .DidNotReceiveWithAnyArgs().CreateAsync(default);

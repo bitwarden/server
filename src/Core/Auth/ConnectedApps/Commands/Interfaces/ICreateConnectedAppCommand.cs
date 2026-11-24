@@ -1,6 +1,7 @@
 ﻿#nullable enable
 
 using Bit.Core.Auth.Entities;
+using Bit.Core.Auth.Enums;
 
 namespace Bit.Core.Auth.ConnectedApps.Commands.Interfaces;
 
@@ -12,5 +13,6 @@ public interface ICreateConnectedAppCommand
     /// <paramref name="partnerClientId"/> must resolve to a registered partner. Pushes a create to the
     /// user's other clients.
     /// </summary>
-    Task<ConnectedApp> CreateAsync(Guid userId, string partnerClientId, string name, string encryptedKey);
+    Task<ConnectedApp> CreateAsync(Guid userId, ConnectedAppType type, string partnerClientId, string name,
+        string encryptedKey);
 }
