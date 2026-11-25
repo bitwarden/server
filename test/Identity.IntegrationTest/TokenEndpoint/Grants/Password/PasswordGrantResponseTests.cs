@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Enums;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
@@ -28,12 +27,6 @@ namespace Bit.Identity.IntegrationTest.TokenEndpoint.Grants.Password;
 [SutProviderCustomize]
 public class PasswordGrantResponseTests
 {
-    /// <summary>
-    /// The access token lifetime that tests set through the access token lifetime setting. It differs from every
-    /// built-in client lifetime.
-    /// </summary>
-    private const int ConfiguredAccessTokenLifetimeSeconds = 20 * SecondsInMinute;
-
     [Theory, BitAutoData, RegisterFinishRequestModelCustomize]
     public async Task TokenEndpoint_GrantTypePassword_Success(RegisterFinishRequestModel requestModel)
     {
@@ -166,12 +159,12 @@ public class PasswordGrantResponseTests
     /// A login access token has the built-in access token lifetime of the client that sent the request.
     /// </summary>
     [Theory]
-    [InlineData(BitwardenClient.Web, SecondsInHour)]
-    [InlineData(BitwardenClient.Browser, SecondsInHour)]
-    [InlineData(BitwardenClient.Desktop, SecondsInHour)]
-    [InlineData(BitwardenClient.Mobile, SecondsInHour)]
-    [InlineData(BitwardenClient.Cli, SecondsInHour)]
-    [InlineData(BitwardenClient.DirectoryConnector, 24 * SecondsInHour)]
+    [InlineData(BitwardenClient.Web, 3600)] // 1 hour
+    [InlineData(BitwardenClient.Browser, 3600)] // 1 hour
+    [InlineData(BitwardenClient.Desktop, 3600)] // 1 hour
+    [InlineData(BitwardenClient.Mobile, 3600)] // 1 hour
+    [InlineData(BitwardenClient.Cli, 3600)] // 1 hour
+    [InlineData(BitwardenClient.DirectoryConnector, 24 * 3600)]
     public async Task PasswordGrant_AccessTokenLifetime_MatchesClient(string clientId, int expectedExpiresIn)
     {
         using var factory = new IdentityApplicationFactory();
@@ -187,15 +180,14 @@ public class PasswordGrantResponseTests
     /// lifetime.
     /// </summary>
     [Theory]
-    [InlineData(BitwardenClient.Web, ConfiguredAccessTokenLifetimeSeconds)]
-    [InlineData(BitwardenClient.Mobile, ConfiguredAccessTokenLifetimeSeconds)]
-    [InlineData(BitwardenClient.DirectoryConnector, 24 * SecondsInHour)]
+    [InlineData(BitwardenClient.Web, 1200)] // 20 min
+    [InlineData(BitwardenClient.Mobile, 1200)] // 20 min
+    [InlineData(BitwardenClient.DirectoryConnector, 24 * 3600)]
     public async Task PasswordGrant_AccessTokenLifetimeSetting_AppliesToInteractiveClients(
         string clientId, int expectedExpiresIn)
     {
         using var factory = new IdentityApplicationFactory();
-        factory.UpdateConfiguration("globalSettings:identityServer:accessTokenLifetimeSeconds",
-            ConfiguredAccessTokenLifetimeSeconds.ToString(CultureInfo.InvariantCulture));
+        factory.UpdateConfiguration("globalSettings:identityServer:accessTokenLifetimeSeconds", "1200"); // 20 min
         await RegisterUserAsync(factory);
 
         var context = await factory.ContextFromPasswordAsync(DefaultUsername, DefaultPassword, clientId: clientId);
