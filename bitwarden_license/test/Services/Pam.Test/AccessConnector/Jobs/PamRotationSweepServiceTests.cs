@@ -20,6 +20,39 @@ public class PamRotationSweepServiceTests
 {
     private static readonly DateTime _now = new(2026, 6, 5, 12, 0, 0, DateTimeKind.Utc);
     private static readonly TimeSpan _failureRetryDelay = TimeSpan.FromHours(1);
+    private static readonly TimeSpan _accessEndRetryDelay = TimeSpan.FromMinutes(1);
+
+    [Theory, BitAutoData]
+    public async Task SweepAsync_AccessEndPhase_RetriesEachPendingConfigPastTheDelay(
+        PamRotationConfig config1, PamRotationConfig config2)
+    {
+        var sutProvider = Setup();
+        sutProvider.GetDependency<IPamRotationConfigRepository>()
+            .GetManyPendingAccessEndAsync(_now - _accessEndRetryDelay)
+            .Returns(new List<PamRotationConfig> { config1, config2 });
+
+        await sutProvider.Sut.SweepAsync();
+
+        await sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().Received(1).HandleAsync(config1.CipherId);
+        await sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().Received(1).HandleAsync(config2.CipherId);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SweepAsync_AccessEndPhase_OneConfigThrows_ContinuesWithOthersAndLaterPhases(
+        PamRotationConfig config1, PamRotationConfig config2)
+    {
+        var sutProvider = Setup();
+        sutProvider.GetDependency<IPamRotationConfigRepository>()
+            .GetManyPendingAccessEndAsync(_now - _accessEndRetryDelay)
+            .Returns(new List<PamRotationConfig> { config1, config2 });
+        sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().HandleAsync(config1.CipherId)
+            .Returns(Task.FromException(new InvalidOperationException("boom")));
+
+        await sutProvider.Sut.SweepAsync();
+
+        await sutProvider.GetDependency<IHandleAccessGrantEndedCommand>().Received(1).HandleAsync(config2.CipherId);
+        await sutProvider.GetDependency<IPamRotationConfigRepository>().Received(1).GetManyDueAsync(_now);
+    }
 
     [Theory, BitAutoData]
     public async Task SweepAsync_DuePhase_OffersEachDueConfig(PamRotationConfig config1, PamRotationConfig config2)
@@ -184,7 +217,11 @@ public class PamRotationSweepServiceTests
         var sutProvider = new SutProvider<PamRotationSweepService>().WithFakeTimeProvider().Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
         sutProvider.GetDependency<IOptions<PamRotationOptions>>().Value
-            .Returns(new PamRotationOptions { FailureRetryDelay = _failureRetryDelay });
+            .Returns(new PamRotationOptions
+            {
+                FailureRetryDelay = _failureRetryDelay,
+                AccessEndRetryDelay = _accessEndRetryDelay,
+            });
         return sutProvider;
     }
 }

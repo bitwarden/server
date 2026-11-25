@@ -1,8 +1,8 @@
 ﻿namespace Bit.Services.Pam.AccessConnector.Jobs;
 
 /// <summary>
-/// Runs the three time-derived rotation sweeps: offering due scheduled configs, timing out expired jobs, and
-/// releasing jobs whose claiming access connector has gone stale.
+/// Runs the time-derived rotation sweeps: retrying access-end triggers that did not complete, offering due scheduled
+/// configs, timing out expired jobs, and releasing jobs whose claiming access connector has gone stale.
 /// </summary>
 public interface IPamRotationSweepService
 {

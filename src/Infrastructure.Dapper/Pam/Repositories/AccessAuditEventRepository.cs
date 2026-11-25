@@ -48,6 +48,8 @@ public class AccessAuditEventRepository : BaseRepository, IAccessAuditEventRepos
             auditEvent.RotationJobId,
             RotationSource = (byte?)auditEvent.RotationSource,
             SyncState = (byte?)auditEvent.SyncState,
+            auditEvent.IpAddress,
+            DeviceType = (byte?)auditEvent.DeviceType,
         });
 
         // DATETIME2(7), since Dapper's default DATETIME rounds to about 3ms and the paging cursor needs the column's

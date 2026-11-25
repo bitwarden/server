@@ -1,4 +1,5 @@
-﻿using Bit.Pam.Enums;
+﻿using Bit.Core.Enums;
+using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Services.Pam.Api.Models.Response;
 using Xunit;
@@ -31,6 +32,8 @@ public class AccessAuditEventResponseModelTests
             RequesterName = "Grace",
             RequesterEmail = "grace@example.com",
             RuleName = "Production database",
+            IpAddress = "203.0.113.7",
+            DeviceType = DeviceType.ChromeExtension,
         };
 
         var model = new AccessAuditEventResponseModel(auditEvent);
@@ -52,6 +55,8 @@ public class AccessAuditEventResponseModelTests
         Assert.Equal(auditEvent.RequesterName, model.RequesterName);
         Assert.Equal(auditEvent.RequesterEmail, model.RequesterEmail);
         Assert.Equal(auditEvent.RuleName, model.RuleName);
+        Assert.Equal(auditEvent.IpAddress, model.IpAddress);
+        Assert.Equal(auditEvent.DeviceType, model.DeviceType);
     }
 
     [Fact]

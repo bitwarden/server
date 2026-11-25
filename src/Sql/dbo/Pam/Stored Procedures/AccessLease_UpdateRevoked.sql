@@ -12,7 +12,7 @@ BEGIN
     SET XACT_ABORT ON
 
     -- Ends a running lease (2 Revoked or 3 Cancelled), idempotently; feeds a Deny AccessDecision.
-    DECLARE @Ended TABLE ([AccessRequestId] UNIQUEIDENTIFIER)
+    DECLARE @Ended TABLE ([AccessRequestId] UNIQUEIDENTIFIER, [CipherId] UNIQUEIDENTIFIER)
 
     BEGIN TRY
         BEGIN TRANSACTION
@@ -21,7 +21,7 @@ BEGIN
         SET [Action] = @Action,
             [RevokedDate] = @Now,
             [RevokedBy] = @RevokedBy
-        OUTPUT INSERTED.[AccessRequestId] INTO @Ended
+        OUTPUT INSERTED.[AccessRequestId], INSERTED.[CipherId] INTO @Ended
         WHERE [Id] = @AccessLeaseId
             AND [Action] = 0 -- None (no early end)
             AND [NotAfter] > @Now
@@ -35,6 +35,25 @@ BEGIN
             @AccessDecisionId, E.[AccessRequestId], 1 /* Human */, @RevokedBy, NULL,
             0 /* Deny */, @Reason, NULL, @Now
         FROM @Ended E
+
+        -- The access-end trigger runs after commit; this row lets the rotation sweep retry it if it fails.
+        INSERT INTO [dbo].[PamPendingAccessEnd]
+        (
+            [AccessLeaseId],
+            [RotationConfigId],
+            [CreationDate]
+        )
+        SELECT
+            @AccessLeaseId,
+            C.[Id],
+            @Now
+        FROM
+            @Ended E
+        INNER JOIN
+            [dbo].[PamRotationConfig] C ON C.[CipherId] = E.[CipherId]
+        WHERE
+            C.[RotateOnAccessEnd] = 1
+            AND C.[Enabled] = 1
 
         COMMIT TRANSACTION
     END TRY

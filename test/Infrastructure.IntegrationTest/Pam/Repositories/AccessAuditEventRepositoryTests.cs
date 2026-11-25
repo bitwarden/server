@@ -1,4 +1,5 @@
-﻿using Bit.Core.Repositories;
+﻿using Bit.Core.Enums;
+using Bit.Core.Repositories;
 using Bit.Core.Utilities;
 using Bit.Infrastructure.IntegrationTest.AdminConsole;
 using Bit.Pam.Entities;
@@ -417,6 +418,39 @@ public class AccessAuditEventRepositoryTests
         Assert.Equal(rotationConfigId, stored.RotationConfigId);
         Assert.Equal(PamRotationSource.OnDemand, stored.RotationSource);
         Assert.Equal(PamRotationSyncState.TargetUpdated, stored.SyncState);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task Create_ThenRead_RoundTripsTheRequestSource(
+        IOrganizationRepository organizationRepository,
+        IAccessAuditEventRepository accessAuditEventRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var fromARequest = Guid.NewGuid();
+        var fromAJob = Guid.NewGuid();
+
+        await accessAuditEventRepository.CreateAsync(
+            BuildEvent(organization.Id, AccessAuditEventKind.RequestApproved, AccessAuditEventPhase.Outcome, now) with
+            {
+                AccessRequestId = fromARequest,
+                IpAddress = "2001:db8:85a3::8a2e:370:7334",
+                DeviceType = DeviceType.ChromeExtension,
+            });
+        await accessAuditEventRepository.CreateAsync(
+            BuildEvent(organization.Id, AccessAuditEventKind.LeaseExpired, AccessAuditEventPhase.Outcome, now) with
+            {
+                AccessRequestId = fromAJob,
+            });
+
+        var events = await ReadAllAsync(accessAuditEventRepository, organization.Id, now);
+
+        var requested = Assert.Single(events, e => e.AccessRequestId == fromARequest);
+        Assert.Equal("2001:db8:85a3::8a2e:370:7334", requested.IpAddress);
+        Assert.Equal(DeviceType.ChromeExtension, requested.DeviceType);
+        var swept = Assert.Single(events, e => e.AccessRequestId == fromAJob);
+        Assert.Null(swept.IpAddress);
+        Assert.Null(swept.DeviceType);
     }
 
     [DatabaseTheory, DatabaseData]
