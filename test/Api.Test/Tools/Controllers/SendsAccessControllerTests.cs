@@ -204,6 +204,7 @@ public class SendsAccessControllerTests : IDisposable
     [InlineAutoData(SendType.Item)]
     public async Task AccessUsingAuth_WithCountableSendType_IncrementsAccessCount(SendType sendType, Guid sendId)
     {
+        _featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing).Returns(true);
         var send = new Send
         {
             Id = sendId,
