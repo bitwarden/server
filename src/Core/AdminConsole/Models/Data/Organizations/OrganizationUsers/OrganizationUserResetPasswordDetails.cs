@@ -45,10 +45,4 @@ public class OrganizationUserResetPasswordDetails
     public string MasterPasswordSalt { get; set; }
     public string ResetPasswordKey { get; set; }
     public string EncryptedPrivateKey { get; set; }
-
-    /// <summary>
-    /// Whether the user belongs to another organization that account recovery would not remove them from,
-    /// because removing them would leave it without a confirmed owner.
-    /// </summary>
-    public bool IsSoleOwnerOfOtherOrganization { get; set; }
 }

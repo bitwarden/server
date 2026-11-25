@@ -1,6 +1,4 @@
 ﻿using Bit.Core.AdminConsole.Entities;
-using Bit.Core.AdminConsole.Entities.Provider;
-using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.AdminConsole.Repositories;
@@ -658,73 +656,6 @@ public class OrganizationUserRepositoryTests
             r.ResetPasswordKey == "resetpasswordkey2" &&
             r.EncryptedPrivateKey == "privatekey" &&
             r.MasterPasswordSalt == "master-salt2");
-    }
-
-    [Theory, DatabaseData]
-    public async Task GetManyAccountRecoveryDetailsByOrganizationUserAsync_ReportsSoleOwnershipOfOtherOrganizations(
-        IUserRepository userRepository,
-        IOrganizationRepository organizationRepository,
-        IOrganizationUserRepository organizationUserRepository,
-        IProviderRepository providerRepository,
-        IProviderOrganizationRepository providerOrganizationRepository,
-        IProviderUserRepository providerUserRepository)
-    {
-        // Arrange
-        var recoveringOrganization = await organizationRepository.CreateTestOrganizationAsync();
-
-        var soleOwner = await userRepository.CreateTestUserAsync("sole");
-        var soleOwnerMembership = await organizationUserRepository.CreateTestOrganizationUserAsync(recoveringOrganization, soleOwner);
-        await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(
-            await organizationRepository.CreateTestOrganizationAsync(), soleOwner);
-
-        var coOwner = await userRepository.CreateTestUserAsync("co");
-        var coOwnerMembership = await organizationUserRepository.CreateTestOrganizationUserAsync(recoveringOrganization, coOwner);
-        var coOwnedOrganization = await organizationRepository.CreateTestOrganizationAsync();
-        await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(coOwnedOrganization, coOwner);
-        await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(
-            coOwnedOrganization, await userRepository.CreateTestUserAsync("other"));
-
-        var providerManagedOwner = await userRepository.CreateTestUserAsync("managed");
-        var providerManagedOwnerMembership =
-            await organizationUserRepository.CreateTestOrganizationUserAsync(recoveringOrganization, providerManagedOwner);
-        var providerManagedOrganization = await organizationRepository.CreateTestOrganizationAsync();
-        await organizationUserRepository.CreateConfirmedTestOrganizationUserAsync(providerManagedOrganization, providerManagedOwner);
-        var provider = await providerRepository.CreateAsync(new Provider
-        {
-            Name = "Test Provider",
-            BusinessName = "Test Provider Business",
-            BillingEmail = $"billing+{Guid.NewGuid()}@example.com",
-            Enabled = true,
-            Type = ProviderType.Msp
-        });
-        await providerOrganizationRepository.CreateAsync(new ProviderOrganization
-        {
-            ProviderId = provider.Id,
-            OrganizationId = providerManagedOrganization.Id
-        });
-        await providerUserRepository.CreateAsync(new ProviderUser
-        {
-            ProviderId = provider.Id,
-            UserId = (await userRepository.CreateTestUserAsync("provider")).Id,
-            Status = ProviderUserStatusType.Confirmed,
-            Type = ProviderUserType.ProviderAdmin
-        });
-
-        var singleOrganizationMember = await userRepository.CreateTestUserAsync("single");
-        var singleOrganizationMembership =
-            await organizationUserRepository.CreateTestOrganizationUserAsync(recoveringOrganization, singleOrganizationMember);
-
-        // Act
-        var details = (await organizationUserRepository.GetManyAccountRecoveryDetailsByOrganizationUserAsync(
-                recoveringOrganization.Id,
-                [soleOwnerMembership.Id, coOwnerMembership.Id, providerManagedOwnerMembership.Id, singleOrganizationMembership.Id]))
-            .ToDictionary(d => d.OrganizationUserId, d => d.IsSoleOwnerOfOtherOrganization);
-
-        // Assert
-        Assert.True(details[soleOwnerMembership.Id]);
-        Assert.False(details[coOwnerMembership.Id]);
-        Assert.False(details[providerManagedOwnerMembership.Id]);
-        Assert.False(details[singleOrganizationMembership.Id]);
     }
 
     [Theory, DatabaseData]

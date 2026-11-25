@@ -220,7 +220,6 @@ public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
         MasterPasswordSalt = orgUser.MasterPasswordSalt;
         ResetPasswordKey = orgUser.ResetPasswordKey;
         EncryptedPrivateKey = orgUser.EncryptedPrivateKey;
-        IsSoleOwnerOfOtherOrganization = orgUser.IsSoleOwnerOfOtherOrganization;
     }
 
     public Guid OrganizationUserId { get; set; }

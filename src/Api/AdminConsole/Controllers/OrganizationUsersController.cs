@@ -101,6 +101,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
     private readonly IGlobalSettings _globalSettings;
     private readonly IInviteStagedOrganizationUsersCommand _inviteStagedOrganizationUsersCommand;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
+    private readonly IHasConfirmedOwnersExceptQuery _hasConfirmedOwnersExceptQuery;
 
     public OrganizationUsersController(IOrganizationRepository organizationRepository,
         IOrganizationUserRepository organizationUserRepository,
@@ -140,7 +141,8 @@ public class OrganizationUsersController : BaseAdminConsoleController
         IGetActingUserForOrganizationQuery getActingUserForOrganizationQuery,
         IGlobalSettings globalSettings,
         IInviteStagedOrganizationUsersCommand inviteStagedOrganizationUsersCommand,
-        Bitwarden.Server.Sdk.Features.IFeatureService featureService)
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
+        IHasConfirmedOwnersExceptQuery hasConfirmedOwnersExceptQuery)
     {
         _organizationRepository = organizationRepository;
         _organizationUserRepository = organizationUserRepository;
@@ -181,6 +183,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         _globalSettings = globalSettings;
         _inviteStagedOrganizationUsersCommand = inviteStagedOrganizationUsersCommand;
         _featureService = featureService;
+        _hasConfirmedOwnersExceptQuery = hasConfirmedOwnersExceptQuery;
     }
 
     [HttpGet("{id}")]
@@ -304,15 +307,15 @@ public class OrganizationUsersController : BaseAdminConsoleController
             throw new NotFoundException();
         }
 
-        var details = new OrganizationUserResetPasswordDetails(organizationUser, user, organization);
-        if (_featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryMultiOrgCheck))
-        {
-            details.IsSoleOwnerOfOtherOrganization = (await _organizationUserRepository
-                    .GetManyAccountRecoveryDetailsByOrganizationUserAsync(organization.Id, [organizationUser.Id]))
-                .Any(d => d.IsSoleOwnerOfOtherOrganization);
-        }
+        var retainingUserIds = _featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryMultiOrgCheck)
+            ? await GetUsersRetainingOtherOrganizationsAsync(organization.Id, [user.Id])
+            : [];
 
-        return new OrganizationUserResetPasswordDetailsResponseModel(details);
+        return new OrganizationUserResetPasswordDetailsResponseModel(
+            new OrganizationUserResetPasswordDetails(organizationUser, user, organization))
+        {
+            IsSoleOwnerOfOtherOrganization = retainingUserIds.Contains(user.Id),
+        };
     }
 
     [HttpPost("account-recovery-details")]
@@ -334,13 +337,71 @@ public class OrganizationUsersController : BaseAdminConsoleController
             return new ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>([]);
         }
 
-        var responses = await _organizationUserRepository.GetManyAccountRecoveryDetailsByOrganizationUserAsync(orgId, authorizedIds);
-        var includeSoleOwnership = _featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryMultiOrgCheck);
-        return new ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>(responses.Select(r =>
-            new OrganizationUserResetPasswordDetailsResponseModel(r)
+        var details = await _organizationUserRepository.GetManyAccountRecoveryDetailsByOrganizationUserAsync(orgId, authorizedIds);
+        var userIdsByOrganizationUserId = organizationUsers
+            .Where(ou => ou.UserId.HasValue && authorizedIds.Contains(ou.Id))
+            .ToDictionary(ou => ou.Id, ou => ou.UserId!.Value);
+        var retainingUserIds = _featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryMultiOrgCheck)
+            ? await GetUsersRetainingOtherOrganizationsAsync(orgId, userIdsByOrganizationUserId.Values)
+            : [];
+
+        return new ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>(details.Select(memberDetails =>
+            new OrganizationUserResetPasswordDetailsResponseModel(memberDetails)
             {
-                IsSoleOwnerOfOtherOrganization = includeSoleOwnership && r.IsSoleOwnerOfOtherOrganization,
+                IsSoleOwnerOfOtherOrganization =
+                    userIdsByOrganizationUserId.TryGetValue(memberDetails.OrganizationUserId, out var userId) &&
+                    retainingUserIds.Contains(userId),
             }));
+    }
+
+    /// <summary>
+    /// Returns the users who would keep at least one membership outside the recovering organization,
+    /// using the same rule as <see cref="AdminRecoverAccountCommand"/>.
+    /// </summary>
+    private async Task<HashSet<Guid>> GetUsersRetainingOtherOrganizationsAsync(
+        Guid recoveringOrganizationId, ICollection<Guid> userIds)
+    {
+        var retainingUserIds = new HashSet<Guid>();
+        if (userIds.Count == 0)
+        {
+            return retainingUserIds;
+        }
+
+        var otherMemberships = (await _organizationUserRepository.GetManyByManyUsersAsync(userIds))
+            .Where(ou => ou.OrganizationId != recoveringOrganizationId);
+
+        // Excluding a membership that isn't a confirmed owner leaves the organization's owners unchanged,
+        // so the result for such memberships depends only on the organization.
+        var nonOwnerResultByOrganization = new Dictionary<Guid, bool>();
+
+        foreach (var membership in otherMemberships)
+        {
+            var userId = membership.UserId!.Value;
+            if (retainingUserIds.Contains(userId))
+            {
+                continue;
+            }
+
+            var isConfirmedOwner = membership is
+            { Type: OrganizationUserType.Owner, Status: OrganizationUserStatusType.Confirmed };
+            if (isConfirmedOwner ||
+                !nonOwnerResultByOrganization.TryGetValue(membership.OrganizationId, out var hasOtherOwner))
+            {
+                hasOtherOwner = await _hasConfirmedOwnersExceptQuery.HasConfirmedOwnersExceptAsync(
+                    membership.OrganizationId, [membership.Id]);
+                if (!isConfirmedOwner)
+                {
+                    nonOwnerResultByOrganization[membership.OrganizationId] = hasOtherOwner;
+                }
+            }
+
+            if (!hasOtherOwner)
+            {
+                retainingUserIds.Add(userId);
+            }
+        }
+
+        return retainingUserIds;
     }
 
     private async Task<bool> CanRecoverAccountAsync(OrganizationUser organizationUser) =>

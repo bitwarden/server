@@ -3,9 +3,9 @@ using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Authorization.Collections;
 using Bit.Api.AdminConsole.Controllers;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
+using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
-using Bit.Core;
 using Bit.Core.AdminConsole.OrganizationFeatures.AccountRecovery;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks;
 using Bit.Core.AdminConsole.OrganizationFeatures.InviteLinks.Interfaces;
@@ -34,10 +34,10 @@ using Bit.Core.Utilities;
 using Bit.HttpExtensions;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
+using Bitwarden.Server.Sdk.Features;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
-using Bitwarden.Server.Sdk.Features;
 using NSubstitute;
 using OneOf.Types;
 using Xunit;
@@ -524,10 +524,11 @@ public class OrganizationUsersControllerTests
     }
 
     [Theory]
-    [BitAutoData]
+    [BitAutoData(false, true)]
+    [BitAutoData(true, false)]
     public async Task GetResetPasswordDetails_FlagEnabled_ReturnsSoleOwnershipOfOtherOrganizations(
+        bool otherOrganizationHasOtherOwners, bool expected,
         Guid orgUserId, OrganizationUser organizationUser, User user, Organization org,
-        OrganizationUserResetPasswordDetails details,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
@@ -536,19 +537,19 @@ public class OrganizationUsersControllerTests
         sutProvider.GetDependency<IOrganizationUserRepository>().GetByIdAsync(orgUserId).Returns(organizationUser);
         sutProvider.GetDependency<IUserService>().GetUserByIdAsync(user.Id).Returns(user);
         MockCanRecoverAccount(sutProvider, organizationUser, true);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountRecoveryMultiOrgCheck).Returns(true);
+        EnableMultiOrgCheck(sutProvider);
 
-        details.IsSoleOwnerOfOtherOrganization = true;
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAccountRecoveryDetailsByOrganizationUserAsync(org.Id,
-                Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == organizationUser.Id))
-            .Returns([details]);
+        var otherMembership = OtherMembership(user.Id, Guid.NewGuid(), OrganizationUserType.Owner);
+        MockMemberships(sutProvider, organizationUser, otherMembership);
+        MockHasConfirmedOwnersExcept(sutProvider, otherMembership, otherOrganizationHasOtherOwners);
 
         // Act
         var response = await sutProvider.Sut.GetResetPasswordDetails(orgUserId, org);
 
         // Assert
-        Assert.True(response.IsSoleOwnerOfOtherOrganization);
+        Assert.Equal(expected, response.IsSoleOwnerOfOtherOrganization);
+        await sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().DidNotReceive()
+            .HasConfirmedOwnersExceptAsync(org.Id, Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>());
     }
 
     [Theory]
@@ -570,42 +571,126 @@ public class OrganizationUsersControllerTests
         // Assert
         Assert.False(response.IsSoleOwnerOfOtherOrganization);
         await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
-            .GetManyAccountRecoveryDetailsByOrganizationUserAsync(default, default);
+            .GetManyByManyUsersAsync(default);
     }
 
     [Theory]
-    [BitAutoData(true)]
-    [BitAutoData(false)]
-    public async Task GetAccountRecoveryDetails_ReturnsSoleOwnershipOnlyWhenFlagEnabled(
-        bool flagEnabled,
+    [BitAutoData]
+    public async Task GetAccountRecoveryDetails_FlagDisabled_DoesNotReturnSoleOwnership(
         Guid organizationId,
         OrganizationUserBulkRequestModel bulkRequestModel,
-        ICollection<OrganizationUserResetPasswordDetails> resetPasswordDetails,
         SutProvider<OrganizationUsersController> sutProvider)
     {
         // Arrange
-        var organizationUsers = MockAccountRecoveryCandidates(sutProvider, organizationId, bulkRequestModel);
-        foreach (var organizationUser in organizationUsers)
-        {
-            MockCanRecoverAccount(sutProvider, organizationUser, true);
-        }
-
-        foreach (var details in resetPasswordDetails)
-        {
-            details.IsSoleOwnerOfOtherOrganization = true;
-        }
-
-        sutProvider.GetDependency<IOrganizationUserRepository>()
-            .GetManyAccountRecoveryDetailsByOrganizationUserAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
-            .Returns(resetPasswordDetails);
-        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountRecoveryMultiOrgCheck)
-            .Returns(flagEnabled);
+        MockRecoverableMembers(sutProvider, organizationId, bulkRequestModel);
 
         // Act
         var response = await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel);
 
         // Assert
-        Assert.All(response.Data, r => Assert.Equal(flagEnabled, r.IsSoleOwnerOfOtherOrganization));
+        Assert.NotEmpty(response.Data);
+        Assert.All(response.Data, r => Assert.False(r.IsSoleOwnerOfOtherOrganization));
+        await sutProvider.GetDependency<IOrganizationUserRepository>().DidNotReceiveWithAnyArgs()
+            .GetManyByManyUsersAsync(default);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetAccountRecoveryDetails_FlagEnabled_ReturnsSoleOwnershipPerMember(
+        Guid organizationId,
+        OrganizationUserBulkRequestModel bulkRequestModel,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        bulkRequestModel.Ids = [Guid.NewGuid(), Guid.NewGuid(), Guid.NewGuid()];
+        var members = MockRecoverableMembers(sutProvider, organizationId, bulkRequestModel);
+        EnableMultiOrgCheck(sutProvider);
+
+        var (noOtherOrganizations, memberOfOwnedOrganization, soleOwner) = (members[0], members[1], members[2]);
+        var memberOfOwnedOrganizationMembership =
+            OtherMembership(memberOfOwnedOrganization.UserId!.Value, Guid.NewGuid(), OrganizationUserType.User);
+        var soleOwnerMembership = OtherMembership(soleOwner.UserId!.Value, Guid.NewGuid(), OrganizationUserType.Owner);
+        MockMemberships(sutProvider, [.. members, memberOfOwnedOrganizationMembership, soleOwnerMembership]);
+        MockHasConfirmedOwnersExcept(sutProvider, memberOfOwnedOrganizationMembership, true);
+        MockHasConfirmedOwnersExcept(sutProvider, soleOwnerMembership, false);
+
+        // Act
+        var response = await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel);
+
+        // Assert
+        var isSoleOwnerByMember = response.Data.ToDictionary(r => r.OrganizationUserId, r => r.IsSoleOwnerOfOtherOrganization);
+        Assert.False(isSoleOwnerByMember[noOtherOrganizations.Id]);
+        Assert.False(isSoleOwnerByMember[memberOfOwnedOrganization.Id]);
+        Assert.True(isSoleOwnerByMember[soleOwner.Id]);
+        await sutProvider.GetDependency<IOrganizationUserRepository>().Received(1)
+            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>());
+        await sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().DidNotReceive()
+            .HasConfirmedOwnersExceptAsync(organizationId, Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetAccountRecoveryDetails_FlagEnabled_ChecksOtherOrganizationOnceForNonOwners(
+        Guid organizationId,
+        Guid otherOrganizationId,
+        OrganizationUserBulkRequestModel bulkRequestModel,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        bulkRequestModel.Ids = [Guid.NewGuid(), Guid.NewGuid()];
+        var members = MockRecoverableMembers(sutProvider, organizationId, bulkRequestModel);
+        EnableMultiOrgCheck(sutProvider);
+
+        var otherMemberships = members
+            .Select(m => OtherMembership(m.UserId!.Value, otherOrganizationId, OrganizationUserType.User))
+            .ToList();
+        MockMemberships(sutProvider, [.. members, .. otherMemberships]);
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(otherOrganizationId, Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>())
+            .Returns(false);
+
+        // Act
+        var response = await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel);
+
+        // Assert
+        Assert.All(response.Data, r => Assert.True(r.IsSoleOwnerOfOtherOrganization));
+        await sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().Received(1)
+            .HasConfirmedOwnersExceptAsync(otherOrganizationId, Arg.Any<IEnumerable<Guid>>(), Arg.Any<bool>());
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task GetAccountRecoveryDetails_FlagEnabled_ChecksEachConfirmedOwnerIndividually(
+        Guid organizationId,
+        Guid otherOrganizationId,
+        OrganizationUserBulkRequestModel bulkRequestModel,
+        SutProvider<OrganizationUsersController> sutProvider)
+    {
+        // Arrange
+        bulkRequestModel.Ids = [Guid.NewGuid(), Guid.NewGuid()];
+        var members = MockRecoverableMembers(sutProvider, organizationId, bulkRequestModel);
+        EnableMultiOrgCheck(sutProvider);
+
+        var otherMemberships = members
+            .Select(m => OtherMembership(m.UserId!.Value, otherOrganizationId, OrganizationUserType.Owner))
+            .ToList();
+        MockMemberships(sutProvider, [.. members, .. otherMemberships]);
+        foreach (var otherMembership in otherMemberships)
+        {
+            MockHasConfirmedOwnersExcept(sutProvider, otherMembership, true);
+        }
+
+        // Act
+        var response = await sutProvider.Sut.GetAccountRecoveryDetails(organizationId, bulkRequestModel);
+
+        // Assert
+        Assert.All(response.Data, r => Assert.False(r.IsSoleOwnerOfOtherOrganization));
+        foreach (var otherMembership in otherMemberships)
+        {
+            await sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>().Received(1)
+                .HasConfirmedOwnersExceptAsync(otherOrganizationId,
+                    Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == otherMembership.Id), Arg.Any<bool>());
+        }
     }
 
     [Theory]
@@ -639,6 +724,49 @@ public class OrganizationUsersControllerTests
                 organizationUser,
                 Arg.Is<IEnumerable<IAuthorizationRequirement>>(x => x.SingleOrDefault() is RecoverAccountAuthorizationRequirement))
             .Returns(authorized ? AuthorizationResult.Success() : AuthorizationResult.Failed());
+    }
+
+    private static void EnableMultiOrgCheck(SutProvider<OrganizationUsersController> sutProvider) =>
+        sutProvider.GetDependency<IFeatureService>().IsEnabled(FeatureFlagKeys.AccountRecoveryMultiOrgCheck).Returns(true);
+
+    private static OrganizationUser OtherMembership(Guid userId, Guid organizationId, OrganizationUserType type) =>
+        new()
+        {
+            Id = Guid.NewGuid(),
+            OrganizationId = organizationId,
+            UserId = userId,
+            Type = type,
+            Status = OrganizationUserStatusType.Confirmed,
+        };
+
+    private static void MockMemberships(SutProvider<OrganizationUsersController> sutProvider,
+        params OrganizationUser[] memberships) =>
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyByManyUsersAsync(Arg.Any<IEnumerable<Guid>>())
+            .Returns(memberships);
+
+    private static void MockHasConfirmedOwnersExcept(SutProvider<OrganizationUsersController> sutProvider,
+        OrganizationUser membership, bool hasOtherOwners) =>
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(membership.OrganizationId,
+                Arg.Is<IEnumerable<Guid>>(ids => ids.Single() == membership.Id), Arg.Any<bool>())
+            .Returns(hasOtherOwners);
+
+    private static List<OrganizationUser> MockRecoverableMembers(
+        SutProvider<OrganizationUsersController> sutProvider, Guid organizationId,
+        OrganizationUserBulkRequestModel bulkRequestModel)
+    {
+        var members = MockAccountRecoveryCandidates(sutProvider, organizationId, bulkRequestModel);
+        foreach (var member in members)
+        {
+            MockCanRecoverAccount(sutProvider, member, true);
+        }
+
+        sutProvider.GetDependency<IOrganizationUserRepository>()
+            .GetManyAccountRecoveryDetailsByOrganizationUserAsync(organizationId, Arg.Any<IEnumerable<Guid>>())
+            .Returns(members.Select(m => new OrganizationUserResetPasswordDetails { OrganizationUserId = m.Id }).ToList());
+
+        return members;
     }
 
     private static List<OrganizationUser> MockAccountRecoveryCandidates(

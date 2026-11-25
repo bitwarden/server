@@ -4,7 +4,6 @@
 using System.Data.Common;
 using AutoMapper;
 using Bit.Core.AdminConsole.Enums;
-using Bit.Core.AdminConsole.Enums.Provider;
 using Bit.Core.AdminConsole.Models.Data.OrganizationUsers;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 using Bit.Core.Enums;
@@ -796,30 +795,10 @@ public class OrganizationUserRepository : Repository<Core.Entities.OrganizationU
                         join o in dbContext.Organizations
                             on ou.OrganizationId equals o.Id
                         where ou.OrganizationId == organizationId
-                        select new
-                        {
-                            ou,
-                            u,
-                            o,
-                            IsSoleOwnerOfOtherOrganization = dbContext.OrganizationUsers.Any(otherOu =>
-                                otherOu.UserId == ou.UserId &&
-                                otherOu.OrganizationId != organizationId &&
-                                !dbContext.OrganizationUsers.Any(ownerOu =>
-                                    ownerOu.OrganizationId == otherOu.OrganizationId &&
-                                    ownerOu.Id != otherOu.Id &&
-                                    ownerOu.Type == OrganizationUserType.Owner &&
-                                    ownerOu.Status == OrganizationUserStatusType.Confirmed) &&
-                                !dbContext.ProviderOrganizations.Any(po =>
-                                    po.OrganizationId == otherOu.OrganizationId &&
-                                    dbContext.ProviderUsers.Any(pu =>
-                                        pu.ProviderId == po.ProviderId &&
-                                        pu.Status == ProviderUserStatusType.Confirmed))),
-                        };
-            var data = await query.ToListAsync();
-            return data.Select(x => new OrganizationUserResetPasswordDetails(x.ou, x.u, x.o)
-            {
-                IsSoleOwnerOfOtherOrganization = x.IsSoleOwnerOfOtherOrganization,
-            }).ToList();
+                        select new { ou, u, o };
+            var data = await query
+                .Select(x => new OrganizationUserResetPasswordDetails(x.ou, x.u, x.o)).ToListAsync();
+            return data;
         }
     }
 
