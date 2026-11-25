@@ -230,7 +230,7 @@ public class PasswordGrantAuthRequestTests
         {
             UserId = userId,
             Type = AuthRequestType.AuthenticateAndUnlock,
-            RequestDeviceIdentifier = DefaultDeviceIdentifier,
+            RequestDeviceIdentifier = IdentityApplicationFactory.DefaultDeviceIdentifier,
             RequestIpAddress = "1.1.1.1",
             AccessCode = AccessCode,
             PublicKey = "test_public_key",
@@ -255,7 +255,7 @@ public class PasswordGrantAuthRequestTests
             { "scope", "api offline_access" },
             { "client_id", "web" },
             { "deviceType", DeviceTypeAsString(DefaultDeviceType) },
-            { "deviceIdentifier", DefaultDeviceIdentifier },
+            { "deviceIdentifier", IdentityApplicationFactory.DefaultDeviceIdentifier },
             { "deviceName", DefaultDeviceName },
             { "grant_type", "password" },
             { "username", DefaultUsername },
@@ -268,7 +268,7 @@ public class PasswordGrantAuthRequestTests
     {
         await factory.GetService<IDeviceRepository>().CreateAsync(new Device
         {
-            Identifier = DefaultDeviceIdentifier,
+            Identifier = IdentityApplicationFactory.DefaultDeviceIdentifier,
             Type = DefaultDeviceType,
             Name = DefaultDeviceName,
             UserId = userId,

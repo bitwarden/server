@@ -14,7 +14,6 @@ public static class PasswordGrantTestHelpers
 {
     public const string DefaultPassword = "master_password_hash";
     public const string DefaultUsername = "test@email.qa";
-    public const string DefaultDeviceIdentifier = "test_identifier";
     public const DeviceType DefaultDeviceType = DeviceType.FirefoxBrowser;
     public const string DefaultDeviceName = "firefox";
 
