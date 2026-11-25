@@ -85,7 +85,8 @@ public static class TokenResponseAssertions
 
     /// <summary>
     /// Asserts that the user decryption options say the user has a master password, and that they carry the master
-    /// password unlock data.
+    /// password unlock data. Other decryption options can also be present; use
+    /// <see cref="AssertDecryptionOptionFields"/> to check the full set.
     /// </summary>
     public static void AssertMasterPasswordDecryptionOptions(JsonElement tokenResponse, KdfType expectedKdfType,
         int expectedKdfIterations, string expectedMasterKeyEncryptedUserKey, string expectedSalt)
@@ -109,6 +110,18 @@ public static class TokenResponseAssertions
         // MasterPasswordUnlock.Salt
         var salt = AssertHelper.AssertJsonProperty(masterPasswordUnlock, "Salt", JsonValueKind.String).ToString();
         Assert.Equal(expectedSalt, salt);
+    }
+
+    /// <summary>
+    /// Asserts that the user decryption options hold exactly the given fields, so no other decryption option is
+    /// present.
+    /// </summary>
+    public static void AssertDecryptionOptionFields(JsonElement tokenResponse, params string[] expectedFields)
+    {
+        var userDecryptionOptions =
+            AssertHelper.AssertJsonProperty(tokenResponse, "UserDecryptionOptions", JsonValueKind.Object);
+        Assert.Equal(expectedFields.Order(StringComparer.Ordinal),
+            userDecryptionOptions.EnumerateObject().Select(p => p.Name).Order(StringComparer.Ordinal));
     }
 
     private static string AssertScopeExists(JsonElement tokenResponse)

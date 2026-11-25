@@ -57,6 +57,7 @@ public class PasswordGrantResponseTests
             expectedKdfIterations: KdfConstants.PBKDF2_ITERATIONS.Default,
             expectedMasterKeyEncryptedUserKey: requestModel.UserSymmetricKey!,
             expectedSalt: requestModel.Email);
+        AssertDecryptionOptionFields(root, "HasMasterPassword", "MasterPasswordUnlock", "Object");
     }
 
     /// <summary>
