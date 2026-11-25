@@ -58,17 +58,17 @@ pub unsafe extern "C" fn make_organization_invite(
     wrapped_private_key: *const c_char,
     supports_confirmation: bool,
 ) -> *const c_char {
-    let Ok(organization_key_b64) = CStr::from_ptr(organization_key_b64).to_str() else {
+    let Ok(organization_key_str) = CStr::from_ptr(organization_key_b64).to_str() else {
         return error_response("Invalid UTF-8 in organization_key_b64");
     };
 
-    let Ok(wrapped_private_key) = CStr::from_ptr(wrapped_private_key).to_str() else {
+    let Ok(wrapped_private_key_str) = CStr::from_ptr(wrapped_private_key).to_str() else {
         return error_response("Invalid UTF-8 in wrapped_private_key");
     };
 
     match make_invite(
-        organization_key_b64,
-        wrapped_private_key,
+        organization_key_str,
+        wrapped_private_key_str,
         supports_confirmation,
     ) {
         Ok((invite, secret)) => {
