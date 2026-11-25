@@ -308,7 +308,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
         }
 
         var retainingUserIds = _featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryMultiOrgCheck)
-            ? await GetUsersRetainingOtherOrganizationsAsync(organization.Id, [user.Id])
+            ? await GetSoleOwnersOfOtherOrganizationsAsync(organization.Id, [user.Id])
             : [];
 
         return new OrganizationUserResetPasswordDetailsResponseModel(
@@ -342,7 +342,7 @@ public class OrganizationUsersController : BaseAdminConsoleController
             .Where(ou => ou.UserId.HasValue && authorizedIds.Contains(ou.Id))
             .ToDictionary(ou => ou.Id, ou => ou.UserId!.Value);
         var retainingUserIds = _featureService.IsEnabled(FeatureFlagKeys.AccountRecoveryMultiOrgCheck)
-            ? await GetUsersRetainingOtherOrganizationsAsync(orgId, userIdsByOrganizationUserId.Values)
+            ? await GetSoleOwnersOfOtherOrganizationsAsync(orgId, userIdsByOrganizationUserId.Values)
             : [];
 
         return new ListResponseModel<OrganizationUserResetPasswordDetailsResponseModel>(details.Select(memberDetails =>
@@ -355,10 +355,9 @@ public class OrganizationUsersController : BaseAdminConsoleController
     }
 
     /// <summary>
-    /// Returns the users who would keep at least one membership outside the recovering organization,
-    /// using the same rule as <see cref="AdminRecoverAccountCommand"/>.
+    /// Return user IDs for users who are the sole owner of organizations other than <paramref name="recoveringOrganizationId"/>.
     /// </summary>
-    private async Task<HashSet<Guid>> GetUsersRetainingOtherOrganizationsAsync(
+    private async Task<HashSet<Guid>> GetSoleOwnersOfOtherOrganizationsAsync(
         Guid recoveringOrganizationId, ICollection<Guid> userIds)
     {
         var retainingUserIds = new HashSet<Guid>();
