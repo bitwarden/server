@@ -10,7 +10,7 @@ namespace Bit.Identity.IntegrationTest.Helpers;
 /// </summary>
 public static class TokenResponseAssertions
 {
-    private const int SecondsInMinute = 60;
+    public const int SecondsInMinute = 60;
     private const int MinutesInHour = 60;
     public const int SecondsInHour = SecondsInMinute * MinutesInHour;
 
