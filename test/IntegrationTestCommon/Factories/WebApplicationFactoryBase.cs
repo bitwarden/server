@@ -49,6 +49,9 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     /// </remarks>
     public bool ManagesDatabase { get; set; } = true;
 
+    private readonly string _dataProtectionDirectory =
+        Path.Join(Path.GetTempPath(), $"bitwarden-test-dp-{Guid.NewGuid()}");
+
     public bool StripeEnabled { get; set; } = false;
 
     protected readonly List<Action<IServiceCollection>> _configureTestServices = new();
@@ -161,6 +164,10 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
             // This will force it to use an ephemeral key for IdentityServer
             { "globalSettings:developmentDirectory", null },
+
+            // Self-hosted test hosts keep data protection keys here. The self-hosted default is under /etc/bitwarden,
+            // which tests cannot write to.
+            { "globalSettings:dataProtection:directory", _dataProtectionDirectory },
 
             // Email Verification
             { "globalSettings:enableEmailVerification", "true" },
@@ -312,6 +319,12 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
             // Avoid calling Dispose twice
             ManagesDatabase = false;
             TestDatabase.Dispose();
+        }
+
+        // The folder exists only if the test host wrote data protection keys.
+        if (Directory.Exists(_dataProtectionDirectory))
+        {
+            Directory.Delete(_dataProtectionDirectory, recursive: true);
         }
     }
 }
