@@ -303,28 +303,4 @@ public class NonAnonymousSendCommand : INonAnonymousSendCommand
 
         return valid;
     }
-
-    public async Task<(string, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId)
-    {
-        if (send.Type != SendType.File)
-        {
-            throw new BadRequestException("Can only get a download URL for a file type of Send");
-        }
-
-        if (!INonAnonymousSendCommand.SendCanBeAccessed(send))
-        {
-            return (null, SendAccessResult.Denied);
-        }
-
-        var fileData = JsonSerializer.Deserialize<SendFileData>(send.Data ?? string.Empty);
-        if (fileData?.Id != fileId)
-        {
-            throw new NotFoundException();
-        }
-
-        send.AccessCount++;
-        await _sendRepository.ReplaceAsync(send);
-        await _pushNotificationService.PushSyncSendUpdateAsync(send);
-        return (await _sendFileStorageService.GetSendFileDownloadUrlAsync(send, fileId), SendAccessResult.Granted);
-    }
 }

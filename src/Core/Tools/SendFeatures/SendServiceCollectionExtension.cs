@@ -14,11 +14,13 @@ public static class SendServiceCollectionExtension
     public static void AddSendServices(this IServiceCollection services)
     {
         services.AddScoped<INonAnonymousSendCommand, NonAnonymousSendCommand>();
+        services.AddScoped<ISendAccessCommand, SendAccessCommand>();
         services.AddScoped<ISendAuthorizationService, SendAuthorizationService>();
         services.AddScoped<ISendValidationService, SendValidationService>();
         services.AddScoped<ISendCoreHelperService, SendCoreHelperService>();
         services.AddScoped<ISendAuthenticationQuery, SendAuthenticationQuery>();
         services.AddScoped<ISendOwnerQuery, SendOwnerQuery>();
+        services.AddScoped<ISendAccessQuery, SendAccessQuery>();
         services.AddScoped<ISendEventClassifier, SendEventClassifier>();
     }
 }

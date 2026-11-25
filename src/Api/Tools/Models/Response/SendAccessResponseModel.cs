@@ -98,7 +98,7 @@ public class SendAccessResponseModel : ResponseModel
     /// </summary>
     /// <remarks>
     /// File content is downloaded separately using
-    /// <see cref="Controllers.SendsController.GetSendFileDownloadDataUsingAuth" />
+    /// <see cref="Controllers.SendsAccessController.GetSendFileDownloadDataUsingAuth" />
     /// </remarks>
     public SendFileModel? File { get; set; }
 
