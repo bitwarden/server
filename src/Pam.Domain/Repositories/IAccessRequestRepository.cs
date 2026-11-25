@@ -12,7 +12,14 @@ public interface IAccessRequestRepository
     /// Atomically creates an auto-approved request and its automatic decision. No lease is minted; the requester
     /// activates the request later, as on the human path.
     /// </summary>
-    Task CreateAutoApprovedAsync(AccessRequest request, AccessDecision decision);
+    Task<AccessRequestCreateOutcome> CreateAutoApprovedAsync(AccessRequest request, AccessDecision decision);
+
+    /// <summary>
+    /// Creates an open request unless the requester already has an open or approved-unactivated request, or a live
+    /// lease, on the item. The check and the insert are serialized per requester and item, so concurrent submits
+    /// cannot both succeed. <paramref name="request"/> needs its Id set.
+    /// </summary>
+    Task<AccessRequestCreateOutcome> CreateIfNoOpenAsync(AccessRequest request, DateTime now);
 
     Task<AccessRequest?> GetByIdAsync(Guid id);
 

@@ -284,6 +284,26 @@ public class ActivateAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
+    public async Task ActivateAsync_RequesterActiveLeaseConflict_ThrowsConflictAndEmitsRejected(AccessRequest request)
+    {
+        var sutProvider = Setup();
+        SetupApprovedRequest(sutProvider, request);
+        sutProvider.GetDependency<IAccessLeaseRepository>()
+            .CreateFromApprovedRequestAsync(Arg.Any<AccessLease>(), _now, Arg.Any<bool>())
+            .Returns(AccessLeaseMintOutcome.RequesterActiveLeaseConflict);
+
+        var ex = await Assert.ThrowsAsync<ConflictException>(
+            () => sutProvider.Sut.ActivateAsync(request.RequesterId, request.Id, _now));
+
+        Assert.Contains("already have active access", ex.Message);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().Received(1).EmitAsync(
+            Arg.Is<AccessAuditEventData>(e => e.Kind == AccessAuditEventKind.LeaseActivationRejected
+                && e.Phase == AccessAuditEventPhase.Outcome && e.AccessRequestId == request.Id));
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
+    }
+
+    [Theory, BitAutoData]
     public async Task ActivateAsync_EscapePathExists_PassesEnforceFalse(AccessRequest request)
     {
         var sutProvider = Setup();

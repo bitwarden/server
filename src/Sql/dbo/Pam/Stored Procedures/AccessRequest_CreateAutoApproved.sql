@@ -20,6 +20,46 @@ BEGIN
     -- Records an auto-approved request and verdict; no lease minted here, activation happens later.
     BEGIN TRANSACTION AccessRequest_CreateAutoApproved
 
+    -- Serializes submits and activations per requester and item; the lock is released at commit or rollback.
+    DECLARE @Resource NVARCHAR(255) = CONCAT(N'PamAccess:', @RequesterId, N':', @CipherId)
+    DECLARE @Lock INT
+    EXEC @Lock = sp_getapplock @Resource = @Resource, @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 10000
+    IF @Lock < 0
+    BEGIN
+        ROLLBACK TRANSACTION;
+        THROW 50000, 'Could not acquire the access submission lock.', 1
+    END
+
+    -- @CreationDate is the submit time. Same predicates as AccessLease_ReadActiveByRequesterIdCipherId.
+    IF EXISTS (
+        SELECT 1 FROM [dbo].[AccessLease]
+        WHERE [RequesterId] = @RequesterId AND [CipherId] = @CipherId
+            AND [Action] = 0 AND [NotBefore] <= @CreationDate AND [NotAfter] > @CreationDate
+    )
+    BEGIN
+        ROLLBACK TRANSACTION
+        SELECT -1 -- ActiveLeaseExists
+        RETURN
+    END
+
+    -- Same predicates as the pending and approved-unactivated reads.
+    IF EXISTS (
+        SELECT 1 FROM [dbo].[AccessRequest] AR
+        WHERE AR.[RequesterId] = @RequesterId AND AR.[CipherId] = @CipherId AND AR.[NotAfter] > @CreationDate
+            AND (
+                AR.[Action] = 0
+                OR (
+                    AR.[Action] = 1 AND AR.[ExtensionOfLeaseId] IS NULL
+                    AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] AL WHERE AL.[AccessRequestId] = AR.[Id])
+                )
+            )
+    )
+    BEGIN
+        ROLLBACK TRANSACTION
+        SELECT 0 -- OpenRequestExists
+        RETURN
+    END
+
     -- ExtensionOfLeaseId stays NULL; provenance instead flows via AccessLease.AccessRequestId.
     INSERT INTO [dbo].[AccessRequest]
     (
@@ -44,4 +84,6 @@ BEGIN
     )
 
     COMMIT TRANSACTION AccessRequest_CreateAutoApproved
+
+    SELECT 1 -- Created
 END
