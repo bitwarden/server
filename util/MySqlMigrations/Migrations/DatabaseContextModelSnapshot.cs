@@ -2388,6 +2388,13 @@ namespace Bit.MySqlMigrations.Migrations
                     b.Property<string>("Detail")
                         .HasColumnType("longtext");
 
+                    b.Property<byte?>("DeviceType")
+                        .HasColumnType("tinyint unsigned");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
                     b.Property<byte>("Kind")
                         .HasColumnType("tinyint unsigned");
 
@@ -2732,6 +2739,24 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsUnique();
 
                     b.ToTable("PamAccessConnectorTargetAssignment", (string)null);
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamPendingAccessEnd", b =>
+                {
+                    b.Property<Guid>("AccessLeaseId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreationDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("RotationConfigId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("AccessLeaseId");
+
+                    b.HasIndex("RotationConfigId");
+
+                    b.ToTable("PamPendingAccessEnd", (string)null);
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationAttempt", b =>
@@ -4247,6 +4272,15 @@ namespace Bit.MySqlMigrations.Migrations
                         .IsRequired();
 
                     b.Navigation("Organization");
+                });
+
+            modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamPendingAccessEnd", b =>
+                {
+                    b.HasOne("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationConfig", null)
+                        .WithMany()
+                        .HasForeignKey("RotationConfigId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Bit.Infrastructure.EntityFramework.Pam.Models.PamRotationAttempt", b =>

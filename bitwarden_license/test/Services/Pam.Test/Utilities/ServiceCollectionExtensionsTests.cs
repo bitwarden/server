@@ -68,6 +68,19 @@ public class ServiceCollectionExtensionsTests
         Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
     }
 
+    /// <summary>
+    /// AddBaseServices already registers the open-source default; a TryAdd would leave every leasing bypass unaudited.
+    /// </summary>
+    [Fact]
+    public void AddPamServices_OverridesTheDefaultLeasingBypassAudit()
+    {
+        var services = PamServices();
+
+        var descriptor = Assert.Single(services, d => d.ServiceType == typeof(ILeasingBypassAudit));
+        Assert.Equal(typeof(LeasingBypassAudit), descriptor.ImplementationType);
+        Assert.Equal(ServiceLifetime.Scoped, descriptor.Lifetime);
+    }
+
     [Fact]
     public void AddPamServices_RegistersTimeProvider()
     {

@@ -100,7 +100,8 @@ public class RevokeAccessLeaseCommand : IRevokeAccessLeaseCommand
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
 
-        // The lease has already ended, so a failure here is logged rather than failing the revoke.
+        // The lease has already ended, so a failure here is logged rather than failing the revoke. The rotation sweep
+        // retries it.
         try
         {
             await _handleAccessGrantEndedCommand.HandleAsync(lease.CipherId);

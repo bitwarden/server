@@ -150,6 +150,7 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         {
             AccessRequestId = request.Id,
             DeciderKind = AccessDeciderKind.Automatic,
+            ConditionKind = governingRule.AutomatedConditionKind,
             Verdict = AccessDecisionVerdict.Approve,
             CreationDate = now,
         };

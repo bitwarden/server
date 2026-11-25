@@ -20,6 +20,8 @@ public static class AccessAuditEventKindNames
     public const string LeaseExpired = "leaseExpired";
     public const string CredentialAccessed = "credentialAccessed";
     public const string CredentialAccessDenied = "credentialAccessDenied";
+    public const string CredentialUngated = "credentialUngated";
+    public const string VaultExported = "vaultExported";
     public const string RuleCreated = "ruleCreated";
     public const string RuleUpdated = "ruleUpdated";
     public const string RuleDeleted = "ruleDeleted";
@@ -74,6 +76,8 @@ public static class AccessAuditEventKindNames
         AccessAuditEventKind.LeaseExpired => LeaseExpired,
         AccessAuditEventKind.CredentialAccessed => CredentialAccessed,
         AccessAuditEventKind.CredentialAccessDenied => CredentialAccessDenied,
+        AccessAuditEventKind.CredentialUngated => CredentialUngated,
+        AccessAuditEventKind.VaultExported => VaultExported,
         AccessAuditEventKind.RuleCreated => RuleCreated,
         AccessAuditEventKind.RuleUpdated => RuleUpdated,
         AccessAuditEventKind.RuleDeleted => RuleDeleted,

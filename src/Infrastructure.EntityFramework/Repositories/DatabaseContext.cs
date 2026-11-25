@@ -57,6 +57,7 @@ public class DatabaseContext : DbContext
     public DbSet<PamRotationJob> PamRotationJobs { get; set; }
     public DbSet<PamRotationAttempt> PamRotationAttempts { get; set; }
     public DbSet<PamRotationJobTimeoutSweep> PamRotationJobTimeoutSweeps { get; set; }
+    public DbSet<PamPendingAccessEnd> PamPendingAccessEnds { get; set; }
     public DbSet<Device> Devices { get; set; }
     public DbSet<EmergencyAccess> EmergencyAccesses { get; set; }
     public DbSet<Event> Events { get; set; }
@@ -135,6 +136,7 @@ public class DatabaseContext : DbContext
         var ePamRotationJob = builder.Entity<PamRotationJob>();
         var ePamRotationAttempt = builder.Entity<PamRotationAttempt>();
         var ePamRotationJobTimeoutSweep = builder.Entity<PamRotationJobTimeoutSweep>();
+        var ePamPendingAccessEnd = builder.Entity<PamPendingAccessEnd>();
         var eEmergencyAccess = builder.Entity<EmergencyAccess>();
         var eFolder = builder.Entity<Folder>();
         var eGroup = builder.Entity<Group>();
@@ -231,6 +233,15 @@ public class DatabaseContext : DbContext
             .WithMany()
             .HasForeignKey(l => l.AccessRequestId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        // No FK to AccessLease, mirroring MSSQL, which rejects a second cascade path from Organization.
+        ePamPendingAccessEnd.HasKey(p => p.AccessLeaseId);
+        ePamPendingAccessEnd.Property(p => p.AccessLeaseId).ValueGeneratedNever();
+        ePamPendingAccessEnd
+            .HasOne<PamRotationConfig>()
+            .WithMany()
+            .HasForeignKey(p => p.RotationConfigId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         eAccessDecision.Property(p => p.Id).ValueGeneratedNever();
         eAccessDecision.HasIndex(p => p.AccessRequestId);
@@ -378,6 +389,7 @@ public class DatabaseContext : DbContext
         ePamRotationJob.ToTable(nameof(PamRotationJob));
         ePamRotationAttempt.ToTable(nameof(PamRotationAttempt));
         ePamRotationJobTimeoutSweep.ToTable(nameof(PamRotationJobTimeoutSweep));
+        ePamPendingAccessEnd.ToTable(nameof(PamPendingAccessEnd));
         eEmergencyAccess.ToTable(nameof(EmergencyAccess));
         eFolder.ToTable(nameof(Folder));
         eGroup.ToTable(nameof(Group));

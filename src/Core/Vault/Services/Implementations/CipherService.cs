@@ -45,6 +45,7 @@ public class CipherService : ICipherService
     private readonly IPricingClient _pricingClient;
     private readonly ICipherLeaseGate _cipherLeaseGate;
     private readonly IPartialCipherWriteGuard _partialCipherWriteGuard;
+    private readonly ILeasingBypassAudit _leasingBypassAudit;
 
     public CipherService(
         ICipherRepository cipherRepository,
@@ -65,7 +66,8 @@ public class CipherService : ICipherService
         IOrganizationAbilityCacheService organizationAbilityCacheService,
         IPricingClient pricingClient,
         ICipherLeaseGate cipherLeaseGate,
-        IPartialCipherWriteGuard partialCipherWriteGuard)
+        IPartialCipherWriteGuard partialCipherWriteGuard,
+        ILeasingBypassAudit leasingBypassAudit)
     {
         _cipherRepository = cipherRepository;
         _folderRepository = folderRepository;
@@ -86,6 +88,7 @@ public class CipherService : ICipherService
         _pricingClient = pricingClient;
         _cipherLeaseGate = cipherLeaseGate;
         _partialCipherWriteGuard = partialCipherWriteGuard;
+        _leasingBypassAudit = leasingBypassAudit;
     }
 
     public async Task SaveAsync(Cipher cipher, Guid savingUserId, DateTime? lastKnownRevisionDate,
@@ -783,8 +786,9 @@ public class CipherService : ICipherService
         if (orgAdmin)
         {
             await _cipherLeaseGate.EnsureCanMutateAsAdminAsync(savingUserId, cipher);
-            await _collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id,
-                cipher.OrganizationId.Value, collectionIds);
+            await _leasingBypassAudit.AuditCollectionChangeAsync(cipher.OrganizationId.Value, savingUserId,
+                [cipher.Id], () => _collectionCipherRepository.UpdateCollectionsForAdminAsync(cipher.Id,
+                    cipher.OrganizationId.Value, collectionIds));
         }
         else
         {
@@ -793,7 +797,9 @@ public class CipherService : ICipherService
                 throw new BadRequestException("You do not have permissions to edit this.");
             }
             await _cipherLeaseGate.EnsureCanMutateAsync(savingUserId, cipher);
-            await _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId, collectionIds);
+            await _leasingBypassAudit.AuditCollectionChangeAsync(cipher.OrganizationId.Value, savingUserId,
+                [cipher.Id], () => _collectionCipherRepository.UpdateCollectionsAsync(cipher.Id, savingUserId,
+                    collectionIds));
         }
 
         await _eventService.LogCipherEventAsync(cipher, EventType.Cipher_UpdatedCollections);

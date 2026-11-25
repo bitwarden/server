@@ -5,7 +5,7 @@ namespace Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 public interface IValidateTwoFactorRememberTokenQuery
 {
     /// <summary>
-    /// Decides whether a presented remember token entitles this request to skip the two-factor
+    /// Decides whether a presented 2FA remember token entitles this request to skip the two-factor
     /// challenge.
     /// </summary>
     /// <remarks>
@@ -13,7 +13,7 @@ public interface IValidateTwoFactorRememberTokenQuery
     /// own command rather than folded in here.
     /// <para>
     /// This validates the token only. Whether the user is required to complete two-factor at all is
-    /// the caller's decision, made before a remember token is considered.
+    /// the caller's decision, made before a 2FA remember token is considered.
     /// </para>
     /// </remarks>
     /// <param name="user">The authenticating user.</param>

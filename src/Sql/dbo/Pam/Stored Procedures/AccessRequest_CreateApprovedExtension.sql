@@ -11,7 +11,8 @@ CREATE PROCEDURE [dbo].[AccessRequest_CreateApprovedExtension]
     @Reason NVARCHAR(MAX) = NULL,
     @Now DATETIME2(7),
     @RuleId UNIQUEIDENTIFIER = NULL,
-    @DenialComment NVARCHAR(MAX) = NULL
+    @DenialComment NVARCHAR(MAX) = NULL,
+    @ConditionKind TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -85,7 +86,7 @@ BEGIN
     )
     VALUES
     (
-        @AccessDecisionId, @AccessRequestId, 0 /* Automatic */, NULL, NULL,
+        @AccessDecisionId, @AccessRequestId, 0 /* Automatic */, NULL, @ConditionKind,
         1 /* Approve */, NULL, NULL, @Now
     )
 

@@ -55,8 +55,8 @@ public class TwoFactorRememberTokenRepository : BaseRepository, ITwoFactorRememb
         catch (SqlException e) when (e.Number is 2601 or 2627)
         {
             // Unique-index backstop ([IX_TwoFactorRememberToken_UserId_DeviceId]): a concurrent
-            // remember-login on the same device inserted the row between our read and our insert.
-            // Update the winner's row instead of failing the login.
+            // login that requested a 2FA remember token for the same device inserted the row between
+            // our read and our insert. Update the winner's row instead of failing the login.
             existing = await GetByUserIdDeviceIdAsync(token.UserId, token.DeviceId);
             if (existing == null || !await TryUpdateAsync(token, existing))
             {
@@ -87,8 +87,8 @@ public class TwoFactorRememberTokenRepository : BaseRepository, ITwoFactorRememb
             return false;
         }
 
-        // CreationDate stays as first written, so the row still records when the device was first
-        // remembered; the update procedure does not write it.
+        // CreationDate stays as first written, so the row still records when a 2FA remember token
+        // was first issued for the device; the update procedure does not write it.
         token.Id = existing.Id;
         token.CreationDate = existing.CreationDate;
         return true;

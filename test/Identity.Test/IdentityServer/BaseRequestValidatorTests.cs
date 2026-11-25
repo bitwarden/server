@@ -7,6 +7,7 @@ using Bit.Core.Auth.Enums;
 using Bit.Core.Auth.Models.Api.Response;
 using Bit.Core.Auth.Repositories;
 using Bit.Core.Auth.UserFeatures.Devices.Interfaces;
+using Bit.Core.Auth.UserFeatures.TwoFactorAuth;
 using Bit.Core.Context;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
@@ -59,6 +60,7 @@ public class BaseRequestValidatorTests
     private readonly IUserAccountKeysQuery _userAccountKeysQuery;
     private readonly IClientVersionValidator _clientVersionValidator;
     private readonly IUpdateDeviceLastActivityCommand _updateDeviceLastActivityCommand;
+    private readonly IIssueTwoFactorRememberTokenCommand _issueTwoFactorRememberTokenCommand;
 
     private readonly BaseRequestValidatorTestWrapper _sut;
 
@@ -83,6 +85,7 @@ public class BaseRequestValidatorTests
         _userAccountKeysQuery = Substitute.For<IUserAccountKeysQuery>();
         _clientVersionValidator = Substitute.For<IClientVersionValidator>();
         _updateDeviceLastActivityCommand = Substitute.For<IUpdateDeviceLastActivityCommand>();
+        _issueTwoFactorRememberTokenCommand = Substitute.For<IIssueTwoFactorRememberTokenCommand>();
 
         _sut = new BaseRequestValidatorTestWrapper(
             _userManager,
@@ -103,7 +106,8 @@ public class BaseRequestValidatorTests
             _mailService,
             _userAccountKeysQuery,
             _clientVersionValidator,
-            _updateDeviceLastActivityCommand);
+            _updateDeviceLastActivityCommand,
+            _issueTwoFactorRememberTokenCommand);
 
         // Default client version validator behavior: allow to pass unless a test overrides.
         _clientVersionValidator
@@ -396,7 +400,7 @@ public class BaseRequestValidatorTests
         // 4 -> set up 2FA verification to fail
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Email, "invalid_token", "requesting-device")
-            .Returns(Task.FromResult(false));
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(false)));
 
         // 5 -> set up SSO required verification to succeed
         _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
@@ -449,7 +453,7 @@ public class BaseRequestValidatorTests
         // 5 -> set up remember token verification to fail
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.Remember, "expired_remember_token", Arg.Any<string>())
-            .Returns(Task.FromResult(false));
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(false)));
 
         // 6 -> set up dummy BuildTwoFactorResultAsync
         var twoFactorResultDict = new Dictionary<string, object>
@@ -986,7 +990,7 @@ public class BaseRequestValidatorTests
         // 5. Recovery code is valid (UserService.RecoverTwoFactorAsync will be called internally)
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "valid-recovery-code-12345", Arg.Any<string>())
-            .Returns(Task.FromResult(true));
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(true)));
 
         // Act
         await _sut.ValidateAsync(context);
@@ -1050,7 +1054,7 @@ public class BaseRequestValidatorTests
         // 5. Recovery code is INVALID
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "INVALID-recovery-code", Arg.Any<string>())
-            .Returns(Task.FromResult(false));
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(false)));
 
         // Act
         await _sut.ValidateAsync(context);
@@ -1129,7 +1133,7 @@ public class BaseRequestValidatorTests
         // 5. Recovery code is valid
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(user, null, TwoFactorProviderType.RecoveryCode, "valid-recovery-code-67890", Arg.Any<string>())
-            .Returns(Task.FromResult(true));
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(true)));
 
         // 6. Device validation passes
         _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
@@ -1165,6 +1169,79 @@ public class BaseRequestValidatorTests
         // Recovery flag should be set for audit purposes
         Assert.True(requestContext.TwoFactorRecoveryRequested,
             "TwoFactorRecoveryRequested flag should be set for audit/logging");
+    }
+
+    /// <summary>
+    /// A successful 2FA login that asks for a 2FA remember token (TwoFactorRemember = "1") is only issued one
+    /// when the provider allows it. A <c>Remember</c> login must not renew itself, and a <c>RecoveryCode</c>
+    /// login removes 2FA, so neither mints a new token. <c>Email</c> is the control: it proves that the
+    /// request really would have been issued a token, so the other two cases can fail.
+    /// </summary>
+    [Theory]
+    [BitAutoData(TwoFactorProviderType.RecoveryCode, false)]
+    [BitAutoData(TwoFactorProviderType.Remember, false)]
+    [BitAutoData(TwoFactorProviderType.Email, true)]
+    public async Task ValidateAsync_TwoFactorRememberRequested_IssuesTwoFactorRememberTokenOnlyForAllowedProviders(
+        TwoFactorProviderType providerType,
+        bool expectTokenIssued,
+        [AuthFixtures.ValidatedTokenRequest] ValidatedTokenRequest tokenRequest,
+        [AuthFixtures.CustomValidatorRequestContext]
+        CustomValidatorRequestContext requestContext,
+        GrantValidationResult grantResult)
+    {
+        // Arrange
+        var context = CreateContext(tokenRequest, requestContext, grantResult);
+        var user = requestContext.User;
+        const string twoFactorToken = "valid-two-factor-token";
+
+        _sut.isValid = true;
+
+        _ssoRequestValidator.ValidateAsync(requestContext.User, tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        _twoFactorAuthenticationValidator
+            .RequiresTwoFactorAsync(user, tokenRequest)
+            .Returns(Task.FromResult(new Tuple<bool, Organization>(true, null)));
+
+        // The user asks for a 2FA remember token and completes 2FA with the provider under test
+        tokenRequest.Raw["TwoFactorRemember"] = "1";
+        tokenRequest.Raw["TwoFactorProvider"] = ((int)providerType).ToString();
+        tokenRequest.Raw["TwoFactorToken"] = twoFactorToken;
+
+        _twoFactorAuthenticationValidator
+            .VerifyTwoFactorAsync(user, null, providerType, twoFactorToken, Arg.Any<string>())
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(true)));
+
+        _deviceValidator.ValidateRequestDeviceAsync(tokenRequest, requestContext)
+            .Returns(Task.FromResult(true));
+
+        _userService.IsLegacyUser(Arg.Any<string>())
+            .Returns(false);
+
+        _userAccountKeysQuery.Run(Arg.Any<User>()).Returns(new UserAccountKeysData
+        {
+            PublicKeyEncryptionKeyPairData = new PublicKeyEncryptionKeyPairData(
+                "test-private-key",
+                "test-public-key"
+            )
+        });
+
+        // Act
+        await _sut.ValidateAsync(context);
+
+        // Assert
+        Assert.False(context.GrantResult.IsError, "Authentication should succeed for the provider under test");
+
+        if (expectTokenIssued)
+        {
+            await _issueTwoFactorRememberTokenCommand.Received(1)
+                .IssueAsync(Arg.Any<User>(), Arg.Any<Device>());
+        }
+        else
+        {
+            await _issueTwoFactorRememberTokenCommand.DidNotReceive()
+                .IssueAsync(Arg.Any<User>(), Arg.Any<Device>());
+        }
     }
 
     [Theory]
@@ -1274,7 +1351,7 @@ public class BaseRequestValidatorTests
 
         _twoFactorAuthenticationValidator
             .VerifyTwoFactorAsync(requestContext.User, null, TwoFactorProviderType.RecoveryCode, "valid-recovery-code", Arg.Any<string>())
-            .Returns(Task.FromResult(true));
+            .Returns(Task.FromResult(new TwoFactorVerificationResult(true)));
 
         // SsoRequestValidator handles the recovery + SSO scenario
         requestContext.TwoFactorRecoveryRequested = true;
