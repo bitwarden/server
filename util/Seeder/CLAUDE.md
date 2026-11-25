@@ -170,7 +170,7 @@ Every login URI must carry `uriChecksum` (set in `LoginCipherSeeder`): the SDK s
 
 ## Rust Crypto Dependency
 
-The Rust shim (`util/RustSdk/rust/`) uses `bitwarden_crypto` and no other Bitwarden SDK crate. It does **not** depend on `bitwarden_vault`, because the seeder drives field selection via `[EncryptProperty]` attributes, not SDK cipher types.
+The Rust shim (`util/RustSdk/rust/`) uses `bitwarden_crypto`, plus `bitwarden_organization_crypto` for the sealed invite behind `OrganizationInviteLinkScene` (`organization_invite.rs`). Pin both crates to the same sdk-internal rev. It does **not** depend on `bitwarden_vault`, because the seeder drives field selection via `[EncryptProperty]` attributes, not SDK cipher types.
 
 Before modifying encryption integration, run `RustSdkCipherTests` to validate roundtrip encryption.
 

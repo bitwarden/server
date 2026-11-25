@@ -5,6 +5,7 @@ fn main() {
         .input_extern_file("src/sm_access_token.rs")
         .input_extern_file("src/attachment.rs")
         .input_extern_file("src/provider.rs")
+        .input_extern_file("src/organization_invite.rs")
         .csharp_dll_name("libsdk")
         .csharp_namespace("Bit.RustSDK")
         .csharp_class_accessibility("public")

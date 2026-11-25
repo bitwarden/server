@@ -3,6 +3,7 @@
 mod attachment;
 mod cipher;
 mod crypto_util;
+mod organization_invite;
 mod provider;
 mod rsa_keys;
 mod sm_access_token;
