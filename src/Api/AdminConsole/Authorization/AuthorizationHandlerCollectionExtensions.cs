@@ -1,4 +1,5 @@
 ﻿using Bit.Api.AdminConsole.Authorization.Collections;
+using Bit.Api.AdminConsole.Authorization.Groups;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 
@@ -21,5 +22,6 @@ public static class AuthorizationHandlerCollectionExtensions
         ]);
 
         services.TryAddScoped<ICollectionAuthorizationService, CollectionAuthorizationService>();
+        services.TryAddScoped<IGroupsAuthorizationService, GroupsAuthorizationService>();
     }
 }
