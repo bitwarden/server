@@ -1,7 +1,4 @@
-﻿// FIXME: Update this file to be null safe and then delete the line below
-#nullable disable
-
-using System.Text.Json;
+﻿using System.Text.Json;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Tools.Entities;
@@ -29,7 +26,7 @@ public class SendAccessCommand : ISendAccessCommand
         _pushNotificationService = pushNotificationService;
     }
 
-    public async Task<(string, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId)
+    public async Task<(string?, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId)
     {
         if (send.Type != SendType.File)
         {

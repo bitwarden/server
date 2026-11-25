@@ -22,7 +22,7 @@ public interface ISendAccessCommand
     /// Returns <see cref="SendAccessResult.Denied" /> when the Send is disabled, MaxAccessCount has been reached,
     /// expiration date has passed, or deletion date has been reached.
     /// </remarks>
-    Task<(string, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId);
+    Task<(string?, SendAccessResult)> GetSendFileDownloadUrlAsync(Send send, string fileId);
 
     /// <summary>
     /// Records an access against the <see cref="Send" /> by incrementing its access count, persisting
