@@ -410,6 +410,6 @@ public class SendAccessCommandTests
         // Assert
         Assert.Equal(4, send.AccessCount);
         await _sendRepository.Received(1).ReplaceAsync(send);
-        await _pushNotificationService.Received(1).PushSyncSendUpdateAsync(send);
+        await _pushNotificationService.Received(1).PushAsync(Arg.Is<PushNotification<SyncSendPushNotification>>(n => n.Type == PushType.SyncSendUpdate && n.Payload.Id == send.Id));
     }
 }
