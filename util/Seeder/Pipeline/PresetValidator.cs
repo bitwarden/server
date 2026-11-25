@@ -56,6 +56,7 @@ internal static class PresetValidator
         {
             ValidateAccessShape(preset, presetName);
             ValidatePolicies(preset, presetName);
+            ValidateSso(preset, presetName);
             ValidateUsers(preset, presetName);
             ValidateDefaultCollections(preset, presetName);
         }
@@ -333,6 +334,66 @@ internal static class PresetValidator
             throw new InvalidOperationException(
                 $"Preset '{presetName}' has 'defaultCollections.sizing' '{sizing}'; " +
                 $"valid values are {string.Join(", ", sizingNames)}.");
+        }
+    }
+
+    /// <summary>
+    /// A Key Connector SSO config needs a URL, a SAML provider (the only one the Seeder writes), an enterprise plan
+    /// (the only plans with <c>UseKeyConnector</c>), and the Single Organization and Require SSO policies, which
+    /// <c>SsoConfigService</c> requires before it saves a Key Connector config. A URL on any other decryption
+    /// type would be silently dropped.
+    /// </summary>
+    private static void ValidateSso(Models.SeedPreset preset, string presetName)
+    {
+        var sso = preset.Sso;
+        if (sso is null)
+        {
+            return;
+        }
+
+        var isKeyConnector = string.Equals(sso.EncryptionType, "keyConnector", StringComparison.OrdinalIgnoreCase);
+        if (!isKeyConnector)
+        {
+            if (sso.KeyConnectorUrl is not null)
+            {
+                throw new InvalidOperationException(
+                    $"Preset '{presetName}' has 'sso.keyConnectorUrl' but 'sso.encryptionType' is not 'keyConnector'. " +
+                    "Remove the URL, or set 'encryptionType' to 'keyConnector'.");
+            }
+
+            return;
+        }
+
+        if (!Uri.TryCreate(sso.KeyConnectorUrl, UriKind.Absolute, out var url) ||
+            (url.Scheme != Uri.UriSchemeHttp && url.Scheme != Uri.UriSchemeHttps))
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has 'sso.encryptionType' 'keyConnector' without a valid 'sso.keyConnectorUrl'. " +
+                "Set it to the absolute http(s) URL of the Key Connector service.");
+        }
+
+        if (!string.Equals(sso.Provider ?? "saml", "saml", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has a Key Connector SSO config with provider '{sso.Provider}'. " +
+                "The Seeder writes SSO configs only for 'saml'; set 'sso.provider' to 'saml'.");
+        }
+
+        var planType = preset.Organization!.PlanType;
+        if (PlanFeatures.Parse(planType) is not (PlanType.EnterpriseAnnually or PlanType.EnterpriseMonthly))
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has a Key Connector SSO config on plan '{planType}', which can't use Key Connector. " +
+                "Use an enterprise plan.");
+        }
+
+        var enabled = ParsePolicyTypes(preset.Policies?.Enable, presetName);
+        var missing = new[] { PolicyType.SingleOrg, PolicyType.RequireSso }.Except(enabled).ToList();
+        if (missing.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Preset '{presetName}' has a Key Connector SSO config without {string.Join(", ", missing)}. " +
+                "The server requires the singleOrg and requireSso policies for Key Connector; add them to 'policies.enable'.");
         }
     }
 

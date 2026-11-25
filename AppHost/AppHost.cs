@@ -14,6 +14,7 @@ builder.ConfigureIdp();
 var services = builder.ConfigureServices(db, secretsSetup, mail, azurite);
 
 builder.ConfigureWebFrontend(services["api"]);
+builder.ConfigureKeyConnector(services["identity"]);
 
 #if ENABLE_NGROK_COMMUNITY_PLUGIN
 builder.ConfigureNgrok((services["billing"], "http"));

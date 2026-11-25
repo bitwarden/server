@@ -46,4 +46,28 @@ public class SsoConfigSeederTests
 
         Assert.Equal(MemberDecryptionType.TrustedDeviceEncryption, config.GetData().MemberDecryptionType);
     }
+
+    [Fact]
+    public void Create_KeyConnector_StoresKeyConnectorUrl()
+    {
+        const string keyConnectorUrl = "http://localhost:5000";
+
+        var config = SsoConfigSeeder.Create(
+            Guid.NewGuid(), _idpEntityId, _idpSsoUrl, _idpCert,
+            MemberDecryptionType.KeyConnector, keyConnectorUrl);
+
+        var data = config.GetData();
+        Assert.Equal(MemberDecryptionType.KeyConnector, data.MemberDecryptionType);
+        Assert.Equal(keyConnectorUrl, data.KeyConnectorUrl);
+    }
+
+    [Fact]
+    public void Create_NotKeyConnector_IgnoresKeyConnectorUrl()
+    {
+        var config = SsoConfigSeeder.Create(
+            Guid.NewGuid(), _idpEntityId, _idpSsoUrl, _idpCert,
+            MemberDecryptionType.MasterPassword, "http://localhost:5000");
+
+        Assert.Null(config.GetData().KeyConnectorUrl);
+    }
 }

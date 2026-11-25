@@ -17,7 +17,8 @@ namespace Bit.Seeder.Steps;
 internal sealed class CreateSsoConfigStep(
     string identifier,
     string? provider,
-    MemberDecryptionType memberDecryptionType) : IAsyncStep
+    MemberDecryptionType memberDecryptionType,
+    string? keyConnectorUrl = null) : IAsyncStep
 {
     private static readonly XNamespace _ds = "http://www.w3.org/2000/09/xmldsig#";
 
@@ -48,7 +49,8 @@ internal sealed class CreateSsoConfigStep(
             LocalSamlIdp.EntityId,
             LocalSamlIdp.SingleSignOnServiceUrl,
             signingCertificate,
-            memberDecryptionType);
+            memberDecryptionType,
+            keyConnectorUrl);
 
         context.SsoConfigs.Add(ssoConfig);
     }

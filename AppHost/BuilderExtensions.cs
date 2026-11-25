@@ -278,15 +278,60 @@ public static class BuilderExtensions
     public static void ConfigureWebFrontend(this IDistributedApplicationBuilder builder,
         IResourceBuilder<ProjectResource> api)
     {
-        if (!int.TryParse(builder.Required("WebFrontend:Port"), out var basePort))
-            throw new InvalidOperationException("Invalid value for WebFrontend:Port.");
-        var port = builder.IsSelfHosted() ? basePort + 1 : basePort;
+        var (port, url) = builder.GetWebFrontendEndpoint();
         var scriptName = builder.IsSelfHosted() ? "build:bit:selfhost:watch" : "build:bit:watch";
-        var url = builder.Required("WebFrontend:Url") + $":{port}";
         builder
             .AddBitwardenNpmApp("web-frontend", "web", api, port: port, scriptName: scriptName)
             .WithUrl(url)
             .WithExternalHttpEndpoints();
+    }
+
+    /// <summary>
+    /// Adds the Key Connector service from the sibling key-connector repository, when that repository is present.
+    /// Key Connector uses its own user secrets for the certificate and database settings; this method only
+    /// points it at the local identity service and web vault.
+    /// </summary>
+    /// <param name="builder">The distributed application builder used to configure the Key Connector resource.</param>
+    /// <param name="identity">The identity service that issues the tokens Key Connector validates.</param>
+    public static void ConfigureKeyConnector(this IDistributedApplicationBuilder builder,
+        IResourceBuilder<ProjectResource> identity)
+    {
+        var projectPath = Path.GetFullPath(builder.Required("KeyConnector:ProjectPath"), builder.AppHostDirectory);
+        if (!File.Exists(projectPath))
+            return;
+
+        if (!int.TryParse(builder.Required("KeyConnector:Port"), out var port))
+            throw new InvalidOperationException("Invalid value for KeyConnector:Port.");
+
+        // Hardcoded to localhost for the same reason as the IdP: these URLs must match what the browser uses.
+        // Identity issues tokens with a host-only issuer, so the authority port does not affect issuer validation.
+        // The web vault URL is Key Connector's only allowed CORS origin, and the web client calls Key Connector
+        // from https://localhost, so it does not use WebFrontend:Url.
+        var identityUrl = $"http://localhost:{builder.GetBitwardenServicePort("identity")}/";
+        var (webVaultPort, _) = builder.GetWebFrontendEndpoint();
+        var webVaultUrl = $"https://localhost:{webVaultPort}/";
+
+        // Skip Key Connector's launchSettings.json: it stores dotnetRunMessages as a string, which Aspire's parser
+        // rejects. The endpoint and environment that the launch profile would supply are declared here instead.
+        builder
+            .AddProject("key-connector", projectPath, options => options.ExcludeLaunchProfile = true)
+            .WithHttpEndpoint(port: port, name: "http")
+            .WithEnvironment("ASPNETCORE_ENVIRONMENT", "Development")
+            .WithEnvironment("keyConnectorSettings__identityServerUri", identityUrl)
+            .WithEnvironment("keyConnectorSettings__webVaultUri", webVaultUrl)
+            .WaitFor(identity)
+            .WithExplicitStart();
+    }
+
+    /// <summary>
+    /// Resolves the web frontend port and its public URL. The port is incremented by 1 in self-hosted mode.
+    /// </summary>
+    private static (int Port, string Url) GetWebFrontendEndpoint(this IDistributedApplicationBuilder builder)
+    {
+        if (!int.TryParse(builder.Required("WebFrontend:Port"), out var basePort))
+            throw new InvalidOperationException("Invalid value for WebFrontend:Port.");
+        var port = builder.IsSelfHosted() ? basePort + 1 : basePort;
+        return (port, builder.Required("WebFrontend:Url") + $":{port}");
     }
 
     private static IResourceBuilder<JavaScriptAppResource> AddBitwardenNpmApp(this IDistributedApplicationBuilder builder,

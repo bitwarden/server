@@ -35,6 +35,7 @@ the services wait for the database and secrets setup to finish before launching.
 | `mailcatcher`       | Container                 | SMTP :10250 · Web UI :1080                                                |
 | `redis`             | Container                 | Redis with AOF persistence, port 6379                                     |
 | `idp`               | SimpleSAMLphp container   | SAML IdP for SSO testing (**explicit start** from the dashboard)          |
+| `key-connector`     | .NET project (optional)   | Key Connector :5000 (**explicit start**; only if the repo is present)     |
 | `admin`             | .NET project              | Admin portal                                                              |
 | `api`               | .NET project              | Main API (waits for Azurite)                                              |
 | `billing`           | .NET project              | Billing service                                                           |
@@ -88,6 +89,8 @@ dotnet user-secrets set "Database:Password" "<your-sa-password>"
 | `Parameters:sso-org-id`     | `yourOrgIdHere`                    | Org ID for SAML SSO testing; the IdP builds its SP entity ID and ACS URL from it     |
 | `WebFrontend:Port`          | `8080`                             | Web frontend port (incremented by 1 in self-hosted mode)                            |
 | `WebFrontend:Url`           | `https://bitwarden.test`           | Web frontend base URL; the resolved port is appended automatically                  |
+| `KeyConnector:ProjectPath`  | `../../key-connector/src/KeyConnector/KeyConnector.csproj` | Path to the Key Connector project (see [Key Connector](#key-connector)) |
+| `KeyConnector:Port`         | `5000`                             | Key Connector HTTP port                                                              |
 
 ## Optional Features
 
@@ -107,6 +110,31 @@ Runs the web client alongside the server services. Requires the Bitwarden
 
 In self-hosted mode the web frontend automatically uses the `build:bit:selfhost:watch` npm script
 and its port is incremented by 1 (matching the server services).
+
+### Key Connector
+
+Runs [Key Connector](https://github.com/bitwarden/key-connector) alongside the server services.
+Requires the `key-connector` repo cloned as a sibling to `server`. If the project file is not found,
+the AppHost skips the resource.
+
+1. Complete the Key Connector
+   [setup guide](https://contributing.bitwarden.com/getting-started/business/key-connector) so that
+   its own user secrets hold the certificate (`bwkc.pfx`) and `database.json` settings. The AppHost
+   does not manage these secrets.
+
+2. If the repo is not at `../../key-connector`, override the path:
+
+   ```bash
+   dotnet user-secrets set "KeyConnector:ProjectPath" "<path/to/KeyConnector.csproj>"
+   ```
+
+3. Run `dotnet run` as normal. The `key-connector` resource starts with **explicit start** — start
+   it from the Aspire dashboard after `identity` is running.
+
+The AppHost sets Key Connector's `identityServerUri` to the local identity service and its
+`webVaultUri` to `https://localhost:<web frontend port>`. Key Connector allows CORS requests only
+from that origin, so open the web vault on `localhost`, not `WebFrontend:Url`. Both values follow
+self-hosted mode. Set the organization's Key Connector URL to `http://localhost:5000`.
 
 ### Ngrok (Billing Webhook Tunneling)
 

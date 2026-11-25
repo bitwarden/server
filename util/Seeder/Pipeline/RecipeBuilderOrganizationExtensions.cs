@@ -127,12 +127,14 @@ public static class RecipeBuilderOrganizationExtensions
         /// <param name="identifier">Org SSO identifier (the domain_hint typed at login); mangled with the org when --mangle is set</param>
         /// <param name="provider">Provider from the preset ("saml"/"oidc"); null defaults to saml</param>
         /// <param name="memberDecryptionType">How members decrypt after SSO auth (MasterPassword by default)</param>
+        /// <param name="keyConnectorUrl">Key Connector service URL; used only when <paramref name="memberDecryptionType"/> is KeyConnector</param>
         /// <returns>The builder for fluent chaining</returns>
         /// <exception cref="InvalidOperationException">Thrown when no organization exists or the identifier is empty</exception>
         public RecipeBuilder WithSso(
             string identifier,
             string? provider,
-            MemberDecryptionType memberDecryptionType)
+            MemberDecryptionType memberDecryptionType,
+            string? keyConnectorUrl = null)
         {
             if (!builder.HasOrg)
             {
@@ -145,7 +147,7 @@ public static class RecipeBuilderOrganizationExtensions
                 throw new InvalidOperationException("SSO configuration requires a non-empty identifier.");
             }
 
-            builder.AddAsyncStep(_ => new CreateSsoConfigStep(identifier, provider, memberDecryptionType));
+            builder.AddAsyncStep(_ => new CreateSsoConfigStep(identifier, provider, memberDecryptionType, keyConnectorUrl));
             return builder;
         }
 

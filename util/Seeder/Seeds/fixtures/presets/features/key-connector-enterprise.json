@@ -1,0 +1,23 @@
+{
+  "$schema": "../../../schemas/preset.schema.json",
+  "organization": {
+    "fixture": "maple-pine-trading",
+    "planType": "enterprise-annually",
+    "seats": 10
+  },
+  "roster": {
+    "fixture": "starter-team"
+  },
+  "ciphers": {
+    "fixture": "enterprise-basic"
+  },
+  "policies": {
+    "enable": ["singleOrg", "requireSso"]
+  },
+  "sso": {
+    "identifier": "key-connector",
+    "encryptionType": "keyConnector",
+    "provider": "saml",
+    "keyConnectorUrl": "http://localhost:5000"
+  }
+}

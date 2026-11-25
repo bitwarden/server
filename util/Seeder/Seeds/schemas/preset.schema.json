@@ -526,6 +526,12 @@
           "type": "string",
           "enum": ["oidc", "saml"],
           "description": "Identity provider protocol."
+        },
+        "keyConnectorUrl": {
+          "type": "string",
+          "minLength": 1,
+          "format": "uri",
+          "description": "Key Connector service URL. Required when encryptionType is 'keyConnector'; not allowed otherwise."
         }
       }
     },

@@ -10,6 +10,7 @@ public class PresetValidatorTests
     private const string _presetPrefix = "presets.";
     private const string _policyEnterprise = "features.policy-enterprise";
     private const string _ssoEnterprise = "features.sso-enterprise";
+    private const string _keyConnectorEnterprise = "features.key-connector-enterprise";
     private const string _sterlingCooper = "scale.md-balanced-sterling-cooper";
     private const string _defaultCollectionsEnterprise = "features.default-collections-enterprise";
     private const string _smCyberdyne = "scale.sm-migrated-cyberdyne";
@@ -83,6 +84,75 @@ public class PresetValidatorTests
         var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _ssoEnterprise));
 
         Assert.Contains("enables RequireSso without singleOrg", ex.Message);
+    }
+
+    [Fact]
+    public void Sso_KeyConnectorPreset_Passes()
+    {
+        var preset = ReadPreset(_keyConnectorEnterprise);
+
+        PresetValidator.Validate(preset, _keyConnectorEnterprise);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("localhost:5000")]
+    [InlineData("ftp://localhost:5000")]
+    public void Sso_KeyConnectorWithoutValidUrl_Throws(string? keyConnectorUrl)
+    {
+        var preset = ReadPreset(_keyConnectorEnterprise);
+        preset = preset with { Sso = preset.Sso! with { KeyConnectorUrl = keyConnectorUrl } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _keyConnectorEnterprise));
+
+        Assert.Contains("without a valid 'sso.keyConnectorUrl'", ex.Message);
+    }
+
+    [Fact]
+    public void Sso_KeyConnectorUrlWithoutKeyConnector_Throws()
+    {
+        var preset = ReadPreset(_keyConnectorEnterprise);
+        preset = preset with { Sso = preset.Sso! with { EncryptionType = "masterPassword" } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _keyConnectorEnterprise));
+
+        Assert.Contains("'sso.encryptionType' is not 'keyConnector'", ex.Message);
+    }
+
+    [Fact]
+    public void Sso_KeyConnectorWithOidc_Throws()
+    {
+        var preset = ReadPreset(_keyConnectorEnterprise);
+        preset = preset with { Sso = preset.Sso! with { Provider = "oidc" } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _keyConnectorEnterprise));
+
+        Assert.Contains("set 'sso.provider' to 'saml'", ex.Message);
+    }
+
+    [Fact]
+    public void Sso_KeyConnectorOnTeamsPlan_Throws()
+    {
+        var preset = ReadPreset(_keyConnectorEnterprise);
+        preset = preset with { Organization = preset.Organization! with { PlanType = "teams-annually" } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _keyConnectorEnterprise));
+
+        Assert.Contains("can't use Key Connector", ex.Message);
+    }
+
+    [Theory]
+    [InlineData(new[] { "singleOrg" }, "RequireSso")]
+    [InlineData(new string[0], "SingleOrg, RequireSso")]
+    public void Sso_KeyConnectorWithoutRequiredPolicies_Throws(string[] enable, string missing)
+    {
+        var preset = ReadPreset(_keyConnectorEnterprise);
+        preset = preset with { Policies = preset.Policies! with { Enable = [.. enable] } };
+
+        var ex = Assert.Throws<InvalidOperationException>(() => PresetValidator.Validate(preset, _keyConnectorEnterprise));
+
+        Assert.Contains($"without {missing}", ex.Message);
     }
 
     [Fact]
