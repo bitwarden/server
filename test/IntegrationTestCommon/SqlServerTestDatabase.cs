@@ -53,7 +53,11 @@ public class SqlServerTestDatabase : ITestDatabase
         using var scope = serviceProvider.CreateScope();
         var services = scope.ServiceProvider;
         var globalSettings = services.GetRequiredService<GlobalSettings>();
-        var logger = services.GetRequiredService<ILogger<DbMigrator>>();
+
+        // A dedicated console logger keeps migration progress visible when the services turn logging off.
+        // Disposing it at the end of the method stops its console thread.
+        using var loggerFactory = LoggerFactory.Create(builder => builder.AddConsole());
+        var logger = loggerFactory.CreateLogger<DbMigrator>();
 
         var migrator = new SqlServerDbMigrator(globalSettings, logger);
         migrator.MigrateDatabase();
