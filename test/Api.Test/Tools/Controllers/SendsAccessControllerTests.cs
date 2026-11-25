@@ -515,10 +515,10 @@ public class SendsAccessControllerTests : IDisposable
         };
         var user = CreateUserWithSendIdClaim(sendId);
         _sut.ControllerContext = CreateControllerContextWithUser(user);
-        _sendRepository.GetByIdAsync(sendId).Returns(send);
+        _sendAccessQuery.Get(sendId).Returns(send);
 
         // Mock GetSendFileDownloadUrlAsync to throw ArgumentException when invalid characters detected
-        _nonAnonymousSendCommand
+        _sendAccessCommand
             .When(x => x.GetSendFileDownloadUrlAsync(send, fileIdWithInvalidChars))
             .Do(x => throw new ArgumentException("File ID contains invalid characters", nameof(fileIdWithInvalidChars)));
 
@@ -529,8 +529,7 @@ public class SendsAccessControllerTests : IDisposable
         Assert.Contains("File ID contains invalid characters", exception.Message);
 
         // Verify that the command was called with the invalid fileId
-        await _nonAnonymousSendCommand.Received(1)
-            .GetSendFileDownloadUrlAsync(send, fileIdWithInvalidChars);
+        await _sendAccessCommand.Received(1).GetSendFileDownloadUrlAsync(send, fileIdWithInvalidChars);
     }
 
     [Fact]

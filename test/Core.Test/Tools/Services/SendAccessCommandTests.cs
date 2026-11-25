@@ -1,4 +1,5 @@
-﻿using Bit.Core.Enums;
+﻿using System.Text.Json;
+using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models;
 using Bit.Core.Platform.Push;
@@ -243,7 +244,7 @@ public class SendAccessCommandTests
 
         // Act & Assert
         var exception = await Assert.ThrowsAsync<NotFoundException>(() =>
-            await _sendAccessCommand.GetSendFileDownloadUrlAsync(send, fileId);
+            _sendAccessCommand.GetSendFileDownloadUrlAsync(send, fileId));
 
         // Verify repository and storage service were not called
         await _sendRepository.DidNotReceive().ReplaceAsync(Arg.Any<Send>());
