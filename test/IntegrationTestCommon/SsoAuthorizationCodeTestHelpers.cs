@@ -22,12 +22,14 @@ public static class SsoAuthorizationCodeTestHelpers
     /// <paramref name="organizationId"/>, and returns the code that a client sends to the token endpoint.
     /// </summary>
     /// <param name="codeVerifier">The PKCE verifier that the token request must send as <c>code_verifier</c>.</param>
+    /// <param name="changeCode">Changes the authorization code before the store saves it.</param>
     public static async Task<string> StoreSsoAuthorizationCodeAsync(
         this IdentityApplicationFactory factory,
         Guid userId,
         string email,
         Guid organizationId,
-        string codeVerifier)
+        string codeVerifier,
+        Action<AuthorizationCode>? changeCode = null)
     {
         var authorizationCode = new AuthorizationCode
         {
@@ -40,6 +42,7 @@ public static class SsoAuthorizationCodeTestHelpers
             CodeChallengeMethod = OidcConstants.CodeChallengeMethods.Plain,
             Subject = BuildSsoSubject(userId, email, organizationId),
         };
+        changeCode?.Invoke(authorizationCode);
 
         using var scope = factory.Services.CreateScope();
         var authorizationCodeStore = scope.ServiceProvider.GetRequiredService<IAuthorizationCodeStore>();
