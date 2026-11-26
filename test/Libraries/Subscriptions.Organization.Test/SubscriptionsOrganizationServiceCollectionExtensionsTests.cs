@@ -144,4 +144,22 @@ public class SubscriptionsOrganizationServiceCollectionExtensionsTests
         Assert.IsType<SendPrivilegedControlsSeatNeededEmailCommand>(
             scope.ServiceProvider.GetService<ISendPrivilegedControlsSeatNeededEmailCommand>());
     }
+
+    [Fact]
+    public void AddPrivilegedControlsSeatAutoscaling_ResolvesValidatePrivilegedControlsSeatReservationQuery()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(Substitute.For<ICountNewPamSeatsRequiredQuery>());
+        services.AddSingleton(Substitute.For<IOrganizationUserRepository>());
+        services.AddSingleton(Substitute.For<IStripeAdapter>());
+        services.AddSingleton(Substitute.For<IPricingClient>());
+        services.AddSingleton(Substitute.For<IBitwardenEnvironment>());
+        services.AddSingleton(Substitute.For<IFeatureService>());
+        services.AddLogging();
+
+        services.AddPrivilegedControlsSeatAutoscaling();
+        using var scope = services.BuildServiceProvider().CreateScope();
+
+        Assert.NotNull(scope.ServiceProvider.GetService<IValidatePrivilegedControlsSeatReservationQuery>());
+    }
 }

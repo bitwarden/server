@@ -34,6 +34,7 @@ public class Startup
 
         // Settings
         var globalSettings = services.AddGlobalSettingsServices(Configuration, Environment);
+        services.AddGlobalSettingsBridge();
         services.Configure<ScimSettings>(Configuration.GetSection("ScimSettings"));
 
         // Data Protection

@@ -955,7 +955,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.11.0, )"
+          "HttpExtensions": "[2026.11.1, )"
         }
       },
       "httpextensions": {
@@ -972,7 +972,7 @@
       "organizationauthorization": {
         "type": "Project",
         "dependencies": {
-          "Core": "[2026.11.0, )",
+          "Core": "[2026.11.1, )",
           "CurrentUser": "[0.0.1, )"
         }
       },

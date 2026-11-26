@@ -1,4 +1,5 @@
-﻿using Bit.Pam.Enums;
+﻿using Bit.Core.Enums;
+using Bit.Pam.Enums;
 
 namespace Bit.Pam.Models;
 
@@ -46,4 +47,13 @@ public record AccessAuditEventData
 
     public DateTime? LeaseNotBefore { get; init; }
     public DateTime? LeaseNotAfter { get; init; }
+
+    /// <summary>
+    /// The source IP address of the request that recorded the event. Set by the emitter, not the caller; null for an
+    /// event recorded by a background job.
+    /// </summary>
+    public string? IpAddress { get; init; }
+
+    /// <summary>The device type of the request that recorded the event. Set and left null as <see cref="IpAddress"/>.</summary>
+    public DeviceType? DeviceType { get; init; }
 }

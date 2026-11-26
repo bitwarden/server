@@ -134,6 +134,29 @@ public class OrganizationSeederTests
         Assert.False(unlicensedMember.AccessPam);
     }
 
+    [Theory]
+    [InlineData(OrganizationUserStatusType.Invited, false, false)]
+    [InlineData(OrganizationUserStatusType.Staged, false, false)]
+    [InlineData(OrganizationUserStatusType.Accepted, true, false)]
+    [InlineData(OrganizationUserStatusType.Confirmed, true, true)]
+    [InlineData(OrganizationUserStatusType.Revoked, true, true)]
+    public void CreateOrganizationUserWithKey_ShapesRowByStatus(
+        OrganizationUserStatusType status, bool linksUserId, bool includesKey)
+    {
+        var organization = OrganizationSeeder.Create(Seed(), new NoOpManglerService());
+        var user = new User { Id = Guid.NewGuid(), Email = "member@acme.test" };
+
+        var member = organization.CreateOrganizationUserWithKey(
+            user, OrganizationUserType.User, status, "orgKey");
+
+        Assert.Equal(status, member.Status);
+        Assert.Equal(OrganizationUserType.User, member.Type);
+        Assert.Equal(organization.Id, member.OrganizationId);
+        Assert.Equal(linksUserId ? user.Id : null, member.UserId);
+        Assert.Equal(linksUserId ? null : user.Email, member.Email);
+        Assert.Equal(includesKey ? "orgKey" : null, member.Key);
+    }
+
     [Fact]
     public void Create_SetsBillingGatewayIdentifiers()
     {

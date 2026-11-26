@@ -43,8 +43,8 @@ public class TwoFactorRememberTokenRepository : BaseEntityFrameworkRepository, I
         }
         catch (DbUpdateException e) when (IsDuplicateKeyException(e))
         {
-            // Unique-index backstop: a concurrent remember-login on the same device inserted the row
-            // between our read and our insert. Update the winner's row instead of failing the login.
+            // Unique-index backstop: a concurrent login that requested a 2FA remember token for the same
+            // device inserted the row between our read and our insert. Update the winner's row instead of failing the login.
             existing = await GetByUserIdDeviceIdAsync(token.UserId, token.DeviceId);
             if (existing == null || !await TryUpdateAsync(token, existing))
             {
@@ -73,7 +73,7 @@ public class TwoFactorRememberTokenRepository : BaseEntityFrameworkRepository, I
             return false;
         }
 
-        // CreationDate is left alone so the row still records when the device was first remembered,
+        // CreationDate is left alone so the row still records when a 2FA remember token was first issued for the device,
         // matching the MSSQL procedure.
         token.Id = existing.Id;
         token.CreationDate = existing.CreationDate;

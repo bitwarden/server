@@ -230,6 +230,7 @@ public class OrganizationUserResetPasswordDetailsResponseModel : ResponseModel
     public string MasterPasswordSalt { get; set; }
     public string ResetPasswordKey { get; set; }
     public string EncryptedPrivateKey { get; set; }
+    public bool IsSoleOwnerOfOtherOrganization { get; set; }
 }
 
 public class OrganizationUserPublicKeyResponseModel : ResponseModel

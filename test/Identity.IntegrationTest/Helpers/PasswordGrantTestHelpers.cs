@@ -1,6 +1,8 @@
 ﻿using Bit.Core.Auth.Models.Api.Request.Accounts;
+using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.KeyManagement.Kdf;
+using Bit.Core.Repositories;
 using Bit.IntegrationTestCommon.Factories;
 
 namespace Bit.Identity.IntegrationTest.Helpers;
@@ -36,5 +38,18 @@ public static class PasswordGrantTestHelpers
                 },
                 UserSymmetricKey = Bit.Test.Common.Constants.TestEncryptionConstants.AES256_CBC_HMAC_Encstring,
             });
+    }
+
+    /// <summary>
+    /// Registers the default user and logs in with the password grant on the given client.
+    /// </summary>
+    public static async Task<(User User, string AccessToken, string RefreshToken)> RegisterAndLoginWithPasswordAsync(
+        IdentityApplicationFactory factory, string clientId = BitwardenClient.Web)
+    {
+        await RegisterUserAsync(factory);
+        var (accessToken, refreshToken) = await factory.TokenFromPasswordAsync(
+            DefaultUsername, DefaultPassword, clientId: clientId);
+        var user = await factory.Services.GetRequiredService<IUserRepository>().GetByEmailAsync(DefaultUsername);
+        return (user!, accessToken, refreshToken);
     }
 }

@@ -28,6 +28,8 @@ CREATE TABLE [dbo].[AccessAuditEvent] (
     [RotationJobId]       UNIQUEIDENTIFIER    NULL,
     [RotationSource]      TINYINT             NULL,
     [SyncState]           TINYINT             NULL,
+    [IpAddress]           VARCHAR(50)         NULL,
+    [DeviceType]          TINYINT             NULL,
     CONSTRAINT [PK_AccessAuditEvent] PRIMARY KEY CLUSTERED ([Id] ASC),
     CONSTRAINT [FK_AccessAuditEvent_Organization] FOREIGN KEY ([OrganizationId])
         REFERENCES [dbo].[Organization] ([Id]) ON DELETE CASCADE
@@ -37,6 +39,9 @@ GO
 -- Subject and rotation ids are deliberately not foreign keyed, so an event outlives a delete or rename of what it
 -- references. Every stored name is plaintext: the subject cipher and collection are recorded by id only, so no vault
 -- data lands here.
+--
+-- [IpAddress] and [DeviceType] describe the request that recorded the event; [IpAddress] is sized as on [dbo].[Event].
+-- Both are NULL for an event recorded by a background job.
 --
 -- [CorrelationId] deliberately has no default, here and on the three EF providers. An action's Attempt and Outcome
 -- must share one id for the read to collapse them, so the caller mints one per action; a DEFAULT NEWID() would let a

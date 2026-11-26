@@ -1,4 +1,6 @@
-﻿using Bit.Services.Pam.Engine;
+﻿using System.Text.Json.Serialization;
+using Bit.Pam.Enums;
+using Bit.Services.Pam.Engine;
 
 namespace Bit.Services.Pam.Models.Conditions;
 
@@ -6,6 +8,9 @@ namespace Bit.Services.Pam.Models.Conditions;
 /// <remarks>Wire format: <c>{ "kind": "human_approval" }</c></remarks>
 public sealed class HumanApprovalCondition : AccessCondition
 {
+    [JsonIgnore]
+    public override AccessConditionKind Kind => AccessConditionKind.HumanApproval;
+
     public override AccessEvaluation Evaluate(AccessSignals signals) => AccessEvaluation.RequiresApproval;
 
     public override AccessRuleValidationResult Validate() => AccessRuleValidationResult.Valid;

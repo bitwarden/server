@@ -159,4 +159,18 @@ public interface ICipherLeaseGate
     /// establishes that the requester may export the whole vault; this only mints.
     /// </summary>
     FullCipherAccess UnrestrictedForWholeVaultExport();
+
+    /// <summary>
+    /// The subset of <paramref name="cipherIds"/> reachable only through collections an enabled access rule governs,
+    /// whoever asks and whatever leases exist. Empty while the flag is off or the organization cannot gate. For
+    /// auditing, not for authorization.
+    /// </summary>
+    Task<IReadOnlySet<Guid>> GetOrganizationGatedCipherIdsAsync(Guid organizationId, IEnumerable<Guid> cipherIds);
+
+    /// <summary>
+    /// Every gated cipher in the organization, by the same rule as
+    /// <see cref="GetOrganizationGatedCipherIdsAsync(Guid, IEnumerable{Guid})"/>. A whole-vault export asks about
+    /// every cipher, and one read of the organization's links costs less than sending every cipher id.
+    /// </summary>
+    Task<IReadOnlySet<Guid>> GetOrganizationGatedCipherIdsForExportAsync(Guid organizationId);
 }

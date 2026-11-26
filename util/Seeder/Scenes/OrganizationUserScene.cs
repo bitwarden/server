@@ -16,7 +16,9 @@ public struct OrganizationUserSceneResult
 /// <summary>
 /// Links an existing user to an existing organization as an OrganizationUser with the requested
 /// role and status. For Confirmed/Revoked statuses the organization's symmetric key is encrypted
-/// to the user's public key; Invited/Accepted statuses carry no key.
+/// to the user's public key; Invited/Accepted/Staged statuses carry no key. Invited and Staged
+/// members are recorded by email only, with no <c>UserId</c>, <c>Key</c> or <c>ExternalId</c>, so
+/// the invite link accept flow finds them by email.
 /// </summary>
 public class OrganizationUserScene(
     IUserRepository userRepository,
@@ -48,7 +50,7 @@ public class OrganizationUserScene(
         /// The member's decrypted user symmetric key (B64), e.g. <c>DecryptedKeyB64</c> from
         /// <c>SingleUserScene</c>. When provided, the member is enrolled in admin account recovery:
         /// <c>ResetPasswordKey</c> is set to this key encrypted to the organization's public key.
-        /// Not valid for Invited members.
+        /// Not valid for Invited or Staged members.
         /// </summary>
         public string? UserKeyB64 { get; set; }
     }
@@ -79,10 +81,11 @@ public class OrganizationUserScene(
         var enrollInAccountRecovery = !string.IsNullOrEmpty(request.UserKeyB64);
         if (enrollInAccountRecovery)
         {
-            if (request.OrganizationUserStatusType == OrganizationUserStatusType.Invited)
+            if (request.OrganizationUserStatusType is OrganizationUserStatusType.Invited
+                or OrganizationUserStatusType.Staged)
             {
                 throw new InvalidOperationException(
-                    "Invited members cannot be enrolled in account recovery.");
+                    "Invited and Staged members cannot be enrolled in account recovery.");
             }
 
             if (string.IsNullOrEmpty(organization.PublicKey))

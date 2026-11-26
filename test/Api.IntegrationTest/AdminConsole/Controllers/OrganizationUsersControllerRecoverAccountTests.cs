@@ -2,6 +2,7 @@
 using Bit.Api.AdminConsole.Authorization;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.AdminConsole.Models.Response.Organizations;
+using Bit.Api.IntegrationTest.Auth.Helpers;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core.AdminConsole.Entities;
@@ -529,5 +530,107 @@ public class OrganizationUsersControllerRecoverAccountTests : IClassFixture<ApiA
         await SetResetPasswordKeyAsync(targetCustomOrgUser);
 
         return targetCustomOrgUser;
+    }
+
+    [Fact]
+    public async Task RecoverAccount_ResetTwoFactorOnly_RevokesTwoFactorRememberTokens()
+    {
+        // Arrange
+        var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Owner);
+        await _loginHelper.LoginAsync(ownerEmail);
+
+        var (targetEmail, targetOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+        await SetResetPasswordKeyAsync(targetOrgUser);
+
+        var device = await TwoFactorIntegrationTestHelpers.SeedTwoFactorRememberTokenAsync(
+            _factory, targetEmail, "stamp-before-reset");
+
+        // Act
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{targetOrgUser.Id}/recover-account",
+            new OrganizationUserResetPasswordRequestModel
+            {
+                ResetMasterPassword = false,
+                ResetTwoFactor = true,
+            });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        await TwoFactorIntegrationTestHelpers.AssertTwoFactorRememberTokenRotatedAsync(
+            _factory, targetEmail, device, "stamp-before-reset");
+    }
+
+    /// <summary>
+    /// The two flags are independent. A password-only recovery is not a two-factor teardown, so it
+    /// does not rotate the 2FA remember token rows. (The password change itself still invalidates
+    /// existing 2FA remember tokens through the security stamp.)
+    /// </summary>
+    [Fact]
+    public async Task RecoverAccount_ResetMasterPasswordOnly_LeavesTwoFactorRememberTokensAlone()
+    {
+        // Arrange
+        var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Owner);
+        await _loginHelper.LoginAsync(ownerEmail);
+
+        var (targetEmail, targetOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+        await SetResetPasswordKeyAsync(targetOrgUser);
+
+        var device = await TwoFactorIntegrationTestHelpers.SeedTwoFactorRememberTokenAsync(
+            _factory, targetEmail, "stamp-untouched");
+
+        // Act
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{targetOrgUser.Id}/recover-account",
+            new OrganizationUserResetPasswordRequestModel
+            {
+                ResetMasterPassword = true,
+                ResetTwoFactor = false,
+                NewMasterPasswordHash = "new-master-password-hash",
+                Key = "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+            });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        await TwoFactorIntegrationTestHelpers.AssertTwoFactorRememberTokenUnchangedAsync(
+            _factory, targetEmail, device, "stamp-untouched");
+    }
+
+    [Fact]
+    public async Task RecoverAccount_ResetMasterPasswordAndTwoFactor_RevokesTwoFactorRememberTokens()
+    {
+        // Arrange
+        var (ownerEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(_factory,
+            _organization.Id, OrganizationUserType.Owner);
+        await _loginHelper.LoginAsync(ownerEmail);
+
+        var (targetEmail, targetOrgUser) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, OrganizationUserType.User);
+        await SetResetPasswordKeyAsync(targetOrgUser);
+
+        var device = await TwoFactorIntegrationTestHelpers.SeedTwoFactorRememberTokenAsync(
+            _factory, targetEmail, "stamp-before-reset");
+
+        // Act
+        var response = await _client.PutAsJsonAsync(
+            $"organizations/{_organization.Id}/users/{targetOrgUser.Id}/recover-account",
+            new OrganizationUserResetPasswordRequestModel
+            {
+                ResetMasterPassword = true,
+                ResetTwoFactor = true,
+                NewMasterPasswordHash = "new-master-password-hash",
+                Key = "2.AAECAwQFBgcICQoLDA0ODw==|QmFzZTY0UGFydA==|AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
+            });
+
+        // Assert
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+
+        await TwoFactorIntegrationTestHelpers.AssertTwoFactorRememberTokenRotatedAsync(
+            _factory, targetEmail, device, "stamp-before-reset");
     }
 }

@@ -15,116 +15,98 @@ namespace Bit.Services.Pam.IntegrationTest;
 public class AccessRuleAuthorizationTests(ApiApplicationFactory factory)
     : AccessRuleIntegrationTestBase(factory, "pam-access-rule-authz")
 {
-    [Fact]
-    public async Task Read_AsNonMember_ReturnsForbidden()
+    [Theory]
+    [MemberData(nameof(AllRoutes))]
+    public async Task AnyRoute_AsNonMember_ReturnsForbidden(string method)
     {
         var outsiderEmail = $"outsider-{Guid.NewGuid()}@bitwarden.com";
         await Factory.LoginWithNewAccount(outsiderEmail);
         await LoginHelper.LoginAsync(outsiderEmail);
 
-        var response = await Client.GetAsync(AccessRulesUrl);
+        var response = await SendAsync(method);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Theory]
-    [InlineData("POST")]
-    [InlineData("PUT")]
-    [InlineData("DELETE")]
-    public async Task Write_AsNonMember_ReturnsForbidden(string method)
-    {
-        var outsiderEmail = $"outsider-{Guid.NewGuid()}@bitwarden.com";
-        await Factory.LoginWithNewAccount(outsiderEmail);
-        await LoginHelper.LoginAsync(outsiderEmail);
-
-        var response = await SendWriteAsync(method);
-
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Theory]
-    [InlineData("POST")]
-    [InlineData("PUT")]
-    [InlineData("DELETE")]
-    public async Task Write_AsPlainMember_ReturnsForbidden(string method)
+    [MemberData(nameof(AllRoutes))]
+    public async Task AnyRoute_AsPlainMember_ReturnsForbidden(string method)
     {
         var (memberEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory,
             Organization.Id, OrganizationUserType.User);
         await LoginHelper.LoginAsync(memberEmail);
 
-        var response = await SendWriteAsync(method);
+        var response = await SendAsync(method);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
     [Theory]
-    [InlineData("POST")]
-    [InlineData("PUT")]
-    [InlineData("DELETE")]
-    public async Task Write_AsCustomUserWithoutManageAccessRules_ReturnsForbidden(string method)
+    [MemberData(nameof(AllRoutes))]
+    public async Task AnyRoute_AsCustomUserWithoutManageAccessRules_ReturnsForbidden(string method)
     {
         var (customEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory,
             Organization.Id, OrganizationUserType.Custom, new Permissions { ManageAccessRules = false });
         await LoginHelper.LoginAsync(customEmail);
 
-        var response = await SendWriteAsync(method);
+        var response = await SendAsync(method);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
-    [Fact]
-    public async Task Read_AsProviderUserForTheOrganization_ReturnsForbidden()
-    {
-        // Access rules gate who can lease credentials, so the group uses MemberRequirement, not
-        // MemberOrProviderRequirement.
-        await LoginAsProviderForOrganizationAsync();
-
-        var response = await Client.GetAsync(AccessRulesUrl);
-
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
-    }
-
-    [Fact]
-    public async Task Write_AsProviderUserForTheOrganization_ReturnsForbidden()
+    [Theory]
+    [MemberData(nameof(AllRoutes))]
+    public async Task AnyRoute_AsProviderUserForTheOrganization_ReturnsForbidden(string method)
     {
         await LoginAsProviderForOrganizationAsync();
 
-        var response = await SendWriteAsync("POST");
+        var response = await SendAsync(method);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
     }
 
-    [Fact]
-    public async Task Read_AsMember_IsNotForbidden()
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("POST")]
+    public async Task ListOrCreate_AsCustomUserWithManageAccessRules_IsNotForbidden(string method)
     {
-        var (memberEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory,
-            Organization.Id, OrganizationUserType.User);
-        await LoginHelper.LoginAsync(memberEmail);
+        var (customEmail, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(Factory,
+            Organization.Id, OrganizationUserType.Custom, new Permissions { ManageAccessRules = true });
+        await LoginHelper.LoginAsync(customEmail);
 
-        var response = await Client.GetAsync(AccessRulesUrl);
+        var response = await SendAsync(method);
 
         AssertReachedTheHandler(response);
     }
 
-    [Fact]
-    public async Task Write_AsOwner_IsNotForbidden()
+    [Theory]
+    [InlineData("GET")]
+    [InlineData("POST")]
+    public async Task ListOrCreate_AsOwner_IsNotForbidden(string method)
     {
         await LoginHelper.LoginAsync(OwnerEmail);
 
-        var response = await SendWriteAsync("POST");
+        var response = await SendAsync(method);
 
         AssertReachedTheHandler(response);
     }
 
-    /// <summary>Also rejects NotFound, so a feature gate swallowing the route does not pass as authorized.</summary>
+    /// <summary>
+    /// Also rejects NotFound, so a feature gate swallowing the route does not pass as authorized. Only the list and
+    /// create routes can show that: the by-id routes target a rule that doesn't exist.
+    /// </summary>
     private static void AssertReachedTheHandler(HttpResponseMessage response)
     {
         Assert.NotEqual(HttpStatusCode.Forbidden, response.StatusCode);
         Assert.NotEqual(HttpStatusCode.NotFound, response.StatusCode);
     }
 
-    private Task<HttpResponseMessage> SendWriteAsync(string method) => method switch
+    public static TheoryData<string> AllRoutes => new() { "GET", "GET {id}", "POST", "PUT", "DELETE" };
+
+    private Task<HttpResponseMessage> SendAsync(string method) => method switch
     {
+        "GET" => Client.GetAsync(AccessRulesUrl),
+        "GET {id}" => Client.GetAsync(AccessRuleUrl(Guid.NewGuid())),
         "POST" => Client.PostAsJsonAsync(AccessRulesUrl, new { }),
         "PUT" => Client.PutAsJsonAsync(AccessRuleUrl(Guid.NewGuid()), new { }),
         "DELETE" => Client.DeleteAsync(AccessRuleUrl(Guid.NewGuid())),
