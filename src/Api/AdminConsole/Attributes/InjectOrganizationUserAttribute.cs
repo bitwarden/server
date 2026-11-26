@@ -38,6 +38,12 @@ public sealed class InjectOrganizationUserAttribute(string organizationUserIdRou
     /// Name of the route parameter containing the organization user ID. Defaults to <c>"id"</c>.
     /// </summary>
     public string OrganizationUserIdRouteParam { get; } = organizationUserIdRouteParam;
+
+    /// <summary>
+    /// The value is loaded from route values, not read from the request, so ApiExplorer leaves
+    /// the parameter out of the OpenAPI spec.
+    /// </summary>
+    public override BindingSource BindingSource => BindingSource.Special;
 }
 
 /// <summary>
