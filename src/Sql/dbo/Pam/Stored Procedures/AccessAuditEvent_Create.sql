@@ -23,7 +23,9 @@ CREATE PROCEDURE [dbo].[AccessAuditEvent_Create]
     @RotationConfigId UNIQUEIDENTIFIER = NULL,
     @RotationJobId UNIQUEIDENTIFIER = NULL,
     @RotationSource TINYINT = NULL,
-    @SyncState TINYINT = NULL
+    @SyncState TINYINT = NULL,
+    @IpAddress VARCHAR(50) = NULL,
+    @DeviceType TINYINT = NULL
 AS
 BEGIN
     SET NOCOUNT ON
@@ -62,7 +64,9 @@ BEGIN
         [RotationConfigId],
         [RotationJobId],
         [RotationSource],
-        [SyncState]
+        [SyncState],
+        [IpAddress],
+        [DeviceType]
     )
     SELECT
         @Id,
@@ -93,7 +97,9 @@ BEGIN
         @RotationConfigId,
         @RotationJobId,
         @RotationSource,
-        @SyncState
+        @SyncState,
+        @IpAddress,
+        @DeviceType
     FROM
         (SELECT 1 AS [X]) Seed
     LEFT JOIN

@@ -1290,6 +1290,7 @@
       "pam.domain": {
         "type": "Project",
         "dependencies": {
+          "Clients": "[0.0.1, )",
           "Data": "[0.0.1, )"
         }
       },

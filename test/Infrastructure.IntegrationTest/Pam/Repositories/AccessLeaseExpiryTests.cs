@@ -130,6 +130,46 @@ public class AccessLeaseExpiryTests
         Assert.Equal(leaseIds, returnedIds.ToHashSet());
     }
 
+    // Only an opted-in, enabled config owes its access-end trigger, recorded in the sweep's own transaction.
+    [DatabaseTheory, DatabaseData]
+    public async Task ExpireDueAsync_OptedInEnabledConfig_RecordsPendingAccessEnd(
+        IOrganizationRepository organizationRepository,
+        IAccessRequestRepository accessRequestRepository,
+        IAccessLeaseRepository accessLeaseRepository,
+        IPamTargetSystemRepository pamTargetSystemRepository,
+        IPamRotationConfigRepository pamRotationConfigRepository)
+    {
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var now = DateTime.UtcNow;
+        var target = await pamTargetSystemRepository.CreateAsync(new PamTargetSystem
+        {
+            OrganizationId = organization.Id,
+            Name = $"target-{Guid.NewGuid()}",
+            Method = PamTargetSystemMethod.Automatic,
+            SealedData = "sealed-blob",
+            WrappedKey = "wrapped-key",
+            Status = PamTargetSystemStatus.Active,
+            CreationDate = now,
+            RevisionDate = now,
+        });
+        var optedInLease = await SeedActiveLeaseAsync(
+            accessRequestRepository, accessLeaseRepository, organization.Id, now.AddHours(-2), now.AddHours(-1));
+        var notOptedInLease = await SeedActiveLeaseAsync(
+            accessRequestRepository, accessLeaseRepository, organization.Id, now.AddHours(-2), now.AddHours(-1));
+        var optedIn = await pamRotationConfigRepository.CreateAsync(
+            BuildConfig(organization.Id, optedInLease.CipherId, target.Id, now, rotateOnAccessEnd: true));
+        var notOptedIn = await pamRotationConfigRepository.CreateAsync(
+            BuildConfig(organization.Id, notOptedInLease.CipherId, target.Id, now, rotateOnAccessEnd: false));
+
+        var expired = await accessLeaseRepository.ExpireDueAsync(now, now - _sweepWindow);
+        Assert.Contains(expired, r => r.Id == optedInLease.Id);
+        Assert.Contains(expired, r => r.Id == notOptedInLease.Id);
+
+        var pending = await pamRotationConfigRepository.GetManyPendingAccessEndAsync(now.AddSeconds(1));
+        Assert.Contains(pending, c => c.Id == optedIn.Id);
+        Assert.DoesNotContain(pending, c => c.Id == notOptedIn.Id);
+    }
+
     [DatabaseTheory, DatabaseData]
     public async Task ExpireDueAsync_LeaseEndedBeforeWindow_NotReturned(
         IOrganizationRepository organizationRepository,
@@ -191,4 +231,18 @@ public class AccessLeaseExpiryTests
         // Read the lease back, since datetime2 round-tripping may differ from the in-memory ticks.
         return (await accessLeaseRepository.GetByIdAsync(lease.Id))!;
     }
+
+    private static PamRotationConfig BuildConfig(Guid organizationId, Guid cipherId, Guid targetSystemId, DateTime now,
+        bool rotateOnAccessEnd) => new()
+        {
+            OrganizationId = organizationId,
+            CipherId = cipherId,
+            TargetSystemId = targetSystemId,
+            SealedData = "sealed-blob",
+            WrappedKey = "wrapped-key",
+            RotateOnAccessEnd = rotateOnAccessEnd,
+            Enabled = true,
+            CreationDate = now,
+            RevisionDate = now,
+        };
 }

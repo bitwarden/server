@@ -299,6 +299,39 @@ public class CipherLeaseGate : ICipherLeaseGate
 
     public FullCipherAccess UnrestrictedForWholeVaultExport() => FullCipherAccess.Unrestricted();
 
+    public async Task<IReadOnlySet<Guid>> GetOrganizationGatedCipherIdsAsync(
+        Guid organizationId, IEnumerable<Guid> cipherIds)
+    {
+        var ids = cipherIds.ToHashSet();
+        if (!Enabled || ids.Count == 0
+            || !CanGate(await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId)))
+        {
+            return new HashSet<Guid>();
+        }
+
+        var leasingCollectionIds = await _gatingCollectionResolver.GetGatingCollectionIdsAsync(organizationId);
+        if (leasingCollectionIds.Count == 0)
+        {
+            return new HashSet<Guid>();
+        }
+
+        return (await _collectionCipherRepository.GetManyByCipherIdsAsync(ids))
+            .GroupBy(cc => cc.CipherId)
+            .Where(g => IsGated(g.Select(cc => cc.CollectionId).ToList(), leasingCollectionIds))
+            .Select(g => g.Key)
+            .ToHashSet();
+    }
+
+    public async Task<IReadOnlySet<Guid>> GetOrganizationGatedCipherIdsForExportAsync(Guid organizationId)
+    {
+        if (!Enabled || !CanGate(await _organizationAbilityCacheService.GetOrganizationAbilityAsync(organizationId)))
+        {
+            return new HashSet<Guid>();
+        }
+
+        return (await GetOrganizationGatedCipherIdsAsync(organizationId)).ToHashSet();
+    }
+
     /// <summary>
     /// Whether the "/admin" decisions need no lease: the organization gates nothing, or the caller is an Owner or
     /// Admin of an organization that lets admins access all collection items, on a client that can hold partials.

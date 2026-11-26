@@ -233,6 +233,7 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
                 Now = now,
                 request.RuleId,
                 DenialComment = denialComment,
+                decision.ConditionKind,
             },
             commandType: CommandType.StoredProcedure);
 

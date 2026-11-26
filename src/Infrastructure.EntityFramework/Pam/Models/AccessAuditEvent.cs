@@ -1,4 +1,5 @@
 ﻿using System.ComponentModel.DataAnnotations;
+using Bit.Core.Enums;
 using Bit.Infrastructure.EntityFramework.AdminConsole.Models;
 using Bit.Pam.Enums;
 
@@ -61,6 +62,11 @@ public class AccessAuditEvent
     public Guid? RotationJobId { get; set; }
     public PamRotationSource? RotationSource { get; set; }
     public PamRotationSyncState? SyncState { get; set; }
+
+    [MaxLength(50)]
+    public string? IpAddress { get; set; }
+
+    public DeviceType? DeviceType { get; set; }
 
     public virtual Organization? Organization { get; set; }
 }

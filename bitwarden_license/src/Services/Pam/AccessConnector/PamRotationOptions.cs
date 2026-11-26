@@ -24,6 +24,11 @@ public class PamRotationOptions
     public TimeSpan FailureRetryDelay { get; set; } = TimeSpan.FromHours(1);
 
     /// <summary>
+    /// How long the sweep leaves a pending access end to the trigger its lease end runs inline before retrying it.
+    /// </summary>
+    public TimeSpan AccessEndRetryDelay { get; set; } = TimeSpan.FromMinutes(1);
+
+    /// <summary>
     /// How long after its last heartbeat an access connector still counts as connected (spec
     /// <c>ConnectorConnection</c>).
     /// </summary>

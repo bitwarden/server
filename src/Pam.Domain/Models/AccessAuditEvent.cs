@@ -1,4 +1,5 @@
-﻿using Bit.Pam.Enums;
+﻿using Bit.Core.Enums;
+using Bit.Pam.Enums;
 
 namespace Bit.Pam.Models;
 
@@ -37,6 +38,12 @@ public class AccessAuditEvent
 
     public DateTime? LeaseNotBefore { get; set; }
     public DateTime? LeaseNotAfter { get; set; }
+
+    /// <summary>The source IP address of the request that recorded the event; null for a background job.</summary>
+    public string? IpAddress { get; set; }
+
+    /// <summary>The device type of the request that recorded the event; null for a background job.</summary>
+    public DeviceType? DeviceType { get; set; }
 
     // Frozen at write time. Any may be null when the referenced row is gone.
     public string? ActorName { get; set; }

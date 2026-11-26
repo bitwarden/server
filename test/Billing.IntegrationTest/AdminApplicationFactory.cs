@@ -4,10 +4,12 @@ using Bit.Admin.Jobs;
 using Bit.Core.Services;
 using Bit.IntegrationTestCommon;
 using Bit.Test.Common.Helpers;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using NSubstitute;
 
 namespace Bit.Billing.IntegrationTest;
@@ -24,7 +26,17 @@ public sealed class AdminApplicationFactory : IAsyncDisposable
 {
     private readonly WebApplicationFactory<Admin.Program> _factory;
 
-    public AdminApplicationFactory(ITestDatabase testDatabase, bool disableAntiforgery = true)
+    /// <param name="testDatabase">The database the Admin host shares with the other test hosts.</param>
+    /// <param name="disableAntiforgery">Whether the Admin host skips antiforgery validation.</param>
+    /// <param name="dataProtectionProvider">
+    /// The Data Protection provider to share with another test host, so a token the Admin host protects (for example
+    /// a business unit conversion token) can be unprotected by the API host. When <c>null</c>, the Admin host uses its
+    /// own key ring.
+    /// </param>
+    public AdminApplicationFactory(
+        ITestDatabase testDatabase,
+        bool disableAntiforgery = true,
+        IDataProtectionProvider? dataProtectionProvider = null)
     {
         _factory = new WebApplicationFactory<Admin.Program>().WithWebHostBuilder(builder =>
         {
@@ -62,6 +74,12 @@ public sealed class AdminApplicationFactory : IAsyncDisposable
                     {
                         options.Filters.Add(new IgnoreAntiforgeryTokenAttribute { Order = 1001 });
                     });
+                }
+
+                if (dataProtectionProvider is not null)
+                {
+                    services.RemoveAll<IDataProtectionProvider>();
+                    services.AddSingleton(dataProtectionProvider);
                 }
 
                 testDatabase.AddDatabase(services);

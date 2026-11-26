@@ -10,6 +10,8 @@ public interface IAccessAuditEventEmitter
 {
     /// <summary>Emits a single audit event.</summary>
     /// <remarks>
+    /// The event's <see cref="AccessAuditEventData.IpAddress"/> and <see cref="AccessAuditEventData.DeviceType"/> are
+    /// taken from the current request, overwriting anything the caller set.
     /// A failed <see cref="AccessAuditEventPhase.Attempt"/> throws, so the action does not proceed. A failed
     /// <see cref="AccessAuditEventPhase.Outcome"/> is logged and swallowed, since the action has already happened.
     /// </remarks>

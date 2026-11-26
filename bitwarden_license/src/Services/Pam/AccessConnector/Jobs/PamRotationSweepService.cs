@@ -13,6 +13,7 @@ public class PamRotationSweepService : IPamRotationSweepService
     private readonly IPamRotationConfigRepository _configRepository;
     private readonly IPamRotationJobRepository _jobRepository;
     private readonly IOfferRotationCommand _offerRotationCommand;
+    private readonly IHandleAccessGrantEndedCommand _handleAccessGrantEndedCommand;
     private readonly IAccessAuditEventEmitter _accessAuditEventEmitter;
     private readonly IOptions<PamRotationOptions> _options;
     private readonly TimeProvider _timeProvider;
@@ -22,6 +23,7 @@ public class PamRotationSweepService : IPamRotationSweepService
         IPamRotationConfigRepository configRepository,
         IPamRotationJobRepository jobRepository,
         IOfferRotationCommand offerRotationCommand,
+        IHandleAccessGrantEndedCommand handleAccessGrantEndedCommand,
         IAccessAuditEventEmitter accessAuditEventEmitter,
         IOptions<PamRotationOptions> options,
         TimeProvider timeProvider,
@@ -30,6 +32,7 @@ public class PamRotationSweepService : IPamRotationSweepService
         _configRepository = configRepository;
         _jobRepository = jobRepository;
         _offerRotationCommand = offerRotationCommand;
+        _handleAccessGrantEndedCommand = handleAccessGrantEndedCommand;
         _accessAuditEventEmitter = accessAuditEventEmitter;
         _options = options;
         _timeProvider = timeProvider;
@@ -40,7 +43,9 @@ public class PamRotationSweepService : IPamRotationSweepService
     {
         var now = _timeProvider.GetUtcNow().UtcDateTime;
 
-        // Each phase sweeps a disjoint set of rows; a failure in one must never prevent the other two from running.
+        // Each phase sweeps its own set of rows; a failure in one must never prevent the others from running.
+        // Access ends go first, so a config also due on its schedule is offered with the access-end source.
+        await RunPhaseAsync("access-end", () => SweepPendingAccessEndsAsync(now));
         await RunPhaseAsync("due", () => SweepDueAsync(now));
         await RunPhaseAsync("timeouts", () => SweepTimeoutsAsync(now));
         await RunPhaseAsync("releases", () => SweepReleasesAsync(now));
@@ -55,6 +60,25 @@ public class PamRotationSweepService : IPamRotationSweepService
         catch (Exception ex)
         {
             _logger.LogError(ex, "PamRotationSweepService: the {Phase} phase failed.", phase);
+        }
+    }
+
+    private async Task SweepPendingAccessEndsAsync(DateTime now)
+    {
+        var pendingConfigs =
+            await _configRepository.GetManyPendingAccessEndAsync(now - _options.Value.AccessEndRetryDelay);
+        foreach (var config in pendingConfigs)
+        {
+            try
+            {
+                await _handleAccessGrantEndedCommand.HandleAsync(config.CipherId);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex,
+                    "PamRotationSweepService: failed to retry the access-end trigger for config {RotationConfigId}.",
+                    config.Id);
+            }
         }
     }
 

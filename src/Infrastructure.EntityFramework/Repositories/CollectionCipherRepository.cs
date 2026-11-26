@@ -101,6 +101,18 @@ public class CollectionCipherRepository : BaseEntityFrameworkRepository, ICollec
         }
     }
 
+    public async Task<ICollection<CollectionCipher>> GetManyByCipherIdsAsync(IEnumerable<Guid> cipherIds)
+    {
+        var cipherIdList = cipherIds.ToList();
+        using (var scope = ServiceScopeFactory.CreateScope())
+        {
+            var dbContext = GetDatabaseContext(scope);
+            return await dbContext.CollectionCiphers
+                .Where(cc => cipherIdList.Contains(cc.CipherId))
+                .ToArrayAsync();
+        }
+    }
+
     public async Task<ICollection<Guid>> GetUserIdsByCollectionIdsAsync(IEnumerable<Guid> collectionIds)
     {
         var collectionIdList = collectionIds.ToList();

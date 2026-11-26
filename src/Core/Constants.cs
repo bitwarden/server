@@ -239,7 +239,6 @@ public static partial class FeatureFlagKeys
     /* Platform Team */
     public const string WebPush = "web-push";
     public const string ContentScriptIpcFramework = "content-script-ipc-channel-framework";
-    public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
     public const string AttachmentUploadProgress = "pm-34410-attachment-upload-progress";
     public const string OrgCipherPushFanout = "pm-35168-org-cipher-push-fanout";
     public const string FedRampGovRegion = "fedramp-gov-region";

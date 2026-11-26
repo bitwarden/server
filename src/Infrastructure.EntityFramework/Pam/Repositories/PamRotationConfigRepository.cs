@@ -67,6 +67,58 @@ public class PamRotationConfigRepository : Repository<CoreEntity, EfModel, Guid>
         return Mapper.Map<List<CoreEntity>>(configs);
     }
 
+    public async Task<ICollection<CoreEntity>> GetManyPendingAccessEndAsync(DateTime createdBefore)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        var configs = await dbContext.PamRotationConfigs
+            .Where(c => dbContext.PamPendingAccessEnds.Any(p => p.RotationConfigId == c.Id
+                && p.CreationDate <= createdBefore))
+            .AsNoTracking()
+            .ToListAsync();
+
+        return Mapper.Map<List<CoreEntity>>(configs);
+    }
+
+    public async Task DeletePendingAccessEndAsync(Guid configId, DateTime? createdOnOrBefore = null)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+        await dbContext.PamPendingAccessEnds
+            .Where(p => p.RotationConfigId == configId
+                && (createdOnOrBefore == null || p.CreationDate <= createdOnOrBefore))
+            .ExecuteDeleteAsync();
+    }
+
+    public async Task<bool> RaiseManualObligationOnAccessEndAsync(Guid configId, DateTime now)
+    {
+        using var scope = ServiceScopeFactory.CreateScope();
+        var dbContext = GetDatabaseContext(scope);
+
+        // Clearing the pending access end in the same transaction means a sweep retry racing the inline trigger
+        // raises the obligation once.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+
+        var cleared = await dbContext.PamPendingAccessEnds
+            .Where(p => p.RotationConfigId == configId)
+            .ExecuteDeleteAsync();
+        if (cleared == 0)
+        {
+            await transaction.RollbackAsync();
+            return false;
+        }
+
+        await dbContext.PamRotationConfigs
+            .Where(c => c.Id == configId)
+            .ExecuteUpdateAsync(s => s
+                .SetProperty(c => c.NextRotationDate, now)
+                .SetProperty(c => c.RevisionDate, now));
+
+        await transaction.CommitAsync();
+        return true;
+    }
+
     public async Task<bool> AnyByTargetSystemAsync(Guid targetSystemId)
     {
         using var scope = ServiceScopeFactory.CreateScope();

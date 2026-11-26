@@ -57,6 +57,7 @@ public class CiphersController : Controller
     private readonly IArchiveCiphersCommand _archiveCiphersCommand;
     private readonly IUnarchiveCiphersCommand _unarchiveCiphersCommand;
     private readonly ICipherLeaseGate _cipherLeaseGate;
+    private readonly ILeasingBypassAudit _leasingBypassAudit;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
     private readonly IAuthorizationService _authorizationService;
 
@@ -75,6 +76,7 @@ public class CiphersController : Controller
         IArchiveCiphersCommand archiveCiphersCommand,
         IUnarchiveCiphersCommand unarchiveCiphersCommand,
         ICipherLeaseGate cipherLeaseGate,
+        ILeasingBypassAudit leasingBypassAudit,
         IAuthorizationService authorizationService,
         Bitwarden.Server.Sdk.Features.IFeatureService featureService)
     {
@@ -92,6 +94,7 @@ public class CiphersController : Controller
         _archiveCiphersCommand = archiveCiphersCommand;
         _unarchiveCiphersCommand = unarchiveCiphersCommand;
         _cipherLeaseGate = cipherLeaseGate;
+        _leasingBypassAudit = leasingBypassAudit;
         _authorizationService = authorizationService;
         _featureService = featureService;
     }
@@ -1120,14 +1123,14 @@ public class CiphersController : Controller
             await _cipherLeaseGate.EnsureCanMutateManyAsync(userId, ciphers);
         }
 
-        if (model.RemoveSharedFolders)
-        {
-            await _collectionCipherRepository.RemoveCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.SharedFolderIds);
-        }
-        else
-        {
-            await _collectionCipherRepository.AddCollectionsForManyCiphersAsync(model.OrganizationId, model.CipherIds, model.SharedFolderIds);
-        }
+        Func<Task> collectionChange = model.RemoveSharedFolders
+            ? () => _collectionCipherRepository.RemoveCollectionsForManyCiphersAsync(
+                model.OrganizationId, model.CipherIds, model.SharedFolderIds)
+            : () => _collectionCipherRepository.AddCollectionsForManyCiphersAsync(
+                model.OrganizationId, model.CipherIds, model.SharedFolderIds);
+
+        await _leasingBypassAudit.AuditCollectionChangeAsync(
+            model.OrganizationId, userId, model.CipherIds, collectionChange);
     }
 
     [HttpPost("bulk-collections")]
