@@ -36,6 +36,12 @@ public sealed class InjectCollectionAttribute(string collectionIdRouteParam = "i
     /// Name of the route parameter containing the collection ID. Defaults to <c>"id"</c>.
     /// </summary>
     public string CollectionIdRouteParam { get; } = collectionIdRouteParam;
+
+    /// <summary>
+    /// The value is loaded from route values, not read from the request, so ApiExplorer leaves
+    /// the parameter out of the OpenAPI spec.
+    /// </summary>
+    public override BindingSource BindingSource => BindingSource.Special;
 }
 
 /// <summary>
