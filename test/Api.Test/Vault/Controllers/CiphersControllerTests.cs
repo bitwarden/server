@@ -2634,7 +2634,7 @@ public class CiphersControllerTests
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamWebPartialCipherMinimumVersion));
 
         var result = await sutProvider.Sut.Get(cipherId);
 
@@ -2666,7 +2666,7 @@ public class CiphersControllerTests
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeExtension);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamBrowserPartialCipherMinimumVersion));
         sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers).Returns(flagOn);
 
@@ -2681,6 +2681,32 @@ public class CiphersControllerTests
         Assert.Null(result.Data);
         Assert.NotNull(result.PartialData);
         Assert.DoesNotContain("2.password|encrypted", result.PartialData);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Get_LeasingGatedCipher_BrowserExtensionBelowMinimumVersion_ThrowsNotFound(
+        Guid cipherId, Guid userId, User user, SutProvider<CiphersController> sutProvider)
+    {
+        user.Id = userId;
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        var cipherDetails = new CipherDetails
+        {
+            Id = cipherId,
+            UserId = userId,
+            Type = CipherType.Login,
+            Data = """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""",
+        };
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, userId)
+            .Returns(Task.FromResult(cipherDetails));
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeReadAsync(userId, Arg.Any<Cipher>())
+            .Returns((FullCipherAccess)null);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeExtension);
+        sutProvider.GetDependency<ICurrentContext>().ClientVersion.Returns(new Version("2026.11.0"));
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers).Returns(true);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Get(cipherId));
     }
 
     [Theory, BitAutoData]
@@ -2734,7 +2760,7 @@ public class CiphersControllerTests
             .Returns(FullCipherAccess.ForCipher(visible.Id));
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamWebPartialCipherMinimumVersion));
 
         var result = await sutProvider.Sut.GetAll();
 
@@ -2846,7 +2872,7 @@ public class CiphersControllerTests
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamWebPartialCipherMinimumVersion));
 
         var result = await sutProvider.Sut.GetAdmin(cipher.Id.ToString());
 
@@ -2906,7 +2932,7 @@ public class CiphersControllerTests
             .Returns(FullCipherAccess.ForCipher(visible.Id));
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamWebPartialCipherMinimumVersion));
 
         var result = await sutProvider.Sut.GetOrganizationCiphers(organization.Id);
 
@@ -2936,7 +2962,7 @@ public class CiphersControllerTests
             .Returns([cipher]);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamWebPartialCipherMinimumVersion));
 
         await sutProvider.Sut.GetOrganizationCiphers(organization.Id);
 
@@ -2983,7 +3009,7 @@ public class CiphersControllerTests
             .Returns(FullCipherAccess.ForCipher(visible.Id));
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamWebPartialCipherMinimumVersion));
 
         var result = await sutProvider.Sut.GetOrganizationLoginCiphers(organization.Id);
 
@@ -3012,7 +3038,7 @@ public class CiphersControllerTests
             .Returns([cipher]);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamWebPartialCipherMinimumVersion));
 
         await sutProvider.Sut.GetOrganizationLoginCiphers(organization.Id);
 
@@ -3054,7 +3080,7 @@ public class CiphersControllerTests
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamWebPartialCipherMinimumVersion));
 
         var result = await sutProvider.Sut.PostAdmin(model);
 
@@ -3693,7 +3719,7 @@ public class CiphersControllerTests
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamWebPartialCipherMinimumVersion));
 
         var result = await sutProvider.Sut.PutPartial(
             cipherId, new CipherPartialRequestModel { Favorite = true, FolderId = folderId.ToString() });
@@ -3765,7 +3791,7 @@ public class CiphersControllerTests
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamWebPartialCipherMinimumVersion));
 
         var model = SecureNoteRequestModel(MismatchedKeyId);
         model.OrganizationId = organizationId.ToString();
@@ -3799,7 +3825,7 @@ public class CiphersControllerTests
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamWebPartialCipherMinimumVersion));
 
         var result = await sutProvider.Sut.PutRestore(cipherId);
 
@@ -3845,7 +3871,7 @@ public class CiphersControllerTests
             .Returns((FullCipherAccess)null);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamWebPartialCipherMinimumVersion));
 
         var model = new CipherShareRequestModel
         {

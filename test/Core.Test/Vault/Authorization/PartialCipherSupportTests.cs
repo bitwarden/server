@@ -6,10 +6,12 @@ namespace Bit.Core.Test.Vault.Authorization;
 
 public class PartialCipherSupportTests
 {
-    private static readonly Version _minimumVersion = new(Constants.PamPartialCipherMinimumVersion);
+    private static readonly Version _webMinimumVersion = new(Constants.PamWebPartialCipherMinimumVersion);
+    private static readonly Version _webOlderVersion =
+        new(_webMinimumVersion.Major, _webMinimumVersion.Minor, _webMinimumVersion.Build - 1);
+    private static readonly Version _minimumVersion = new(Constants.PamBrowserPartialCipherMinimumVersion);
     private static readonly Version _newerVersion = new(_minimumVersion.Major, _minimumVersion.Minor + 1, 0);
-    private static readonly Version _olderVersion =
-        new(_minimumVersion.Major, _minimumVersion.Minor, _minimumVersion.Build - 1);
+    private static readonly Version _olderVersion = new(_minimumVersion.Major, _minimumVersion.Minor - 1, 0);
 
     [Theory]
     [InlineData(DeviceType.ChromeBrowser, false)]
@@ -21,7 +23,7 @@ public class PartialCipherSupportTests
     public void IsSupportedBy_WebVault_MinimumVersion_IsSupportedRegardlessOfFlag(
         DeviceType deviceType, bool browserExtensionsEnabled)
     {
-        Assert.True(PartialCipherSupport.IsSupportedBy(deviceType, _minimumVersion, browserExtensionsEnabled));
+        Assert.True(PartialCipherSupport.IsSupportedBy(deviceType, _webMinimumVersion, browserExtensionsEnabled));
     }
 
     [Fact]
@@ -32,16 +34,16 @@ public class PartialCipherSupportTests
     }
 
     [Fact]
-    public void IsSupportedBy_WebVault_OlderVersion_IsSupported()
+    public void IsSupportedBy_WebVault_OlderVersion_IsNotSupported()
     {
-        Assert.True(PartialCipherSupport.IsSupportedBy(
-            DeviceType.ChromeBrowser, _olderVersion, browserExtensionsEnabled: true));
+        Assert.False(PartialCipherSupport.IsSupportedBy(
+            DeviceType.ChromeBrowser, _webOlderVersion, browserExtensionsEnabled: true));
     }
 
     [Fact]
-    public void IsSupportedBy_WebVault_NoVersion_IsSupported()
+    public void IsSupportedBy_WebVault_NoVersion_IsNotSupported()
     {
-        Assert.True(PartialCipherSupport.IsSupportedBy(
+        Assert.False(PartialCipherSupport.IsSupportedBy(
             DeviceType.ChromeBrowser, clientVersion: null, browserExtensionsEnabled: true));
     }
 
@@ -65,17 +67,19 @@ public class PartialCipherSupportTests
             DeviceType.ChromeExtension, _newerVersion, browserExtensionsEnabled: true));
     }
 
-    [Fact]
-    public void IsSupportedBy_BrowserExtension_FlagOnAndOlderVersion_IsSupported()
+    [Theory]
+    [InlineData(DeviceType.ChromeExtension)]
+    [InlineData(DeviceType.FirefoxExtension)]
+    [InlineData(DeviceType.SafariExtension)]
+    public void IsSupportedBy_BrowserExtension_FlagOnAndOlderVersion_IsNotSupported(DeviceType deviceType)
     {
-        Assert.True(PartialCipherSupport.IsSupportedBy(
-            DeviceType.ChromeExtension, _olderVersion, browserExtensionsEnabled: true));
+        Assert.False(PartialCipherSupport.IsSupportedBy(deviceType, _olderVersion, browserExtensionsEnabled: true));
     }
 
     [Fact]
-    public void IsSupportedBy_BrowserExtension_FlagOnAndNoVersion_IsSupported()
+    public void IsSupportedBy_BrowserExtension_FlagOnAndNoVersion_IsNotSupported()
     {
-        Assert.True(PartialCipherSupport.IsSupportedBy(
+        Assert.False(PartialCipherSupport.IsSupportedBy(
             DeviceType.ChromeExtension, clientVersion: null, browserExtensionsEnabled: true));
     }
 

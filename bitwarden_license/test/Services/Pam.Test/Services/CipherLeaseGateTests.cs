@@ -1336,6 +1336,19 @@ public class CipherLeaseGateTests
     }
 
     [Fact]
+    public async Task AuthorizeReadAsync_GatedWithActiveLease_BrowserExtensionBelowMinimumVersion_ReturnsNull()
+    {
+        var (sutProvider, userId, cipherId) = Setup();
+        ClientIs(sutProvider, DeviceType.ChromeExtension, browserPartialCiphersEnabled: true, clientVersion: "2026.11.0");
+        Gated(sutProvider, userId, cipherId);
+        HasActiveLease(sutProvider, userId, cipherId);
+
+        Assert.Null(await sutProvider.Sut.AuthorizeReadAsync(userId, new Cipher { Id = cipherId, OrganizationId = _organizationId }));
+        await sutProvider.GetDependency<IAccessLeaseRepository>().DidNotReceiveWithAnyArgs()
+            .GetActiveByRequesterIdCipherIdAsync(default, default, default);
+    }
+
+    [Fact]
     public async Task AuthorizeReadAsync_NotGated_ClientWithoutPartials_Authorizes()
     {
         var (sutProvider, userId, cipherId) = Setup();
@@ -1679,9 +1692,11 @@ public class CipherLeaseGateTests
     }
 
     private static void ClientIs(SutProvider<CipherLeaseGate> sutProvider, DeviceType? deviceType,
-        bool browserPartialCiphersEnabled = false)
+        bool browserPartialCiphersEnabled = false,
+        string clientVersion = Core.Constants.PamBrowserPartialCipherMinimumVersion)
     {
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
+        sutProvider.GetDependency<ICurrentContext>().ClientVersion.Returns(new Version(clientVersion));
         sutProvider.GetDependency<IFeatureService>().IsEnabled(Core.FeatureFlagKeys.PamBrowserPartialCiphers)
             .Returns(browserPartialCiphersEnabled);
     }
