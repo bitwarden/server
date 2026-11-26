@@ -15,34 +15,22 @@ public static class ServiceCollectionExtension
         {
             client.Timeout = TimeSpan.FromSeconds(20);
             client.MaxResponseContentBufferSize = 5000000; // 5 MB
-                                                           // Let's add some headers to look like we're coming from a web browser request. Some websites
-                                                           // will block our request without these.
-            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-                "(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36");
-            client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.8");
-            client.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
-            client.DefaultRequestHeaders.Add("Pragma", "no-cache");
-            client.DefaultRequestHeaders.Add("Accept", "text/html,application/xhtml+xml,application/xml;" +
-                "q=0.9,image/webp,image/apng,*/*;q=0.8");
+                                                           // Adding headers to present source of traffic accurately
+            client.DefaultRequestHeaders.Add("User-Agent", "Bitwarden");
         }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
         {
             AllowAutoRedirect = false,
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
         }).AddSsrfProtection(followRedirects: false);
 
-        // The CreatePasswordUri handler wants similar headers as Icons to portray coming from a browser but
+        // The CreatePasswordUri handler wants similar headers as Icons but
         // needs to follow redirects to get the final URL.
         services.AddHttpClient("ChangePasswordUri", client =>
         {
             client.Timeout = TimeSpan.FromSeconds(20);
             client.MaxResponseContentBufferSize = 5000000; // 5 MB
-                                                           // Let's add some headers to look like we're coming from a web browser request. Some websites
-                                                           // will block our request without these.
-            client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
-                "(KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36");
-            client.DefaultRequestHeaders.Add("Accept-Language", "en-US,en;q=0.8");
-            client.DefaultRequestHeaders.Add("Cache-Control", "no-cache");
-            client.DefaultRequestHeaders.Add("Pragma", "no-cache");
+                                                           // Adding headers to present source of traffic accurately
+            client.DefaultRequestHeaders.Add("User-Agent", "Bitwarden");
         }).ConfigurePrimaryHttpMessageHandler(() => new HttpClientHandler
         {
             AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate,
