@@ -305,7 +305,9 @@ public class NonChargeCashApplicationRecorder(
     private static bool IsFee(string? paymentType)
     {
         var words = Normalize(paymentType).Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        return words.Length > 0 && (words[0] == "FEE" || words[^1] == "FEE");
+        var hasFeeAtStart = words.Length > 0 && words[0] == "FEE";
+        var hasFeeAtEnd = words.Length > 0 && words[^1] == "FEE";
+        return hasFeeAtStart || hasFeeAtEnd;
     }
 
     /// <summary>
