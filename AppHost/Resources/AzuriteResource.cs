@@ -47,8 +47,15 @@ internal static class AzuriteResource
                         .WithBlobPort(_blobPort)
                         .WithQueuePort(_queuePort)
                         .WithTablePort(_tablePort)
-                        .WithDataVolume()
                         .WithLifetime(ContainerLifetime.Persistent);
+                    if (string.IsNullOrWhiteSpace(settings.Azurite.DataPath))
+                    {
+                        emulator.WithDataVolume();
+                    }
+                    else
+                    {
+                        emulator.WithDataBindMount(settings.Azurite.DataPath);
+                    }
                 });
 
             builder
