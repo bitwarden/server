@@ -15,14 +15,12 @@ namespace Bit.Core.Vault.Authorization;
 /// </remarks>
 public static class PartialCipherSupport
 {
-    private static readonly Version _webMinimumVersion = new(Constants.PamWebPartialCipherMinimumVersion);
-    private static readonly Version _browserMinimumVersion = new(Constants.PamBrowserPartialCipherMinimumVersion);
+    private static readonly Version _minimumVersion = new(Constants.PamPartialCipherMinimumVersion);
 
     /// <summary>
     /// Whether the calling client can be sent partial ciphers: the web vault at
-    /// <see cref="Constants.PamWebPartialCipherMinimumVersion"/> or later, and a browser extension at
-    /// <see cref="Constants.PamBrowserPartialCipherMinimumVersion"/> or later while
-    /// <see cref="FeatureFlagKeys.PamBrowserPartialCiphers"/> is on.
+    /// <see cref="Constants.PamPartialCipherMinimumVersion"/> or later, and a browser extension at that version
+    /// or later while <see cref="FeatureFlagKeys.PamBrowserPartialCiphers"/> is on.
     /// </summary>
     /// <remarks>
     /// Fails safe: an absent or unrecognized device type maps to <see cref="ClientType.All"/>, which is
@@ -33,11 +31,11 @@ public static class PartialCipherSupport
     public static bool IsSupportedBy(DeviceType? deviceType, Version? clientVersion, bool browserExtensionsEnabled) =>
         DeviceTypes.ToClientType(deviceType) switch
         {
-            ClientType.Web => MeetsMinimumVersion(clientVersion, _webMinimumVersion),
-            ClientType.Browser => browserExtensionsEnabled && MeetsMinimumVersion(clientVersion, _browserMinimumVersion),
+            ClientType.Web => MeetsMinimumVersion(clientVersion),
+            ClientType.Browser => browserExtensionsEnabled && MeetsMinimumVersion(clientVersion),
             _ => false,
         };
 
-    private static bool MeetsMinimumVersion(Version? clientVersion, Version minimumVersion) =>
-        clientVersion is not null && clientVersion >= minimumVersion;
+    private static bool MeetsMinimumVersion(Version? clientVersion) =>
+        clientVersion is not null && clientVersion >= _minimumVersion;
 }

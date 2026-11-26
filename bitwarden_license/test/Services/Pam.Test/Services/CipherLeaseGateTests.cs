@@ -1693,7 +1693,7 @@ public class CipherLeaseGateTests
 
     private static void ClientIs(SutProvider<CipherLeaseGate> sutProvider, DeviceType? deviceType,
         bool browserPartialCiphersEnabled = false,
-        string clientVersion = Core.Constants.PamBrowserPartialCipherMinimumVersion)
+        string clientVersion = Core.Constants.PamPartialCipherMinimumVersion)
     {
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(deviceType);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion.Returns(new Version(clientVersion));

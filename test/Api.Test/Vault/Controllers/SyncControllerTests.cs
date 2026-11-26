@@ -478,7 +478,7 @@ public class SyncControllerTests
         var (gated, visible) = SetupLeasingSync(user, sutProvider);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeBrowser);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamWebPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
 
         var result = await sutProvider.Sut.Get();
 
@@ -511,7 +511,7 @@ public class SyncControllerTests
         var (gated, visible) = SetupLeasingSync(user, sutProvider);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeExtension);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamBrowserPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
         sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers).Returns(true);
 
@@ -531,7 +531,7 @@ public class SyncControllerTests
         var (gated, visible) = SetupLeasingSync(user, sutProvider);
         sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeExtension);
         sutProvider.GetDependency<ICurrentContext>().ClientVersion
-            .Returns(new Version(Constants.PamBrowserPartialCipherMinimumVersion));
+            .Returns(new Version(Constants.PamPartialCipherMinimumVersion));
         sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
             .IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers).Returns(false);
 
