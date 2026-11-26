@@ -1,15 +1,15 @@
 ---
 name: bump-rust-sdk
-description: Bump the server's util/RustSdk `bitwarden-crypto` git-rev pin to a bitwarden/clients release — map the client's sdk-internal version to a commit, fix breaking changes, then verify.
-when_to_use: When asked to bump the Rust SDK, sdk-internal, or bitwarden-crypto, update RustSdk dependencies, or align the server SDK with clients. Not client-side @bitwarden/sdk-internal npm/package.json bumps.
+description: Bump the server's util/RustSdk `bitwarden-crypto` and `bitwarden-organization-crypto` git-rev pins (kept in lockstep) to a bitwarden/clients release — map the client's sdk-internal version to a commit, fix breaking changes, then verify.
+when_to_use: When asked to bump the Rust SDK, sdk-internal, bitwarden-crypto, or bitwarden-organization-crypto, update RustSdk dependencies, or align the server SDK with clients. Not client-side @bitwarden/sdk-internal npm/package.json bumps.
 ---
 
 # Bump sdk-internal Rust crate dependencies
 
 ## Overview
 
-`util/RustSdk/rust/Cargo.toml` pins `bitwarden-crypto` from `bitwarden/sdk-internal` by git rev; bump
-it periodically to track a `bitwarden/clients` release. RustSdk is Seeder **test** infrastructure
+`util/RustSdk/rust/Cargo.toml` pins `bitwarden-crypto` and `bitwarden-organization-crypto` from
+`bitwarden/sdk-internal` at the same git rev; bump both together periodically to track a `bitwarden/clients` release. RustSdk is Seeder **test** infrastructure
 (`util/`, not `src/` production): it gives the C# Seeder field-level encryption
 (`encrypt_string`/`decrypt_string`/`encrypt_fields`) to produce cryptographically correct Protected
 Data for integration tests. `EncryptPropertyAttribute` drives which fields get encrypted.
@@ -46,15 +46,18 @@ ships the same commit, so the open-source tarball's embedded SHA is authoritativ
    type renames, removed/deprecated functions, changed signatures, and trait changes:
    ```bash
    cd /path/to/sdk-internal
-   git log --oneline <old-rev>..<new-rev> -- crates/bitwarden-crypto
+   git log --oneline <old-rev>..<new-rev> -- crates/bitwarden-crypto crates/bitwarden-organization-crypto
    git diff <old-rev>..<new-rev> -- crates/bitwarden-crypto/src/keys/mod.rs crates/bitwarden-crypto/src/lib.rs
+   git diff <old-rev>..<new-rev> -- crates/bitwarden-organization-crypto/src/invite.rs
    ```
 4. **Apply** —
-   - Update the `bitwarden-crypto` `rev` in `Cargo.toml`.
+   - Update the `bitwarden-crypto` **and** `bitwarden-organization-crypto` `rev` pins in
+     `Cargo.toml`. Both must be the same rev, or Cargo resolves two copies of `bitwarden-crypto`
+     and the types stop unifying.
    - **MSRV check:** compare the target's workspace `rust-version` against `util/RustSdk/rust-toolchain.toml`;
      if the MSRV rose above our channel, bump the channel to the **MSRV** (not sdk-internal's dev
      toolchain), else the build fails "requires rustc X or newer".
-   - `cargo update -p bitwarden-crypto` (targeted — re-resolves only what the new rev needs; a bare
+   - `cargo update -p bitwarden-crypto -p bitwarden-organization-crypto` (targeted — re-resolves only what the new rev needs; a bare
      `cargo update` churns the lockfile).
    - Fix compile errors; add `#[allow(deprecated)]` + a why-comment for newly-deprecated APIs.
 5. **Build & verify (Claude)** —
@@ -91,7 +94,7 @@ ships the same commit, so the open-source tarball's embedded SHA is authoritativ
 ## Keeping api-surface.md current
 
 `references/api-surface.md` must mirror the actual code. After a bump, regenerate it: read every `.rs`
-in `util/RustSdk/rust/src/`, extract the `bitwarden_crypto` `use` statements, and rewrite the file.
+in `util/RustSdk/rust/src/`, extract the `bitwarden_crypto` and `bitwarden_organization_crypto` `use` statements, and rewrite the file.
 A Stop hook (`.claude/hooks/rust-sdk-surface-check.sh`) blocks if `Cargo.toml` changed but
 `api-surface.md` did not.
 
@@ -99,13 +102,13 @@ A Stop hook (`.claude/hooks/rust-sdk-surface-check.sh`) blocks if `Cargo.toml` c
 
 | File | Change |
 | --- | --- |
-| `util/RustSdk/rust/Cargo.toml` | `bitwarden-crypto` rev pin |
+| `util/RustSdk/rust/Cargo.toml` | `bitwarden-crypto` and `bitwarden-organization-crypto` rev pins (same rev) |
 | `util/RustSdk/rust-toolchain.toml` | bump `channel` only if the MSRV rose |
 | `util/RustSdk/rust/src/*.rs` | breaking-change fixes |
-| `util/RustSdk/rust/Cargo.lock` | re-resolved (`cargo update -p bitwarden-crypto`) |
+| `util/RustSdk/rust/Cargo.lock` | re-resolved (`cargo update -p bitwarden-crypto -p bitwarden-organization-crypto`) |
 | `util/RustSdk/NativeMethods.g.cs` | should NOT change — verify |
 
 ## References
 
-- `references/api-surface.md` — types, traits, and functions imported from `bitwarden-crypto`.
+- `references/api-surface.md` — types, traits, and functions imported from `bitwarden-crypto` and `bitwarden-organization-crypto`.
 - `references/examples/2026-06-bump.md` — the June 2026 bump, worked end-to-end.
