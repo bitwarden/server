@@ -49,3 +49,8 @@ GO
 CREATE UNIQUE NONCLUSTERED INDEX [IX_AccessLease_AccessRequestId]
     ON [dbo].[AccessLease] ([AccessRequestId] ASC);
 GO
+
+-- Supports the ON DELETE CASCADE from Organization, so deleting one organization touches only its own leases.
+CREATE NONCLUSTERED INDEX [IX_AccessLease_OrganizationId]
+    ON [dbo].[AccessLease] ([OrganizationId] ASC);
+GO
