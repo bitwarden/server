@@ -53,10 +53,10 @@ when bumping revs. Pin both crates to the same rev, or Cargo resolves two copies
 
 ## bitwarden-organization-crypto
 
-| Item                   | File                   | Usage                                                                                |
-| ---------------------- | ---------------------- | ------------------------------------------------------------------------------------ |
-| `invite::Invite`       | organization_invite.rs | `Invite::make_for_private_key()`, `.disable_confirmation()`, `String::from(&invite)` |
-| `invite::InviteSecret` | organization_invite.rs | `String::from(&secret)` (base64url); tests also parse it and unseal the invite       |
+| Item                   | File                   | Usage                                                                                                                                                                                                       |
+| ---------------------- | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invite::Invite`       | organization_invite.rs | `Invite::make_for_private_key()`, `.disable_confirmation()`, `String::from(&invite)`; tests also `.parse()`, `.supports_confirmation()`, `.unseal_invite_key_with_invite_secret()`, `.unseal_invite_key_with_organization_key()`, `.get_invite_secret()` |
+| `invite::InviteSecret` | organization_invite.rs | `String::from(&secret)` (base64url); tests also parse it and unseal the invite                                                                                                                              |
 
 ## FFI Functions Exposed
 
@@ -83,7 +83,7 @@ When reviewing upstream commits, prioritize checking for changes to:
 - Changes to `EncString` parsing or serialization format
 - Changes to `KeyEncryptable` or `KeyDecryptable` trait method signatures
 - Changes to `SymmetricCryptoKey::try_from()` or `BitwardenLegacyKeyBytes`
-- Changes to `key_slot_ids!`, `KeyStore`/`KeyStoreContext`, or `Invite::make_for_private_key()`
+- Changes to `key_slot_ids!`, `KeyStore`/`KeyStoreContext`, `Invite::make_for_private_key()`, or the `Invite` `unseal_*`/`get_invite_secret` methods
 
 **High (runtime failure):**
 
