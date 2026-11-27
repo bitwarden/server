@@ -307,6 +307,7 @@ public static partial class FeatureFlagKeys
     public const string OrganizationEventCleanup = "pm-33527-organization-event-cleanup";
     public const string AccessIntelligencePerformanceAtScale = "pm-43231-access-intelligence-performance-at-scale";
     public const string HealthReportExclusions = "pm-39196-health-report-exclusions";
+    public const string DesktopVaultHealth = "pm-47704-desktop-vault-health";
 
     /* PAM */
     public const string Pam = "pm-37044-pam-v-0";
