@@ -4,9 +4,13 @@ using System.Text.Json.Nodes;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Core;
+using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Core.Vault.Entities;
+using Bit.Core.Vault.Enums;
+using Bit.Core.Vault.Repositories;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
@@ -242,6 +246,63 @@ public class AuditTrailTests(ApiApplicationFactory factory)
 
         var trail = await Client.GetAsync(AuditUrl);
         Assert.Equal(HttpStatusCode.NotFound, trail.StatusCode);
+    }
+
+    [Fact]
+    public async Task Submit_RefusedByIpAllowlist_RecordsSubmissionRejected()
+    {
+        // Rules gate only in an organization with Privileged Controls; the claim is read at login.
+        Organization.UsePam = true;
+        await Factory.GetService<IOrganizationRepository>().UpsertAsync(Organization);
+        await Factory.GetService<IOrganizationAbilityCacheService>()
+            .UpsertOrganizationAbilityAsync(Organization, CancellationToken.None);
+
+        var ownerId = (await Factory.GetService<IUserRepository>().GetByEmailAsync(OwnerEmail))!.Id;
+        var organizationUserRepository = Factory.GetService<IOrganizationUserRepository>();
+        var ownerMembership = await organizationUserRepository.GetByOrganizationAsync(Organization.Id, ownerId);
+        // The submit's license gate needs the requester to hold a PAM seat.
+        ownerMembership!.AccessPam = true;
+        await organizationUserRepository.ReplaceAsync(ownerMembership);
+        // The submit reads the cipher as the requester, so the owner needs direct access to the collection.
+        var gated = await OrganizationTestHelpers.CreateCollectionAsync(Factory, Organization.Id, "Gated",
+            users: [new CollectionAccessSelection { Id = ownerMembership.Id, ReadOnly = false, HidePasswords = false, Manage = true }]);
+        var cipher = new Cipher { Type = CipherType.Login, OrganizationId = Organization.Id, Data = "{}" };
+        await Factory.GetService<ICipherRepository>().CreateAsync(cipher, [gated.Id]);
+
+        await LoginHelper.LoginAsync(OwnerEmail);
+        // No human_approval condition, so the rule approves automatically and its allowlist decides.
+        var rule = await Client.PostAsJsonAsync(AccessRulesUrl, new
+        {
+            name = "Office network only",
+            enabled = true,
+            conditions = JsonNode.Parse("""[{"kind":"ip_allowlist","cidrs":["10.0.0.0/8"]}]"""),
+            collections = new[] { gated.Id },
+        });
+        rule.EnsureSuccessStatusCode();
+
+        // The test client's address is never in 10.0.0.0/8, and an unknown address fails closed.
+        var submit = await Client.PostAsJsonAsync($"leases/ciphers/{cipher.Id}", new { durationSeconds = 3600 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, submit.StatusCode);
+
+        var stored = await Factory.GetService<IAccessAuditEventRepository>()
+            .GetPageByOrganizationIdAsync(Organization.Id, new AccessAuditTrailFilter
+            {
+                Since = DateTime.UtcNow.AddDays(-1),
+                Until = DateTime.UtcNow.AddMinutes(1),
+                PageSize = 50,
+            });
+        var rejected = Assert.Single(stored, e => e.Kind == AccessAuditEventKind.RequestSubmissionRejected);
+        Assert.Equal(AccessAuditEventPhase.Outcome, rejected.Phase);
+        Assert.Equal("NotWithinIpRange", rejected.Detail);
+        Assert.Equal(cipher.Id, rejected.CipherId);
+        Assert.Null(rejected.AccessRequestId);
+        Assert.Null(rejected.ActorId);
+        Assert.DoesNotContain(stored, e => e.Kind == AccessAuditEventKind.RequestSubmitted);
+
+        var requests = await Factory.GetService<IAccessRequestRepository>()
+            .GetManyByRequesterIdAsync(ownerId, null, DateTime.UtcNow);
+        Assert.Empty(requests);
     }
 
     [Fact]

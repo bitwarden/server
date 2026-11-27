@@ -19,6 +19,7 @@ public class AccessAuditEventKindNamesTests
         "requestCancelled",
         "requestExpiredUnanswered",
         "requestExpiredUnactivated",
+        "requestSubmissionRejected",
         "leaseActivated",
         "leaseActivationRejected",
         "leaseExtended",

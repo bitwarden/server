@@ -13,6 +13,7 @@ public static class AccessAuditEventKindNames
     public const string RequestCancelled = "requestCancelled";
     public const string RequestExpiredUnanswered = "requestExpiredUnanswered";
     public const string RequestExpiredUnactivated = "requestExpiredUnactivated";
+    public const string RequestSubmissionRejected = "requestSubmissionRejected";
     public const string LeaseActivated = "leaseActivated";
     public const string LeaseActivationRejected = "leaseActivationRejected";
     public const string LeaseExtended = "leaseExtended";
@@ -69,6 +70,7 @@ public static class AccessAuditEventKindNames
         AccessAuditEventKind.RequestCancelled => RequestCancelled,
         AccessAuditEventKind.RequestExpiredUnanswered => RequestExpiredUnanswered,
         AccessAuditEventKind.RequestExpiredUnactivated => RequestExpiredUnactivated,
+        AccessAuditEventKind.RequestSubmissionRejected => RequestSubmissionRejected,
         AccessAuditEventKind.LeaseActivated => LeaseActivated,
         AccessAuditEventKind.LeaseActivationRejected => LeaseActivationRejected,
         AccessAuditEventKind.LeaseExtended => LeaseExtended,

@@ -155,6 +155,7 @@ public class SubmitAccessRequestCommandTests
         Assert.Contains("provide a duration", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CreateAutoApprovedAsync(default!, default!);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }
 
     [Theory, BitAutoData]
@@ -166,6 +167,7 @@ public class SubmitAccessRequestCommandTests
 
         await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission()));
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }
 
     [Theory, BitAutoData]
@@ -179,6 +181,7 @@ public class SubmitAccessRequestCommandTests
             () => sutProvider.Sut.SubmitAsync(userId, cipherId,
                 new AccessRequestSubmission { DurationSeconds = SubmitAccessRequestCommand.MaxDurationSeconds + 1 }));
         Assert.Contains("maximum", ex.Message);
+        await sutProvider.GetDependency<IAccessAuditEventEmitter>().DidNotReceiveWithAnyArgs().EmitAsync(default!);
     }
 
     // Submit enforces the rule's own MaxLeaseDurationSeconds as well as the global ceiling.
@@ -248,6 +251,36 @@ public class SubmitAccessRequestCommandTests
         var ex = await Assert.ThrowsAsync<BadRequestException>(
             () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
         Assert.Contains("network", ex.Message);
+        await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
+            .CreateAutoApprovedAsync(default!, default!);
+    }
+
+    [Theory]
+    [BitAutoData(DenyReason.NotWithinIpRange)]
+    [BitAutoData(DenyReason.NotWithinTimeWindow)]
+    public async Task SubmitAsync_AutomaticPolicyDenied_EmitsOnlySubmissionRejectedWithReason(
+        DenyReason reason, Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
+        SetupEvaluation(sutProvider, AccessEvaluation.Deny(reason));
+
+        await Assert.ThrowsAsync<BadRequestException>(
+            () => sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission { DurationSeconds = 3600 }));
+
+        var emitter = sutProvider.GetDependency<IAccessAuditEventEmitter>();
+        await emitter.Received(1).EmitAsync(Arg.Any<AccessAuditEventData>());
+        await emitter.Received(1).EmitAsync(Arg.Is<AccessAuditEventData>(e =>
+            e.Kind == AccessAuditEventKind.RequestSubmissionRejected &&
+            e.Phase == AccessAuditEventPhase.Outcome &&
+            e.OrganizationId == orgId &&
+            e.ActorId == null &&
+            e.RequesterId == userId &&
+            e.CipherId == cipherId &&
+            e.CollectionId == collectionId &&
+            e.AccessRequestId == null &&
+            e.Detail == reason.ToString()));
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CreateAutoApprovedAsync(default!, default!);
     }

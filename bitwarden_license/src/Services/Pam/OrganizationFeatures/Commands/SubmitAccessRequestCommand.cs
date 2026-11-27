@@ -125,6 +125,21 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         var evaluation = _ruleEngine.Evaluate(governingRule.Conditions, signals);
         if (evaluation.Outcome != AccessEvaluationOutcome.Allow)
         {
+            // No request is created, so the refusal is recorded against the item and rule only.
+            await _accessAuditEventEmitter.EmitAsync(new AccessAuditEventData
+            {
+                Kind = AccessAuditEventKind.RequestSubmissionRejected,
+                Phase = AccessAuditEventPhase.Outcome,
+                OccurredDate = now,
+                OrganizationId = governingRule.OrganizationId,
+                ActorId = null,
+                RequesterId = userId,
+                CollectionId = governingRule.CollectionId,
+                CipherId = cipherId,
+                AccessRuleId = governingRule.RuleId,
+                // The reason code, not the localized message.
+                Detail = evaluation.Reason.ToString(),
+            });
             throw new BadRequestException(AccessDenialMessage.For(evaluation));
         }
 

@@ -141,6 +141,7 @@ public class AccessAuditEventEmitter : IAccessAuditEventEmitter
         // A timed-out job counts as failed; the PAM store keeps the reason.
         AccessAuditEventKind.RotationFailed or AccessAuditEventKind.RotationJobTimedOut =>
             EventType.Pam_Rotation_Failed,
+        AccessAuditEventKind.RequestSubmissionRejected => EventType.Pam_AccessRequest_SubmissionRejected,
         _ => null,
     };
 }

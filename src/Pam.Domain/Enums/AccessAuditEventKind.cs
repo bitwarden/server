@@ -11,6 +11,8 @@ public enum AccessAuditEventKind : byte
     RequestCancelled = 3,
     RequestExpiredUnanswered = 4, // not emitted yet
     RequestExpiredUnactivated = 5, // not emitted yet
+    /// <summary>A submit was refused by the rule's automated conditions; no request was created.</summary>
+    RequestSubmissionRejected = 6,
 
     // Access leases
     LeaseActivated = 10,
