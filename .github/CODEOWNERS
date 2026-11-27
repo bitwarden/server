@@ -145,6 +145,6 @@ Directory.Build.props
 dev/docker-compose.yml
 
 # Claude related files
-.claude/ @bitwarden/team-ai-sme
+.claude/ @bitwarden/team-ai-sme @bitwarden/tech-leads
 .github/workflows/respond.yml @bitwarden/team-ai-sme
 .github/workflows/review-code.yml @bitwarden/team-ai-sme
