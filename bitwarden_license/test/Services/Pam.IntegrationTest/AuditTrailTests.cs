@@ -298,6 +298,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
         Assert.Equal(cipher.Id, rejected.CipherId);
         Assert.Null(rejected.AccessRequestId);
         Assert.Null(rejected.ActorId);
+        Assert.Null(rejected.AccessRuleId);
         Assert.DoesNotContain(stored, e => e.Kind == AccessAuditEventKind.RequestSubmitted);
 
         var requests = await Factory.GetService<IAccessRequestRepository>()

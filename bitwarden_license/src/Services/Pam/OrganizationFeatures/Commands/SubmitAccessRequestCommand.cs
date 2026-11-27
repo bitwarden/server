@@ -125,7 +125,9 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         var evaluation = _ruleEngine.Evaluate(governingRule.Conditions, signals);
         if (evaluation.Outcome != AccessEvaluationOutcome.Allow)
         {
-            // No request is created, so the refusal is recorded against the item and rule only.
+            // No request is created, so the refusal is recorded against the item only. Like the other request and
+            // lease events it names no rule: the trail's Item filter takes a rule's name from its latest event, and
+            // only rule administration carries one.
             await _accessAuditEventEmitter.EmitAsync(new AccessAuditEventData
             {
                 Kind = AccessAuditEventKind.RequestSubmissionRejected,
@@ -136,7 +138,6 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
                 RequesterId = userId,
                 CollectionId = governingRule.CollectionId,
                 CipherId = cipherId,
-                AccessRuleId = governingRule.RuleId,
                 // The reason code, not the localized message.
                 Detail = evaluation.Reason.ToString(),
             });

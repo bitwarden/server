@@ -280,6 +280,8 @@ public class SubmitAccessRequestCommandTests
             e.CipherId == cipherId &&
             e.CollectionId == collectionId &&
             e.AccessRequestId == null &&
+            e.AccessRuleId == null &&
+            e.RuleName == null &&
             e.Detail == reason.ToString()));
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
             .CreateAutoApprovedAsync(default!, default!);
