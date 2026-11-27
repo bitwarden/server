@@ -51,7 +51,9 @@ BEGIN
         [RotationConfigId],
         [RotationJobId],
         [RotationSource],
-        [SyncState]
+        [SyncState],
+        [IpAddress],
+        [DeviceType]
     FROM
         [dbo].[AccessAuditEvent] E
     WHERE

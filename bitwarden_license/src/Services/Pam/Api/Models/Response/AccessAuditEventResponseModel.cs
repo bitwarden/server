@@ -1,4 +1,5 @@
-﻿using Bit.HttpExtensions;
+﻿using Bit.Core.Enums;
+using Bit.HttpExtensions;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 
@@ -41,6 +42,8 @@ public class AccessAuditEventResponseModel : ResponseModel
         RuleName = auditEvent.RuleName;
         TargetSystemName = auditEvent.TargetSystemName;
         AccessConnectorName = auditEvent.AccessConnectorName;
+        IpAddress = auditEvent.IpAddress;
+        DeviceType = auditEvent.DeviceType;
         Automated = auditEvent.Automated;
         Incomplete = auditEvent.Phase == AccessAuditEventPhase.Attempt;
     }
@@ -95,6 +98,12 @@ public class AccessAuditEventResponseModel : ResponseModel
 
     /// <summary>The access connector's name, for rotation and connector events.</summary>
     public string? AccessConnectorName { get; }
+
+    /// <summary>The source IP address of the request that recorded the event. Null for a background job.</summary>
+    public string? IpAddress { get; }
+
+    /// <summary>The device type of the request that recorded the event. Null for a background job.</summary>
+    public DeviceType? DeviceType { get; }
 
     /// <summary>True for a system event with no human actor.</summary>
     public bool Automated { get; }

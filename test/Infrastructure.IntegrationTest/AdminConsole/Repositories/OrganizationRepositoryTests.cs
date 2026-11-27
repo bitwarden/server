@@ -482,7 +482,7 @@ public class OrganizationRepositoryTests
         Assert.NotNull(updateResult);
         Assert.Equal(organization.Id, updateResult.Id);
         Assert.True(updateResult.SyncSeats);
-        Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
+        Assert.Equal(requestDate, updateResult.RevisionDate, TimeSpan.FromSeconds(1));
     }
 
     [DatabaseData, Theory]
@@ -504,7 +504,7 @@ public class OrganizationRepositoryTests
         Assert.NotNull(updateResult);
         Assert.Equal(organization.Id, updateResult.Id);
         Assert.True(updateResult.SyncSeats);
-        Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
+        Assert.Equal(requestDate, updateResult.RevisionDate, TimeSpan.FromSeconds(1));
     }
 
     [DatabaseData, Theory]
@@ -524,7 +524,7 @@ public class OrganizationRepositoryTests
         Assert.NotNull(updateResult);
         Assert.Equal(organization.Id, updateResult.Id);
         Assert.True(updateResult.SyncSeats);
-        Assert.Equal(requestDate.ToString("yyyy-MM-dd HH:mm:ss"), updateResult.RevisionDate.ToString("yyyy-MM-dd HH:mm:ss"));
+        Assert.Equal(requestDate, updateResult.RevisionDate, TimeSpan.FromSeconds(1));
     }
 
     [DatabaseData, Theory]

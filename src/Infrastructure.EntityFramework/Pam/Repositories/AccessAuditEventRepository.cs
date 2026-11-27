@@ -61,6 +61,8 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
             RotationJobId = auditEvent.RotationJobId,
             RotationSource = auditEvent.RotationSource,
             SyncState = auditEvent.SyncState,
+            IpAddress = auditEvent.IpAddress,
+            DeviceType = auditEvent.DeviceType,
         };
 
         dbContext.Add(row);
@@ -164,6 +166,8 @@ public class AccessAuditEventRepository : BaseEntityFrameworkRepository, IAccess
                 RotationJobId = e.RotationJobId,
                 RotationSource = e.RotationSource,
                 SyncState = e.SyncState,
+                IpAddress = e.IpAddress,
+                DeviceType = e.DeviceType,
             })
             .ToListAsync();
     }

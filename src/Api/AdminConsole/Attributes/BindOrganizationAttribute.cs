@@ -23,7 +23,14 @@ namespace Bit.Api.AdminConsole.Attributes;
 /// ]]></code>
 /// </example>
 [AttributeUsage(AttributeTargets.Parameter)]
-public sealed class BindOrganizationAttribute() : ModelBinderAttribute(typeof(OrganizationModelBinder));
+public sealed class BindOrganizationAttribute() : ModelBinderAttribute(typeof(OrganizationModelBinder))
+{
+    /// <summary>
+    /// The value is loaded from route values, not read from the request, so ApiExplorer leaves
+    /// the parameter out of the OpenAPI spec.
+    /// </summary>
+    public override BindingSource BindingSource => BindingSource.Special;
+}
 
 /// <summary>
 /// Custom model binder that loads an <see cref="Organization"/> from the database

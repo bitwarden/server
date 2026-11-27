@@ -240,13 +240,13 @@ public static partial class FeatureFlagKeys
     /* Platform Team */
     public const string WebPush = "web-push";
     public const string ContentScriptIpcFramework = "content-script-ipc-channel-framework";
-    public const string WebAuthnRelatedOrigins = "pm-30529-webauthn-related-origins";
     public const string ElectronStorageCache = "pm-32783-electron-storage-cache";
     public const string AttachmentUploadProgress = "pm-34410-attachment-upload-progress";
     public const string OrgCipherPushFanout = "pm-35168-org-cipher-push-fanout";
     public const string FedRampGovRegion = "fedramp-gov-region";
     public const string ManagedDeviceFramework = "pm-27719-managed-device-framework";
     public const string FlightRecorderTsLogging = "pm-30935-flight-recorder-ts-logging";
+    public const string DesktopJsonFileStorage = "pm-47525-desktop-json-file-storage";
 
     /* Tools Team */
     public const string SendControls = "pm-31885-send-controls";

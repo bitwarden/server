@@ -243,6 +243,11 @@ public class RequestLeaseExtensionCommandTests
         var result = await sutProvider.Sut.ExtendAsync(lease.RequesterId, Submission(lease.Id));
 
         Assert.Equal(AccessRequestStatus.Approved, result.Status);
+        await sutProvider.GetDependency<IAccessRequestRepository>().Received(1).CreateApprovedExtensionAsync(
+            Arg.Any<AccessRequest>(),
+            Arg.Is<AccessDecision>(d => d.ConditionKind == AccessConditionKind.IpAllowlist),
+            Arg.Any<DateTime>(),
+            Arg.Any<string?>());
     }
 
     [Theory, BitAutoData]
@@ -346,7 +351,9 @@ public class RequestLeaseExtensionCommandTests
                 && r.NotBefore == lease.NotAfter
                 && r.NotAfter == expectedNotAfter),
             Arg.Is<AccessDecision>(d =>
-                d.DeciderKind == AccessDeciderKind.Automatic && d.Verdict == AccessDecisionVerdict.Approve),
+                d.DeciderKind == AccessDeciderKind.Automatic && d.Verdict == AccessDecisionVerdict.Approve
+                // A human-approval rule has no automated condition to name.
+                && d.ConditionKind == null),
             _now,
             Arg.Any<string?>());
 

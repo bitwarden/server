@@ -103,5 +103,13 @@ public class CipherLeaseGateRegistrationTests
             throw new NotSupportedException();
 
         public FullCipherAccess UnrestrictedForWholeVaultExport() => throw new NotSupportedException();
+
+        public Task<IReadOnlySet<Guid>> GetOrganizationGatedCipherIdsAsync(
+            Guid organizationId,
+            IEnumerable<Guid> cipherIds) =>
+            throw new NotSupportedException();
+
+        public Task<IReadOnlySet<Guid>> GetOrganizationGatedCipherIdsForExportAsync(Guid organizationId) =>
+            throw new NotSupportedException();
     }
 }

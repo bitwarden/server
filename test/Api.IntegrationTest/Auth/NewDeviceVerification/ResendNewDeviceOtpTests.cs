@@ -14,8 +14,7 @@ namespace Bit.Api.IntegrationTest.Auth.NewDeviceVerification;
 
 /// <summary>
 /// Covers how the new device verification resend endpoint decides which device to scope a code to, running
-/// the real service and distributed cache rather than a substitute. <see cref="SubstitutedTwoFactorEmailServiceTests"/>
-/// substitutes <see cref="ITwoFactorEmailService"/>, so it can only assert the controller's wiring.
+/// the real service and distributed cache rather than a substitute.
 /// </summary>
 public class ResendNewDeviceOtpTests
 {
@@ -32,6 +31,50 @@ public class ResendNewDeviceOtpTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         await AssertCodeSentAsync(mailService);
+        await AssertCodeRedeemableByDeviceAsync(factory, mailService, user, RequestDeviceIdentifier);
+    }
+
+    [Fact]
+    public async Task ResendNewDeviceOtp_WithDeviceIdentifierHeader_PendingDeviceRecorded_SendsCodeForRequestingDevice()
+    {
+        var (factory, mailService, user) = await ArrangeAsync();
+        await RecordPendingDeviceAsync(factory, user, PendingDeviceIdentifier);
+        mailService.ClearReceivedCalls();
+
+        var response = await PostResendAsync(factory, user.Email, RequestDeviceIdentifier);
+
+        // The device making the request takes precedence over the device the pending code was issued to.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await AssertCodeSentAsync(mailService);
+        await AssertCodeRedeemableByDeviceAsync(factory, mailService, user, RequestDeviceIdentifier);
+    }
+
+    [Fact]
+    public async Task ResendNewDeviceOtp_WrongMasterPassword_SendsNothing()
+    {
+        var (factory, mailService, user) = await ArrangeAsync();
+
+        var response = await PostResendAsync(
+            factory, user.Email, RequestDeviceIdentifier, masterPasswordHash: "wrong-master-password-hash");
+
+        // Silent 200 so the response does not reveal whether the master password was correct.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await mailService.DidNotReceiveWithAnyArgs().SendTwoFactorEmailAsync(
+            default, default, default, default, default, default);
+    }
+
+    [Fact]
+    public async Task ResendNewDeviceOtp_UnknownEmail_SendsNothing()
+    {
+        var (factory, mailService, _) = await ArrangeAsync();
+
+        var response = await PostResendAsync(
+            factory, $"does-not-exist-{Guid.NewGuid()}@bitwarden.com", RequestDeviceIdentifier);
+
+        // Silent 200 so the response does not reveal whether an account exists for the email.
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        await mailService.DidNotReceiveWithAnyArgs().SendTwoFactorEmailAsync(
+            default, default, default, default, default, default);
     }
 
     // TODO: PM-43465 - Delete this test once every supported client version sends the Device-Identifier
@@ -47,6 +90,7 @@ public class ResendNewDeviceOtpTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         await AssertCodeSentAsync(mailService);
+        await AssertCodeRedeemableByDeviceAsync(factory, mailService, user, PendingDeviceIdentifier);
     }
 
     // TODO: PM-43465 - Delete this test once mobile sends the Device-Identifier header on this request
@@ -70,6 +114,7 @@ public class ResendNewDeviceOtpTests
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         await AssertCodeSentAsync(mailService);
+        await AssertCodeRedeemableByDeviceAsync(factory, mailService, user, PendingDeviceIdentifier);
     }
 
     [Fact]
@@ -148,7 +193,8 @@ public class ResendNewDeviceOtpTests
     }
 
     private static async Task<HttpResponseMessage> PostResendAsync(
-        ApiApplicationFactory factory, string email, string? deviceIdentifier)
+        ApiApplicationFactory factory, string email, string? deviceIdentifier,
+        string masterPasswordHash = MasterPasswordHash)
     {
         using var client = factory.CreateClient();
         using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/resend-new-device-otp");
@@ -160,7 +206,7 @@ public class ResendNewDeviceOtpTests
         message.Content = JsonContent.Create(new UnauthenticatedSecretVerificationRequestModel
         {
             Email = email,
-            MasterPasswordHash = MasterPasswordHash,
+            MasterPasswordHash = masterPasswordHash,
         });
 
         return await client.SendAsync(message);
@@ -178,118 +224,19 @@ public class ResendNewDeviceOtpTests
     }
 
     /// <summary>
-    /// Runs with <see cref="ITwoFactorEmailService"/> substituted, so these tests assert which user and device
-    /// the controller passes to the service.
+    /// Reads the code from the email sent to the user and redeems it with the real service, which proves the
+    /// code was issued to that user and scoped to the given device.
     /// </summary>
-    // TODO: Move the cases below that the outer class does not cover into the outer class, which runs the real
-    // service, and then delete this class.
-    public class SubstitutedTwoFactorEmailServiceTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+    private static async Task AssertCodeRedeemableByDeviceAsync(
+        ApiApplicationFactory factory, IMailService mailService, User user, string deviceIdentifier)
     {
-        // const so it can be a default parameter value on PostResendNewDeviceOtpAsync.
-        private const string _resendDeviceIdentifier = "resend-device-identifier";
+        var sendCall = Assert.Single(mailService.ReceivedCalls(),
+            call => call.GetMethodInfo().Name == nameof(IMailService.SendTwoFactorEmailAsync));
+        var arguments = sendCall.GetArguments();
+        Assert.Equal(user.Email, arguments[0]);
+        var code = Assert.IsType<string>(arguments[2]);
 
-        private readonly HttpClient _client;
-        private readonly ApiApplicationFactory _factory;
-        private readonly IUserRepository _userRepository;
-        private readonly ITwoFactorEmailService _twoFactorEmailService;
-
-        private string _ownerEmail = null!;
-
-        public SubstitutedTwoFactorEmailServiceTests(ApiApplicationFactory factory)
-        {
-            _factory = factory;
-            _factory.SubstituteService<ITwoFactorEmailService>(_ => { });
-            _client = factory.CreateClient();
-            _userRepository = _factory.GetService<IUserRepository>();
-            _twoFactorEmailService = _factory.GetService<ITwoFactorEmailService>();
-        }
-
-        public async Task InitializeAsync()
-        {
-            _ownerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
-            await _factory.LoginWithNewAccount(_ownerEmail);
-        }
-
-        public Task DisposeAsync()
-        {
-            _client.Dispose();
-            return Task.CompletedTask;
-        }
-
-        // TODO: The outer class covers this request. Assert there that the code is scoped to the requesting device.
-        [Fact]
-        public async Task PostResendNewDeviceOtp_ValidEmailAndSecret_OkAndSendsEmailForRequestingDevice()
-        {
-            var user = await _userRepository.GetByEmailAsync(_ownerEmail);
-            Assert.NotNull(user);
-
-            var response = await PostResendNewDeviceOtpAsync(_ownerEmail, MasterPasswordHash);
-
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            await _twoFactorEmailService.Received(1)
-                .SendNewDeviceVerificationEmailAsync(
-                    Arg.Is<User>(u => u.Id == user.Id), _resendDeviceIdentifier);
-        }
-
-        // TODO: The outer class has no wrong master password case. Move this case there.
-        [Fact]
-        public async Task PostResendNewDeviceOtp_WrongSecret_SilentlySucceedsWithoutSendingEmail()
-        {
-            var user = await _userRepository.GetByEmailAsync(_ownerEmail);
-            Assert.NotNull(user);
-
-            var response = await PostResendNewDeviceOtpAsync(_ownerEmail, "wrong-master-password-hash");
-
-            // Silent 200 to avoid account enumeration via response shape.
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            await _twoFactorEmailService.DidNotReceive()
-                .SendNewDeviceVerificationEmailAsync(
-                    Arg.Is<User>(u => u.Id == user.Id), Arg.Any<string>());
-        }
-
-        // TODO: The outer class has no unknown email case. Move this case there, and assert that no email is sent.
-        [Fact]
-        public async Task PostResendNewDeviceOtp_UnknownEmail_SilentlySucceeds()
-        {
-            var response = await PostResendNewDeviceOtpAsync(
-                $"does-not-exist-{Guid.NewGuid()}@bitwarden.com",
-                MasterPasswordHash);
-
-            // Silent 200 to avoid account enumeration via response shape.
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-        }
-
-        // TODO: Duplicates ResendNewDeviceOtp_NoHeader_NoPendingDevice_SendsNothing. Delete this case.
-        [Fact]
-        public async Task PostResendNewDeviceOtp_NoDeviceIdentifier_SilentlySucceedsWithoutSendingEmail()
-        {
-            var user = await _userRepository.GetByEmailAsync(_ownerEmail);
-            Assert.NotNull(user);
-
-            // The code is scoped to the requesting device, so it cannot be issued without one.
-            var response = await PostResendNewDeviceOtpAsync(
-                _ownerEmail, MasterPasswordHash, deviceIdentifier: null);
-
-            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
-            await _twoFactorEmailService.DidNotReceive()
-                .SendNewDeviceVerificationEmailAsync(
-                    Arg.Is<User>(u => u.Id == user.Id), Arg.Any<string>());
-        }
-
-        private async Task<HttpResponseMessage> PostResendNewDeviceOtpAsync(
-            string email, string masterPasswordHash, string? deviceIdentifier = _resendDeviceIdentifier)
-        {
-            using var message = new HttpRequestMessage(HttpMethod.Post, "/accounts/resend-new-device-otp");
-            if (deviceIdentifier != null)
-            {
-                message.Headers.Add("Device-Identifier", deviceIdentifier);
-            }
-            message.Content = JsonContent.Create(new UnauthenticatedSecretVerificationRequestModel
-            {
-                Email = email,
-                MasterPasswordHash = masterPasswordHash,
-            });
-            return await _client.SendAsync(message);
-        }
+        var twoFactorEmailService = factory.GetService<ITwoFactorEmailService>();
+        Assert.True(await twoFactorEmailService.VerifyNewDeviceVerificationOtpAsync(user, deviceIdentifier, code));
     }
 }

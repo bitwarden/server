@@ -5,8 +5,10 @@ using Bit.IntegrationTestCommon;
 using Bit.IntegrationTestCommon.Factories;
 using Bit.Test.Common.Constants;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Xunit;
 
 #nullable enable
@@ -28,9 +30,17 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
         _identityApplicationFactory = new IdentityApplicationFactory();
         _identityApplicationFactory.TestDatabase = TestDatabase;
         _identityApplicationFactory.ManagesDatabase = false;
+
+        ShareDataProtectionWithIdentity();
     }
 
     public IdentityApplicationFactory Identity => _identityApplicationFactory;
+
+    /// <summary>
+    /// The in-memory Data Protection provider the API and Identity hosts share. Give it to any other test host that
+    /// must unprotect a token the API protects, or protect one the API unprotects.
+    /// </summary>
+    public IDataProtectionProvider DataProtectionProvider { get; } = new EphemeralDataProtectionProvider();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
@@ -41,6 +51,10 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
             // Remove scheduled background jobs to prevent errors in parallel test execution
             var jobService = services.First(sd => sd.ServiceType == typeof(IHostedService) && sd.ImplementationType == typeof(Jobs.JobsHostedService));
             services.Remove(jobService);
+
+            // Each Quartz scheduler holds a thread-pool thread for the life of its host, starving parallel test hosts
+            var quartzService = services.First(sd => sd.ServiceType == typeof(IHostedService) && sd.ImplementationType == typeof(Quartz.QuartzHostedService));
+            services.Remove(quartzService);
 
             // The Identity host starts on the first backchannel call, so an anonymous request does not start it.
             services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
@@ -68,6 +82,22 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
 
             base.Dispose(disposing);
         }
+    }
+
+    /// <summary>
+    /// Gives the API and Identity hosts one in-memory Data Protection key ring, so a token one host protects (for
+    /// example an SSO two-factor session token) can be unprotected by the other, as in a deployed environment.
+    /// </summary>
+    private void ShareDataProtectionWithIdentity()
+    {
+        void UseSharedProvider(IServiceCollection services)
+        {
+            services.RemoveAll<IDataProtectionProvider>();
+            services.AddSingleton(DataProtectionProvider);
+        }
+
+        ConfigureServices(UseSharedProvider);
+        _identityApplicationFactory.ConfigureServices(UseSharedProvider);
     }
 
     /// <summary>

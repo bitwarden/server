@@ -1291,7 +1291,7 @@
       "exceptionhandling": {
         "type": "Project",
         "dependencies": {
-          "HttpExtensions": "[2026.11.0, )"
+          "HttpExtensions": "[2026.11.1, )"
         }
       },
       "httpextensions": {
@@ -1308,6 +1308,7 @@
       "pam.domain": {
         "type": "Project",
         "dependencies": {
+          "Clients": "[0.0.1, )",
           "Data": "[0.0.1, )"
         }
       },
