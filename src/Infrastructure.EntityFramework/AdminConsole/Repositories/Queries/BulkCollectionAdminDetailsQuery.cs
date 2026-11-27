@@ -16,11 +16,13 @@ namespace Bit.Infrastructure.EntityFramework.AdminConsole.Repositories.Queries;
 /// </remarks>
 public class BulkCollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
 {
+    private readonly Guid _organizationId;
     private readonly Guid? _userId;
     private readonly IEnumerable<Guid> _collectionIds;
 
-    public BulkCollectionAdminDetailsQuery(IEnumerable<Guid> collectionIds, Guid? userId)
+    public BulkCollectionAdminDetailsQuery(Guid organizationId, IEnumerable<Guid> collectionIds, Guid? userId)
     {
+        _organizationId = organizationId;
         _collectionIds = collectionIds;
         _userId = userId;
     }
@@ -34,7 +36,7 @@ public class BulkCollectionAdminDetailsQuery : IQuery<CollectionAdminDetails>
                                          select ou;
 
         var baseCollectionQuery = from c in dbContext.Collections
-                                  where _collectionIds.Contains(c.Id)
+                                  where c.OrganizationId == _organizationId && _collectionIds.Contains(c.Id)
 
                                   join ou in confirmedOrganizationUsers
                                       on new { c.OrganizationId, UserId = _userId } equals

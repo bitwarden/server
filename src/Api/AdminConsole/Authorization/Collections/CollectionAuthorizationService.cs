@@ -14,8 +14,8 @@ public class CollectionAuthorizationService(
     IOrganizationAbilityCacheService organizationAbilityCacheService,
     IProviderRepository providerRepository) : ICollectionAuthorizationService
 {
-    // A null value means the collection was not found.
-    private readonly Dictionary<Guid, CollectionAdminDetails?> _detailsByCollectionId = new();
+    // A null value means the collection was not found in that organization.
+    private readonly Dictionary<(Guid OrganizationId, Guid CollectionId), CollectionAdminDetails?> _detailsCache = new();
 
     public async Task<bool> AuthorizeUpdateAsync(Guid organizationId, Guid collectionId) =>
         (await AuthorizeAsync(organizationId, [collectionId], CollectionRules.OrganizationRole.CanUpdate))
@@ -40,11 +40,11 @@ public class CollectionAuthorizationService(
             return new HashSet<Guid>();
         }
 
-        await EnsureCollectionDetailsCachedAsync(collectionIds);
+        await EnsureCollectionDetailsCachedAsync(organizationId, collectionIds);
 
         // No one can edit the settings of a default user collection.
         var requestedCollectionIds = collectionIds
-            .Where(id => _detailsByCollectionId[id] is { } details
+            .Where(id => _detailsCache[(organizationId, id)] is { } details
                          && details.OrganizationId == organizationId
                          && details.Type != CollectionType.DefaultUserCollection)
             .ToHashSet();
@@ -69,7 +69,7 @@ public class CollectionAuthorizationService(
         }
 
         var authorizedCollectionIds = requestedCollectionIds
-            .Where(id => CollectionRules.CollectionAssignment.CanManage(organization, _detailsByCollectionId[id]!))
+            .Where(id => CollectionRules.CollectionAssignment.CanManage(organization, _detailsCache[(organizationId, id)]!))
             .ToHashSet();
 
         // Check provider access last. It costs up to two database reads, and most callers are already
@@ -91,21 +91,21 @@ public class CollectionAuthorizationService(
         CollectionRules.ManagingProvider.CanManageCollections(
             await providerRepository.GetByOrganizationIdAsync(organizationId));
 
-    private async Task EnsureCollectionDetailsCachedAsync(IReadOnlyCollection<Guid> collectionIds)
+    private async Task EnsureCollectionDetailsCachedAsync(Guid organizationId, IReadOnlyCollection<Guid> collectionIds)
     {
-        var uncachedIds = collectionIds.Where(id => !_detailsByCollectionId.ContainsKey(id)).ToList();
+        var uncachedIds = collectionIds.Where(id => !_detailsCache.ContainsKey((organizationId, id))).ToList();
         if (uncachedIds.Count == 0)
         {
             return;
         }
 
         var collections = await collectionRepository.GetManyByIdsWithPermissionsAsync(
-            uncachedIds, currentContext.UserId, includeAccessRelationships: false);
+            organizationId, uncachedIds, currentContext.UserId, includeAccessRelationships: false);
         var detailsById = collections.ToDictionary(c => c.Id);
 
         foreach (var id in uncachedIds)
         {
-            _detailsByCollectionId[id] = detailsById.GetValueOrDefault(id);
+            _detailsCache[(organizationId, id)] = detailsById.GetValueOrDefault(id);
         }
     }
 }

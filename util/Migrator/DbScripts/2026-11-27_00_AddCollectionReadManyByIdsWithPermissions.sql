@@ -2,6 +2,7 @@
 -- Unlike the single-collection version, it only counts a Confirmed member of an Enabled org as Assigned or Manage.
 
 CREATE OR ALTER PROCEDURE [dbo].[Collection_ReadManyByIdsWithPermissions]
+    @OrganizationId UNIQUEIDENTIFIER,
     @Ids [dbo].[GuidIdArray] READONLY,
     @UserId UNIQUEIDENTIFIER,
     @IncludeAccessRelationships BIT
@@ -9,7 +10,7 @@ AS
 BEGIN
     SET NOCOUNT ON
 
-    -- The caller's memberships that count: Confirmed, in an Enabled org. A handful of rows for anybody.
+    -- The caller's membership in this org. It only counts if it is Confirmed and the org is Enabled.
     DECLARE @Memberships TABLE (
         [OrganizationUserId] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY,
         [OrganizationId] UNIQUEIDENTIFIER NOT NULL
@@ -25,6 +26,7 @@ BEGIN
         [dbo].[Organization] O ON O.[Id] = OU.[OrganizationId]
     WHERE
         OU.[UserId] = @UserId
+        AND OU.[OrganizationId] = @OrganizationId
         AND OU.[Status] = 2 -- Confirmed
         AND O.[Enabled] = 1
 
@@ -46,15 +48,20 @@ BEGIN
 
     -- A #temp table (not the TVP) so the statements below are planned for the number of ids actually passed.
     -- The unnamed inline primary key lets SQL Server cache the table between calls.
+    -- Only ids in @OrganizationId go in, so every result set below is scoped to that org.
     CREATE TABLE #CollectionIds (
         [Id] UNIQUEIDENTIFIER NOT NULL PRIMARY KEY
     )
 
     INSERT INTO #CollectionIds ([Id])
     SELECT DISTINCT
-        [Id]
+        I.[Id]
     FROM
-        @Ids
+        @Ids I
+    INNER JOIN
+        [dbo].[Collection] C ON C.[Id] = I.[Id]
+    WHERE
+        C.[OrganizationId] = @OrganizationId
 
     SELECT
         C.*,

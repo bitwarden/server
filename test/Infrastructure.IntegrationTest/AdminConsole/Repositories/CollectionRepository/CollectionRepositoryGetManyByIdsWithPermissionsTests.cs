@@ -46,7 +46,7 @@ public class CollectionRepositoryGetManyByIdsWithPermissionsTests
 
         // Act
         var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
-            [managedDirectly.Id, managedViaGroup.Id, notAssigned.Id, defaultCollection.Id], user.Id,
+            organization.Id, [managedDirectly.Id, managedViaGroup.Id, notAssigned.Id, defaultCollection.Id], user.Id,
             includeAccessRelationships: false);
 
         // Assert
@@ -85,10 +85,42 @@ public class CollectionRepositoryGetManyByIdsWithPermissionsTests
 
         // Act
         var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
-            [collection.Id, Guid.NewGuid()], user.Id, includeAccessRelationships: false);
+            organization.Id, [collection.Id, Guid.NewGuid()], user.Id, includeAccessRelationships: false);
 
         // Assert
         Assert.Equal(collection.Id, Assert.Single(results).Id);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyByIdsWithPermissionsAsync_WhenACollectionBelongsToAnotherOrganization_ExcludesItFromTheResult(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        ICollectionRepository collectionRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+
+        var organization = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(organization, user);
+        var collection = new Collection { Name = "Requested org", OrganizationId = organization.Id };
+        await collectionRepository.CreateAsync(collection, groups: [],
+            users: [new CollectionAccessSelection { Id = orgUser.Id, Manage = true }]);
+
+        var otherOrganization = await organizationRepository.CreateTestOrganizationAsync();
+        var otherOrgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(otherOrganization, user);
+        var otherCollection = new Collection { Name = "Other org", OrganizationId = otherOrganization.Id };
+        await collectionRepository.CreateAsync(otherCollection, groups: [],
+            users: [new CollectionAccessSelection { Id = otherOrgUser.Id, Manage = true }]);
+
+        // Act
+        var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
+            organization.Id, [collection.Id, otherCollection.Id], user.Id, includeAccessRelationships: true);
+
+        // Assert
+        var result = Assert.Single(results);
+        Assert.Equal(collection.Id, result.Id);
+        Assert.Equal(orgUser.Id, Assert.Single(result.Users).Id);
     }
 
     [DatabaseTheory, DatabaseData]
@@ -109,7 +141,7 @@ public class CollectionRepositoryGetManyByIdsWithPermissionsTests
 
         // Act
         var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
-            [collection.Id], user.Id, includeAccessRelationships: false);
+            organization.Id, [collection.Id], user.Id, includeAccessRelationships: false);
 
         // Assert
         var result = Single(results, collection.Id);
@@ -143,7 +175,7 @@ public class CollectionRepositoryGetManyByIdsWithPermissionsTests
 
         // Act
         var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
-            [collection.Id], user.Id, includeAccessRelationships: false);
+            organization.Id, [collection.Id], user.Id, includeAccessRelationships: false);
 
         // Assert
         var result = Single(results, collection.Id);
@@ -174,7 +206,7 @@ public class CollectionRepositoryGetManyByIdsWithPermissionsTests
 
         // Act
         var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
-            [collection.Id], user.Id, includeAccessRelationships: false);
+            organization.Id, [collection.Id], user.Id, includeAccessRelationships: false);
 
         // Assert
         var result = Single(results, collection.Id);
@@ -202,7 +234,7 @@ public class CollectionRepositoryGetManyByIdsWithPermissionsTests
 
         // Act
         var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
-            [collection.Id], user.Id, includeAccessRelationships: false);
+            organization.Id, [collection.Id], user.Id, includeAccessRelationships: false);
 
         // Assert
         var result = Single(results, collection.Id);
@@ -230,7 +262,7 @@ public class CollectionRepositoryGetManyByIdsWithPermissionsTests
 
         // Act
         var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
-            [collection.Id], user.Id, includeAccessRelationships: false);
+            organization.Id, [collection.Id], user.Id, includeAccessRelationships: false);
 
         // Assert
         var result = Single(results, collection.Id);
@@ -259,7 +291,7 @@ public class CollectionRepositoryGetManyByIdsWithPermissionsTests
 
         // Act
         var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
-            [collection.Id], user.Id, includeAccessRelationships: false);
+            organization.Id, [collection.Id], user.Id, includeAccessRelationships: false);
 
         // Assert
         var result = Single(results, collection.Id);
@@ -291,7 +323,7 @@ public class CollectionRepositoryGetManyByIdsWithPermissionsTests
 
         // Act
         var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
-            [firstCollection.Id, secondCollection.Id], user.Id, includeAccessRelationships: true);
+            organization.Id, [firstCollection.Id, secondCollection.Id], user.Id, includeAccessRelationships: true);
 
         // Assert
         var first = Single(results, firstCollection.Id);
@@ -324,7 +356,7 @@ public class CollectionRepositoryGetManyByIdsWithPermissionsTests
 
         // Act
         var results = await collectionRepository.GetManyByIdsWithPermissionsAsync(
-            [collection.Id, collection.Id], user.Id, includeAccessRelationships: true);
+            organization.Id, [collection.Id, collection.Id], user.Id, includeAccessRelationships: true);
 
         // Assert
         var result = Single(results, collection.Id);

@@ -566,12 +566,12 @@ public class CollectionRepository : Repository<Core.Entities.Collection, Collect
     }
 
     public async Task<ICollection<CollectionAdminDetails>> GetManyByIdsWithPermissionsAsync(
-        IEnumerable<Guid> collectionIds, Guid? userId, bool includeAccessRelationships)
+        Guid organizationId, IEnumerable<Guid> collectionIds, Guid? userId, bool includeAccessRelationships)
     {
         using (var scope = ServiceScopeFactory.CreateScope())
         {
             var dbContext = GetDatabaseContext(scope);
-            var query = new BulkCollectionAdminDetailsQuery(collectionIds, userId).Run(dbContext);
+            var query = new BulkCollectionAdminDetailsQuery(organizationId, collectionIds, userId).Run(dbContext);
 
             ICollection<CollectionAdminDetails> collections;
 

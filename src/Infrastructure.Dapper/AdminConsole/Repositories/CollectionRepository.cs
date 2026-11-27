@@ -245,13 +245,19 @@ public class CollectionRepository : Repository<Collection, Guid>, ICollectionRep
     }
 
     public async Task<ICollection<CollectionAdminDetails>> GetManyByIdsWithPermissionsAsync(
-        IEnumerable<Guid> collectionIds, Guid? userId, bool includeAccessRelationships)
+        Guid organizationId, IEnumerable<Guid> collectionIds, Guid? userId, bool includeAccessRelationships)
     {
         using (var connection = new SqlConnection(ConnectionString))
         {
             var results = await connection.QueryMultipleAsync(
                 $"[{Schema}].[Collection_ReadManyByIdsWithPermissions]",
-                new { Ids = collectionIds.ToGuidIdArrayTVP(), UserId = userId, IncludeAccessRelationships = includeAccessRelationships },
+                new
+                {
+                    OrganizationId = organizationId,
+                    Ids = collectionIds.ToGuidIdArrayTVP(),
+                    UserId = userId,
+                    IncludeAccessRelationships = includeAccessRelationships
+                },
                 commandType: CommandType.StoredProcedure);
 
             var collections = (await results.ReadAsync<CollectionAdminDetails>()).ToList();

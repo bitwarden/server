@@ -99,7 +99,7 @@ public class CollectionRepositoryHighestPermissionTests
         Assert.NotNull(byId);
         AssertAdminDetails(byId, readOnly, hidePasswords, manage);
 
-        var byIds = await collectionRepository.GetManyByIdsWithPermissionsAsync([collection.Id], user.Id, false);
+        var byIds = await collectionRepository.GetManyByIdsWithPermissionsAsync(collection.OrganizationId, [collection.Id], user.Id, false);
         AssertAdminDetails(Assert.Single(byIds), readOnly, hidePasswords, manage);
 
         var shared = await collectionRepository.GetManySharedByOrganizationIdWithPermissionsAsync(

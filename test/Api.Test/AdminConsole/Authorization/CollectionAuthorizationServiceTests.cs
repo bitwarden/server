@@ -288,7 +288,7 @@ public class CollectionAuthorizationServiceTests
 
         Assert.False(result);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive()
-            .GetManyByIdsWithPermissionsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid?>(), Arg.Any<bool>());
+            .GetManyByIdsWithPermissionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid?>(), Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
@@ -433,7 +433,7 @@ public class CollectionAuthorizationServiceTests
 
         Assert.Empty(result);
         await sutProvider.GetDependency<ICollectionRepository>().DidNotReceive()
-            .GetManyByIdsWithPermissionsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid?>(), Arg.Any<bool>());
+            .GetManyByIdsWithPermissionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid?>(), Arg.Any<bool>());
     }
 
     [Theory, BitAutoData]
@@ -486,9 +486,11 @@ public class CollectionAuthorizationServiceTests
         Assert.Equal(Expected(firstCollectionId), first);
         Assert.Equal(Expected(firstCollectionId, secondCollectionId), second);
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByIdsWithPermissionsAsync(
+            organizationId,
             Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { firstCollectionId })),
             Arg.Any<Guid?>(), Arg.Any<bool>());
         await sutProvider.GetDependency<ICollectionRepository>().Received(1).GetManyByIdsWithPermissionsAsync(
+            organizationId,
             Arg.Is<IEnumerable<Guid>>(ids => ids.SequenceEqual(new[] { secondCollectionId })),
             Arg.Any<Guid?>(), Arg.Any<bool>());
     }
@@ -587,7 +589,7 @@ public class CollectionAuthorizationServiceTests
         SutProvider<CollectionAuthorizationService> sutProvider,
         params CollectionAdminDetails[] collections) =>
         sutProvider.GetDependency<ICollectionRepository>()
-            .GetManyByIdsWithPermissionsAsync(Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid?>(), Arg.Any<bool>())
+            .GetManyByIdsWithPermissionsAsync(Arg.Any<Guid>(), Arg.Any<IEnumerable<Guid>>(), Arg.Any<Guid?>(), Arg.Any<bool>())
             .Returns(callInfo => callInfo.Arg<IEnumerable<Guid>>()
                 .Select(id => collections.FirstOrDefault(c => c.Id == id))
                 .Where(c => c is not null)
