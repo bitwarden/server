@@ -147,7 +147,7 @@ public class EventRepository : Repository<Event, Guid>, IEventRepository
         using (var connection = new SqlConnection(ConnectionString))
         {
             connection.Open();
-            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, null))
+            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints, null))
             {
                 bulkCopy.DestinationTableName = "[dbo].[Event]";
                 var dataTable = BuildEventsTable(bulkCopy, entities.Select(e => e is Event @event ? @event : new Event(e)));

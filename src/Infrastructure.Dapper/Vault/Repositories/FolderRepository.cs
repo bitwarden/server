@@ -92,7 +92,7 @@ public class FolderRepository : Repository<Folder, Guid>, IFolderRepository
             }
 
             // Bulk copy data into temp table
-            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints, transaction))
             {
                 bulkCopy.DestinationTableName = "#TempFolder";
                 var foldersTable = folders.ToDataTable();
