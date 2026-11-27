@@ -50,6 +50,11 @@ internal sealed record AppHostSettings
     internal string? NgrokAuthToken { get; init; }
 
     /// <summary>
+    /// The Azurite storage emulator.
+    /// </summary>
+    internal AzuriteSettings Azurite { get; init; } = new();
+
+    /// <summary>
     /// The MailCatcher container.
     /// </summary>
     internal required MailCatcherSettings MailCatcher { get; init; }

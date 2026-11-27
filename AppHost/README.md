@@ -99,6 +99,7 @@ AppHost password to set (see [Databases](#databases)).
 | `Scripts:DbMigration`           | `migrate.ps1`                      | Migration script filename (relative to `WorkingDirectory`)                                             |
 | `Scripts:AzuriteSetup`          | `setup_azurite.ps1`                | Azurite setup script filename                                                                          |
 | `Scripts:SecretsSetup`          | `setup_secrets.ps1`                | Secrets setup script filename                                                                          |
+| `Azurite:DataPath`              | _(empty)_                          | Folder mounted as Azurite's data; empty keeps Aspire's data volume                                     |
 | `MailCatcher:Image`             | `sj26/mailcatcher:latest`          | Docker image for MailCatcher                                                                           |
 | `MailCatcher:SmtpPort`          | `10250`                            | Host SMTP port                                                                                         |
 | `MailCatcher:WebPort`           | `1080`                             | MailCatcher web UI port                                                                                |

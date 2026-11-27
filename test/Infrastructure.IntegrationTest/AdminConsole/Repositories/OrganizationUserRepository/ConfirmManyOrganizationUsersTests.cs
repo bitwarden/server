@@ -41,7 +41,7 @@ public class ConfirmManyOrganizationUsersTests
         Assert.NotNull(updated);
         Assert.Equal(OrganizationUserStatusType.Confirmed, updated.Status);
         Assert.Equal("key-accepted", updated.Key);
-        Assert.True(updated.RevisionDate >= before);
+        Assert.Equal(before, updated.RevisionDate, TimeSpan.FromSeconds(1));
 
         // The already-confirmed user's status is unchanged
         var unchanged = await organizationUserRepository.GetByIdAsync(confirmedOrgUser.Id);
