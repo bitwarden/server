@@ -5,9 +5,12 @@ public enum AccessRequestCreateOutcome
 {
     Created = 1,
 
-    /// <summary>The requester already has an open or approved-unactivated request for the item. Nothing is persisted.</summary>
-    OpenRequestExists = 0,
+    /// <summary>The requester already has a pending request for the item. Nothing is persisted.</summary>
+    PendingRequestExists = 0,
 
     /// <summary>The requester already holds a live lease on the item. Nothing is persisted.</summary>
     ActiveLeaseExists = -1,
+
+    /// <summary>The requester already has an approved request for the item that is not yet activated. Nothing is persisted.</summary>
+    ApprovedRequestExists = -2,
 }

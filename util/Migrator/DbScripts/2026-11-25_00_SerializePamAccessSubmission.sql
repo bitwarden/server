@@ -42,21 +42,28 @@ BEGIN
         RETURN
     END
 
-    -- Same predicates as the pending and approved-unactivated reads.
+    -- Same predicates as the pending read.
     IF EXISTS (
         SELECT 1 FROM [dbo].[AccessRequest] AR
         WHERE AR.[RequesterId] = @RequesterId AND AR.[CipherId] = @CipherId AND AR.[NotAfter] > @Now
-            AND (
-                AR.[Action] = 0
-                OR (
-                    AR.[Action] = 1 AND AR.[ExtensionOfLeaseId] IS NULL
-                    AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] AL WHERE AL.[AccessRequestId] = AR.[Id])
-                )
-            )
+            AND AR.[Action] = 0
     )
     BEGIN
         ROLLBACK TRANSACTION
-        SELECT 0 -- OpenRequestExists
+        SELECT 0 -- PendingRequestExists
+        RETURN
+    END
+
+    -- Same predicates as the approved-unactivated read.
+    IF EXISTS (
+        SELECT 1 FROM [dbo].[AccessRequest] AR
+        WHERE AR.[RequesterId] = @RequesterId AND AR.[CipherId] = @CipherId AND AR.[NotAfter] > @Now
+            AND AR.[Action] = 1 AND AR.[ExtensionOfLeaseId] IS NULL
+            AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] AL WHERE AL.[AccessRequestId] = AR.[Id])
+    )
+    BEGIN
+        ROLLBACK TRANSACTION
+        SELECT -2 -- ApprovedRequestExists
         RETURN
     END
 
@@ -122,21 +129,28 @@ BEGIN
         RETURN
     END
 
-    -- Same predicates as the pending and approved-unactivated reads.
+    -- Same predicates as the pending read.
     IF EXISTS (
         SELECT 1 FROM [dbo].[AccessRequest] AR
         WHERE AR.[RequesterId] = @RequesterId AND AR.[CipherId] = @CipherId AND AR.[NotAfter] > @CreationDate
-            AND (
-                AR.[Action] = 0
-                OR (
-                    AR.[Action] = 1 AND AR.[ExtensionOfLeaseId] IS NULL
-                    AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] AL WHERE AL.[AccessRequestId] = AR.[Id])
-                )
-            )
+            AND AR.[Action] = 0
     )
     BEGIN
         ROLLBACK TRANSACTION
-        SELECT 0 -- OpenRequestExists
+        SELECT 0 -- PendingRequestExists
+        RETURN
+    END
+
+    -- Same predicates as the approved-unactivated read.
+    IF EXISTS (
+        SELECT 1 FROM [dbo].[AccessRequest] AR
+        WHERE AR.[RequesterId] = @RequesterId AND AR.[CipherId] = @CipherId AND AR.[NotAfter] > @CreationDate
+            AND AR.[Action] = 1 AND AR.[ExtensionOfLeaseId] IS NULL
+            AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] AL WHERE AL.[AccessRequestId] = AR.[Id])
+    )
+    BEGIN
+        ROLLBACK TRANSACTION
+        SELECT -2 -- ApprovedRequestExists
         RETURN
     END
 
@@ -272,3 +286,13 @@ END
 
 GO
 
+-- Covers the in-window lease checks so they never fetch the row. A revoke locks the row first and the index second,
+-- so an activation that read the index and then fetched the row could deadlock with it.
+IF EXISTS (SELECT 1 FROM sys.indexes WHERE [name] = 'IX_AccessLease_CipherId_Action_NotAfter' AND [object_id] = OBJECT_ID('[dbo].[AccessLease]'))
+BEGIN
+    CREATE NONCLUSTERED INDEX [IX_AccessLease_CipherId_Action_NotAfter]
+        ON [dbo].[AccessLease] ([CipherId] ASC, [Action] ASC, [NotAfter] DESC)
+        INCLUDE ([NotBefore], [RequesterId])
+        WITH (DROP_EXISTING = ON);
+END
+GO

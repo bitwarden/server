@@ -197,8 +197,10 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         {
             case AccessRequestCreateOutcome.ActiveLeaseExists:
                 throw new BadRequestException("You already have active access to this item.");
-            case AccessRequestCreateOutcome.OpenRequestExists:
+            case AccessRequestCreateOutcome.PendingRequestExists:
                 throw new BadRequestException("You already have a pending request for this item.");
+            case AccessRequestCreateOutcome.ApprovedRequestExists:
+                throw new BadRequestException("You already have an approved request for this item.");
         }
     }
 

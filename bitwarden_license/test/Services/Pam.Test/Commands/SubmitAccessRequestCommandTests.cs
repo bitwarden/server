@@ -572,7 +572,7 @@ public class SubmitAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_Human_LosesRaceToOpenRequest_ThrowsAndDoesNotNotify(
+    public async Task SubmitAsync_Human_LosesRaceToPendingRequest_ThrowsAndDoesNotNotify(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
@@ -580,7 +580,7 @@ public class SubmitAccessRequestCommandTests
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
         sutProvider.GetDependency<IAccessRequestRepository>()
             .CreateIfNoOpenAsync(Arg.Any<AccessRequest>(), Arg.Any<DateTime>())
-            .Returns(AccessRequestCreateOutcome.OpenRequestExists);
+            .Returns(AccessRequestCreateOutcome.PendingRequestExists);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SubmitAsync(userId, cipherId,
             new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2), Reason = "audit" }));
@@ -608,7 +608,7 @@ public class SubmitAccessRequestCommandTests
     }
 
     [Theory, BitAutoData]
-    public async Task SubmitAsync_Automatic_LosesRaceToOpenRequest_ThrowsAndDoesNotNotify(
+    public async Task SubmitAsync_Automatic_LosesRaceToApprovedRequest_ThrowsAndDoesNotNotify(
         Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
     {
         var sutProvider = Setup();
@@ -617,12 +617,12 @@ public class SubmitAccessRequestCommandTests
         SetupEvaluation(sutProvider, AccessEvaluation.Allow);
         sutProvider.GetDependency<IAccessRequestRepository>()
             .CreateAutoApprovedAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>())
-            .Returns(AccessRequestCreateOutcome.OpenRequestExists);
+            .Returns(AccessRequestCreateOutcome.ApprovedRequestExists);
 
         var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SubmitAsync(userId, cipherId,
             new AccessRequestSubmission { DurationSeconds = 3600 }));
 
-        Assert.Contains("already have a pending request", ex.Message);
+        Assert.Contains("already have an approved request", ex.Message);
         await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
             .NotifyRequesterAsync(default);
     }

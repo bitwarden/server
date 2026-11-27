@@ -37,7 +37,7 @@ public class AccessRequestSubmitRaceTests
             accessRequestRepository.CreateIfNoOpenAsync(BuildOpenRequest(organization.Id, requesterId, cipherId, now), now))));
 
         Assert.Equal(1, outcomes.Count(o => o == AccessRequestCreateOutcome.Created));
-        Assert.Equal(Contenders - 1, outcomes.Count(o => o == AccessRequestCreateOutcome.OpenRequestExists));
+        Assert.Equal(Contenders - 1, outcomes.Count(o => o == AccessRequestCreateOutcome.PendingRequestExists));
         var stored = await accessRequestRepository.GetManyByRequesterIdAsync(requesterId, null, now);
         Assert.Single(stored, r => r.CipherId == cipherId);
     }
@@ -72,7 +72,7 @@ public class AccessRequestSubmitRaceTests
         })));
 
         Assert.Equal(1, outcomes.Count(o => o == AccessRequestCreateOutcome.Created));
-        Assert.Equal(Contenders - 1, outcomes.Count(o => o == AccessRequestCreateOutcome.OpenRequestExists));
+        Assert.Equal(Contenders - 1, outcomes.Count(o => o == AccessRequestCreateOutcome.ApprovedRequestExists));
     }
 
     [DatabaseTheory, DatabaseData]

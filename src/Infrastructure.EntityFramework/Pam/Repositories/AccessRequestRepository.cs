@@ -49,7 +49,7 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         });
 
     /// <summary>
-    /// Mirrors the submit checks: a live lease, then an open request or an approved one that has not been activated.
+    /// Mirrors the submit checks: a live lease, then a pending request, then an approved one that has not been activated.
     /// Null when the submit may proceed.
     /// </summary>
     private static async Task<AccessRequestCreateOutcome?> FindSubmitConflictAsync(
@@ -62,13 +62,17 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         }
 
         if (await dbContext.AccessRequests.AnyAsync(r => r.RequesterId == requesterId && r.CipherId == cipherId
-            && r.NotAfter > now
-            && (r.Action == AccessRequestAction.None
-                || (r.Action == AccessRequestAction.Approved
-                    && r.ExtensionOfLeaseId == null
-                    && !dbContext.AccessLeases.Any(l => l.AccessRequestId == r.Id)))))
+            && r.NotAfter > now && r.Action == AccessRequestAction.None))
         {
-            return AccessRequestCreateOutcome.OpenRequestExists;
+            return AccessRequestCreateOutcome.PendingRequestExists;
+        }
+
+        if (await dbContext.AccessRequests.AnyAsync(r => r.RequesterId == requesterId && r.CipherId == cipherId
+            && r.NotAfter > now && r.Action == AccessRequestAction.Approved
+            && r.ExtensionOfLeaseId == null
+            && !dbContext.AccessLeases.Any(l => l.AccessRequestId == r.Id)))
+        {
+            return AccessRequestCreateOutcome.ApprovedRequestExists;
         }
 
         return null;
@@ -521,14 +525,17 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         return await dbContext.AccessRequests.CountAsync(r => r.ExtensionOfLeaseId == leaseId);
     }
 
-    public async Task<AccessLeaseExtendOutcome> CreateApprovedExtensionAsync(CoreEntity request, AccessDecision decision, DateTime now, string? denialComment)
+    /// <remarks>Serializable, retried on a fresh transaction after a provider serialization failure.</remarks>
+    public Task<AccessLeaseExtendOutcome> CreateApprovedExtensionAsync(CoreEntity request, AccessDecision decision, DateTime now, string? denialComment)
+        => SerializableRetry.RunAsync(() => CreateApprovedExtensionCoreAsync(request, decision, now, denialComment));
+
+    private async Task<AccessLeaseExtendOutcome> CreateApprovedExtensionCoreAsync(CoreEntity request, AccessDecision decision, DateTime now, string? denialComment)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Serializable replaces the procedure's per-lease UPDLOCK, HOLDLOCK, but a losing concurrent extension may
-        // fail at commit (e.g. PostgreSQL 40001) instead of returning AlreadyExtended; callers should treat that as a
-        // conflict.
+        // Serializable replaces the procedure's per-lease UPDLOCK, HOLDLOCK. A losing concurrent extension may fail at
+        // commit (e.g. PostgreSQL 40001); SerializableRetry replays it, and the replay returns AlreadyExtended.
         await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
         var extensionOfLeaseId = request.ExtensionOfLeaseId;

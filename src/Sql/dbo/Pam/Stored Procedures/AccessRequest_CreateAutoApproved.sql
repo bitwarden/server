@@ -42,21 +42,28 @@ BEGIN
         RETURN
     END
 
-    -- Same predicates as the pending and approved-unactivated reads.
+    -- Same predicates as the pending read.
     IF EXISTS (
         SELECT 1 FROM [dbo].[AccessRequest] AR
         WHERE AR.[RequesterId] = @RequesterId AND AR.[CipherId] = @CipherId AND AR.[NotAfter] > @CreationDate
-            AND (
-                AR.[Action] = 0
-                OR (
-                    AR.[Action] = 1 AND AR.[ExtensionOfLeaseId] IS NULL
-                    AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] AL WHERE AL.[AccessRequestId] = AR.[Id])
-                )
-            )
+            AND AR.[Action] = 0
     )
     BEGIN
         ROLLBACK TRANSACTION
-        SELECT 0 -- OpenRequestExists
+        SELECT 0 -- PendingRequestExists
+        RETURN
+    END
+
+    -- Same predicates as the approved-unactivated read.
+    IF EXISTS (
+        SELECT 1 FROM [dbo].[AccessRequest] AR
+        WHERE AR.[RequesterId] = @RequesterId AND AR.[CipherId] = @CipherId AND AR.[NotAfter] > @CreationDate
+            AND AR.[Action] = 1 AND AR.[ExtensionOfLeaseId] IS NULL
+            AND NOT EXISTS (SELECT 1 FROM [dbo].[AccessLease] AL WHERE AL.[AccessRequestId] = AR.[Id])
+    )
+    BEGIN
+        ROLLBACK TRANSACTION
+        SELECT -2 -- ApprovedRequestExists
         RETURN
     END
 
