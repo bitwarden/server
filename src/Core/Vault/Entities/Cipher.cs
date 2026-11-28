@@ -27,6 +27,7 @@ public class Cipher : ITableObject<Guid>, ICloneable
     public Enums.CipherRepromptType? Reprompt { get; set; }
     public string Key { get; set; }
     public string Archives { get; set; }
+    public string Exclusions { get; set; }
 
     public void SetNewId()
     {
