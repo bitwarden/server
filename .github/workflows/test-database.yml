@@ -94,6 +94,13 @@ jobs:
         env:
           CONN_STR: "Server=localhost;Database=vault_dev;User Id=SA;Password=SET_A_PASSWORD_HERE_123;Encrypt=True;TrustServerCertificate=True;"
 
+      - name: Set cloud database options on SQL Server
+        working-directory: "dev"
+        run: >-
+          docker compose exec -T mssql bash -c
+          '/opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P "$MSSQL_SA_PASSWORD" -C -b -v DatabaseName=vault_dev'
+          < helpers/mssql/cloud_database_options.sql
+
       - name: Migrate MySQL
         working-directory: "util/MySqlMigrations"
         run: 'dotnet ef database update --connection "$CONN_STR" -- --GlobalSettings:MySql:ConnectionString="$CONN_STR"'

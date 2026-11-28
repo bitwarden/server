@@ -38,6 +38,24 @@ function Get-UserSecrets {
   return dotnet user-secrets list --json --project "$currentDir/../src/Api" | Where-Object { $_ -notmatch "^//" } | ConvertFrom-Json
 }
 
+# Gives a database in the dev mssql container the database options the cloud vault databases run with.
+function Set-CloudDatabaseOptions([string]$connectionString) {
+  $builder = [System.Data.Common.DbConnectionStringBuilder]::new()
+  $builder.set_ConnectionString($connectionString)
+  $database = $null
+  if (!$builder.TryGetValue("Database", [ref]$database)) {
+    $builder.TryGetValue("Initial Catalog", [ref]$database) | Out-Null
+  }
+
+  Write-Host "Setting cloud database options on $database"
+  Get-Content "$currentDir/helpers/mssql/cloud_database_options.sql" -Raw |
+    docker compose exec -T mssql bash -c "/opt/mssql-tools18/bin/sqlcmd -S localhost -U SA -P `"`$MSSQL_SA_PASSWORD`" -C -b -h -1 -v DatabaseName=$database" |
+    Out-Null
+  if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Could not set the cloud database options on $database; is the dev mssql container running?"
+  }
+}
+
 if ($all -or $mssql) {
   if ($all -or !$test) {
     if ($selfhost) {
@@ -50,6 +68,9 @@ if ($all -or $mssql) {
 
     Write-Host "Starting Microsoft SQL Server Migrations for $envName"
     dotnet run --project ../util/MsSqlMigratorUtility/ "$msSqlConnectionString"
+    if (!$selfhost) {
+      Set-CloudDatabaseOptions $msSqlConnectionString
+    }
   }
 
   if ($all -or $test) {
@@ -58,6 +79,7 @@ if ($all -or $mssql) {
       $testEnvName = "test databases"
       Write-Host "Starting Microsoft SQL Server Migrations for $testEnvName"
       dotnet run --project ../util/MsSqlMigratorUtility/ "$testMsSqlConnectionString"
+      Set-CloudDatabaseOptions $testMsSqlConnectionString
     } else {
       Write-Host "Connection string for a test MSSQL database not found in secrets.json!"
     }
