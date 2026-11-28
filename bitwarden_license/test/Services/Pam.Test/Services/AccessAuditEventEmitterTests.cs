@@ -171,6 +171,7 @@ public class AccessAuditEventEmitterTests
     [BitAutoData(AccessAuditEventKind.RequestApproved, EventType.Pam_AccessRequest_Approved)]
     [BitAutoData(AccessAuditEventKind.RequestDenied, EventType.Pam_AccessRequest_Denied)]
     [BitAutoData(AccessAuditEventKind.RequestCancelled, EventType.Pam_AccessRequest_Cancelled)]
+    [BitAutoData(AccessAuditEventKind.RequestSubmissionRejected, EventType.Pam_AccessRequest_SubmissionRejected)]
     [BitAutoData(AccessAuditEventKind.LeaseActivated, EventType.Pam_AccessLease_Activated)]
     [BitAutoData(AccessAuditEventKind.LeaseActivationRejected, EventType.Pam_AccessLease_ActivationRejected)]
     [BitAutoData(AccessAuditEventKind.LeaseExtended, EventType.Pam_AccessLease_Extended)]
