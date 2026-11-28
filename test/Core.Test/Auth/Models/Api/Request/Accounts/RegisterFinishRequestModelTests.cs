@@ -581,6 +581,178 @@ public class RegisterFinishRequestModelTests
         Assert.Contains(results, r => r.ErrorMessage == "Invalid master password salt.");
     }
 
+    private static RegisterFinishRequestModel BuildModelWithEmailAndSalt(string email, string salt) => new()
+    {
+        Email = email,
+        UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
+        MasterPasswordUnlock = new MasterPasswordUnlockDataRequestModel
+        {
+            Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
+            MasterKeyWrappedUserKey = "wrapped",
+            Salt = salt
+        },
+        MasterPasswordAuthentication = new MasterPasswordAuthenticationDataRequestModel
+        {
+            Kdf = new KdfRequestModel { KdfType = KdfType.PBKDF2_SHA256, Iterations = KdfConstants.PBKDF2_ITERATIONS.Default },
+            MasterPasswordAuthenticationHash = "auth-hash",
+            Salt = salt
+        },
+        EmailVerificationToken = "token"
+    };
+
+    [Theory]
+    [InlineData("user@example.com", "user@example.com")]
+    [InlineData("User@Example.com", "user@example.com")]
+    [InlineData("USER@EXAMPLE.COM", "user@example.com")]
+    public void Validate_EmailSaltEqualsTrimmedLowercasedEmail_IsValid(string email, string salt)
+    {
+        var results = Validate(BuildModelWithEmailAndSalt(email, salt));
+
+        Assert.Empty(results);
+    }
+
+    [Theory]
+    [InlineData("User@Example.com", "User@Example.com")]
+    [InlineData("user@example.com", "User@example.com")]
+    [InlineData("user@example.com", "user@example.com ")]
+    [InlineData("user@example.com", " user@example.com")]
+    [InlineData("user@example.com", "other@example.com")]
+    [InlineData("user@example.com", "user@example.org")]
+    [InlineData("user@example.com", "user@")]
+    [InlineData("user@example.com", "@")]
+    public void Validate_EmailSaltDiffersFromTrimmedLowercasedEmail_ReturnsInvalidSaltError(string email, string salt)
+    {
+        var results = Validate(BuildModelWithEmailAndSalt(email, salt));
+
+        var result = Assert.Single(results);
+        Assert.Equal("Invalid master password salt.", result.ErrorMessage);
+        Assert.Contains(nameof(MasterPasswordUnlockDataRequestModel.Salt), result.MemberNames);
+    }
+
+    [Theory]
+    [InlineData("user@example.com", "dGhpcyBpcyBhIHNhbHQgdmFsdWU=")]
+    [InlineData("User@Example.com", "dGhpcyBpcyBhIHNhbHQgdmFsdWU=")]
+    [InlineData("user@example.com", "a3f1c2d4e5b60718293a4b5c6d7e8f90")]
+    [InlineData("user@example.com", "USER.EXAMPLE.COM")]
+    public void Validate_SaltWithoutAtSign_IsValidForAnyEmail(string email, string salt)
+    {
+        var results = Validate(BuildModelWithEmailAndSalt(email, salt));
+
+        Assert.Empty(results);
+    }
+
+    /// <summary>
+    /// For these non-ASCII domains, <see cref="string.ToLowerInvariant"/> gives the same salt that clients derive, so
+    /// the rule accepts it.
+    /// </summary>
+    [Theory]
+    [InlineData("user@ÜBER.de", "user@über.de")]
+    [InlineData("user@ΟΔΟΣ.gr", "user@οδοσ.gr")] // Σ before '.' and a letter is not at the end of a word.
+    [InlineData("user@ΣΟΦΙΑ.gr", "user@σοφια.gr")]
+    [InlineData("user@Σ-net.gr", "user@σ-net.gr")] // No letter comes before Σ.
+    [InlineData("user@οδος-net.gr", "user@οδος-net.gr")] // ς typed in lowercase.
+    [InlineData("user@I\u0307zmir.com.tr", "user@i\u0307zmir.com.tr")] // Decomposed İ: I + U+0307.
+    public void Validate_EmailSaltForNonAsciiDomain_IsValid(string email, string salt)
+    {
+        var results = Validate(BuildModelWithEmailAndSalt(email, salt));
+
+        Assert.Empty(results);
+    }
+
+    /// <summary>
+    /// For a capital Σ at the end of a word, clients give ς and <see cref="string.ToLowerInvariant"/> gives σ, so the
+    /// rule rejects the salt that clients send. The user can register by typing the email in lowercase: the email then
+    /// equals the client salt, and <see cref="string.ToLowerInvariant"/> does not change it.
+    /// </summary>
+    [Theory]
+    [InlineData("user@ΟΔΟΣ-net.gr", "user@οδος-net.gr")] // Σ before '-'.
+    [InlineData("user@ΟΔΟΣ1.gr", "user@οδος1.gr")] // Σ before a digit.
+    [InlineData("user@ΟΔΟΣ.1x.gr", "user@οδος.1x.gr")] // Σ before '.' and a digit.
+    [InlineData("user@example.ΑΣ", "user@example.ας")] // Σ at the end of the email.
+    public void Validate_EmailWithWordFinalCapitalSigma_RejectsTheClientSalt_AcceptsItWhenTheEmailIsTypedInLowercase(
+        string email, string clientSalt)
+    {
+        var result = Assert.Single(Validate(BuildModelWithEmailAndSalt(email, clientSalt)));
+        Assert.Equal("Invalid master password salt.", result.ErrorMessage);
+
+        Assert.Empty(Validate(BuildModelWithEmailAndSalt(email: clientSalt, clientSalt)));
+    }
+
+    /// <summary>
+    /// For İ (U+0130), clients give i + U+0307, so the rule rejects the salt that clients send. The user can register
+    /// by typing the email in lowercase: the email then equals the client salt and contains no İ.
+    /// </summary>
+    [Theory]
+    [InlineData("user@İzmir.com.tr", "user@i\u0307zmir.com.tr")]
+    [InlineData("user@İZMİR.com.tr", "user@i\u0307zmi\u0307r.com.tr")]
+    public void Validate_EmailWithCapitalIWithDotAbove_RejectsTheClientSalt_AcceptsItWhenTheEmailIsTypedInLowercase(
+        string email, string clientSalt)
+    {
+        var result = Assert.Single(Validate(BuildModelWithEmailAndSalt(email, clientSalt)));
+        Assert.Equal("Invalid master password salt.", result.ErrorMessage);
+
+        Assert.Empty(Validate(BuildModelWithEmailAndSalt(email: clientSalt, clientSalt)));
+    }
+
+    /// <summary>
+    /// When İ (U+0130) is in the top-level domain, typing the email in lowercase does not help. The email check
+    /// requires a top-level domain of letters only, and U+0307 is a combining mark. Such an email cannot register with
+    /// an email-derived salt.
+    /// </summary>
+    [Fact]
+    public void Validate_EmailWithCapitalIWithDotAboveInTopLevelDomain_HasNoLowercaseWorkaround()
+    {
+        var result = Assert.Single(Validate(BuildModelWithEmailAndSalt("user@example.İ", "user@example.i\u0307")));
+        Assert.Equal("Invalid master password salt.", result.ErrorMessage);
+
+        var lowercaseResults = Validate(BuildModelWithEmailAndSalt("user@example.i\u0307", "user@example.i\u0307"));
+        Assert.Contains(lowercaseResults, r => r.MemberNames.Contains(nameof(RegisterFinishRequestModel.Email)));
+    }
+
+    /// <summary>
+    /// <see cref="string.ToLowerInvariant"/> does not change İ (U+0130), so a salt that keeps İ equals the lowercased
+    /// email. Clients do not derive keys from that salt, so the rule rejects it.
+    /// </summary>
+    [Theory]
+    [InlineData("user@İzmir.com.tr", "user@İzmir.com.tr")]
+    [InlineData("user@İZMİR.com.tr", "user@İzmİr.com.tr")]
+    [InlineData("user@example.İ", "user@example.İ")]
+    public void Validate_EmailWithCapitalIWithDotAbove_SaltThatKeepsIt_ReturnsInvalidSaltError(string email, string salt)
+    {
+        Assert.Equal(salt, email.ToLowerInvariant());
+
+        var result = Assert.Single(Validate(BuildModelWithEmailAndSalt(email, salt)));
+
+        Assert.Equal("Invalid master password salt.", result.ErrorMessage);
+    }
+
+    [Fact]
+    public void Validate_EmailWithCapitalIWithDotAbove_SaltWithoutAtSign_IsValid()
+    {
+        var results = Validate(BuildModelWithEmailAndSalt("user@İzmir.com.tr", "dGhpcyBpcyBhIHNhbHQgdmFsdWU="));
+
+        Assert.Empty(results);
+    }
+
+    [Fact]
+    public void Validate_LegacyShapeWithoutSalt_DoesNotReturnSaltError()
+    {
+        var model = new RegisterFinishRequestModel
+        {
+            Email = "User@Example.com",
+            UserAsymmetricKeys = new KeysRequestModel { PublicKey = "pk", EncryptedPrivateKey = "sk" },
+            MasterPasswordHash = "auth-hash",
+            UserSymmetricKey = "wrapped",
+            Kdf = KdfType.PBKDF2_SHA256,
+            KdfIterations = KdfConstants.PBKDF2_ITERATIONS.Default,
+            EmailVerificationToken = "token"
+        };
+
+        var results = Validate(model);
+
+        Assert.Empty(results);
+    }
+
     private static RegisterFinishRequestModel BuildValidBaseModelWithoutToken() => new()
     {
         Email = "user@example.com",

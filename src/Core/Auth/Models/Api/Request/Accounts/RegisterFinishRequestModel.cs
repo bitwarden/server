@@ -205,6 +205,16 @@ public class RegisterFinishRequestModel : IValidatableObject
             }
         }
 
+        // 2.5 A salt that contains '@' is an email-derived salt. Clients derive it as the trimmed,
+        //     lowercased email, so any other email-derived value gives a salt that clients cannot
+        //     reproduce. A salt without '@' is not email-derived and is accepted as sent.
+        if (IsEmailDerivedSaltThatDoesNotMatchEmail(MasterPasswordUnlock?.Salt))
+        {
+            yield return new ValidationResult(
+                "Invalid master password salt.",
+                [nameof(MasterPasswordUnlock.Salt)]);
+        }
+
         // 3. Validate root kdf values if kdf values are not in the unlock and authentication.
         if (MasterPasswordUnlock == null && MasterPasswordAuthentication == null)
         {
@@ -345,5 +355,25 @@ public class RegisterFinishRequestModel : IValidatableObject
                 yield return new ValidationResult("Invalid registration finish request");
                 break;
         }
+    }
+
+    /// <summary>
+    /// Clients lowercase with the Unicode full mapping, which differs from <see cref="string.ToLowerInvariant"/> in
+    /// two cases. Both reject the client salt:
+    /// <list type="number">
+    ///   <item>İ (U+0130): clients give i + U+0307, and ToLowerInvariant keeps İ. Every email-derived salt is
+    ///   rejected when the email contains İ. A salt that keeps İ would match ToLowerInvariant, but clients derive
+    ///   the master key from its lowercase form, so later master password changes would fail.</item>
+    ///   <item>Σ at the end of a word: clients give ς, and ToLowerInvariant gives σ.</item>
+    /// </list>
+    /// Typing the email in lowercase avoids both, except for İ in the top-level domain, where the email check does
+    /// not allow U+0307.
+    /// </summary>
+    private bool IsEmailDerivedSaltThatDoesNotMatchEmail(string? salt)
+    {
+        return salt is not null &&
+               salt.Contains('@') &&
+               (Email.Contains('\u0130') ||
+                !string.Equals(salt, Email.ToLowerInvariant().Trim(), StringComparison.Ordinal));
     }
 }
