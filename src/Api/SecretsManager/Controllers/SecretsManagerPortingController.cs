@@ -7,6 +7,7 @@ using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.Commands.Porting.Interfaces;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Queries.Projects.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
@@ -24,10 +25,11 @@ public class SecretsManagerPortingController : Controller
     private readonly IMaxProjectsQuery _maxProjectsQuery;
     private readonly IImportCommand _importCommand;
     private readonly ICurrentContext _currentContext;
+    private readonly ISecretsManagerAccessQuery _secretsManagerAccessQuery;
 
     public SecretsManagerPortingController(ISecretRepository secretRepository, IProjectRepository projectRepository,
         IUserService userService, IMaxProjectsQuery maxProjectsQuery, IImportCommand importCommand,
-        ICurrentContext currentContext)
+        ICurrentContext currentContext, ISecretsManagerAccessQuery secretsManagerAccessQuery)
     {
         _secretRepository = secretRepository;
         _projectRepository = projectRepository;
@@ -35,12 +37,13 @@ public class SecretsManagerPortingController : Controller
         _maxProjectsQuery = maxProjectsQuery;
         _importCommand = importCommand;
         _currentContext = currentContext;
+        _secretsManagerAccessQuery = secretsManagerAccessQuery;
     }
 
     [HttpGet("sm/{organizationId}/export")]
     public async Task<SMExportResponseModel> Export([FromRoute] Guid organizationId)
     {
-        if (!await _currentContext.OrganizationAdmin(organizationId) || !_currentContext.AccessSecretsManager(organizationId))
+        if (!await _currentContext.OrganizationAdmin(organizationId) || !await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             throw new NotFoundException();
         }
@@ -60,7 +63,7 @@ public class SecretsManagerPortingController : Controller
     [HttpPost("sm/{organizationId}/import")]
     public async Task Import([FromRoute] Guid organizationId, [FromBody] SMImportRequestModel importRequest)
     {
-        if (!await _currentContext.OrganizationAdmin(organizationId) || !_currentContext.AccessSecretsManager(organizationId))
+        if (!await _currentContext.OrganizationAdmin(organizationId) || !await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             throw new NotFoundException();
         }

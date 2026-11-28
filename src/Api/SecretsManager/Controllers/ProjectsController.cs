@@ -11,6 +11,7 @@ using Bit.Core.Exceptions;
 using Bit.Core.SecretsManager.AuthorizationRequirements;
 using Bit.Core.SecretsManager.Commands.Projects.Interfaces;
 using Bit.Core.SecretsManager.Entities;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Queries.Projects.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
@@ -23,6 +24,7 @@ namespace Bit.Api.SecretsManager.Controllers;
 public class ProjectsController : Controller
 {
     private readonly ICurrentContext _currentContext;
+    private readonly ISecretsManagerAccessQuery _secretsManagerAccessQuery;
     private readonly IUserService _userService;
     private readonly IProjectRepository _projectRepository;
     private readonly IMaxProjectsQuery _maxProjectsQuery;
@@ -34,6 +36,7 @@ public class ProjectsController : Controller
 
     public ProjectsController(
         ICurrentContext currentContext,
+        ISecretsManagerAccessQuery secretsManagerAccessQuery,
         IUserService userService,
         IProjectRepository projectRepository,
         IMaxProjectsQuery maxProjectsQuery,
@@ -44,6 +47,7 @@ public class ProjectsController : Controller
         IEventService eventService)
     {
         _currentContext = currentContext;
+        _secretsManagerAccessQuery = secretsManagerAccessQuery;
         _userService = userService;
         _projectRepository = projectRepository;
         _maxProjectsQuery = maxProjectsQuery;
@@ -57,7 +61,7 @@ public class ProjectsController : Controller
     [HttpGet("organizations/{organizationId}/projects")]
     public async Task<ListResponseModel<ProjectResponseModel>> ListByOrganizationAsync([FromRoute] Guid organizationId)
     {
-        if (!_currentContext.AccessSecretsManager(organizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             throw new NotFoundException();
         }
@@ -133,7 +137,7 @@ public class ProjectsController : Controller
             throw new NotFoundException();
         }
 
-        if (!_currentContext.AccessSecretsManager(project.OrganizationId))
+        if (!await _secretsManagerAccessQuery.HasAccessAsync(project.OrganizationId))
         {
             throw new NotFoundException();
         }
@@ -167,7 +171,7 @@ public class ProjectsController : Controller
         // Ensure all projects belongs to the same organization
         var organizationId = projects.First().OrganizationId;
         if (projects.Any(p => p.OrganizationId != organizationId) ||
-            !_currentContext.AccessSecretsManager(organizationId))
+            !await _secretsManagerAccessQuery.HasAccessAsync(organizationId))
         {
             throw new NotFoundException();
         }

@@ -3,7 +3,6 @@ using Bit.Api.SecretsManager.Controllers;
 using Bit.Api.SecretsManager.Models.Request;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Pricing;
-using Bit.Core.Context;
 using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Models.Business;
@@ -13,6 +12,7 @@ using Bit.Core.SecretsManager.Commands.AccessTokens.Interfaces;
 using Bit.Core.SecretsManager.Commands.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Entities;
 using Bit.Core.SecretsManager.Models.Data;
+using Bit.Core.SecretsManager.Queries.Interfaces;
 using Bit.Core.SecretsManager.Queries.ServiceAccounts.Interfaces;
 using Bit.Core.SecretsManager.Repositories;
 using Bit.Core.Services;
@@ -36,7 +36,7 @@ public class ServiceAccountsControllerTests
     public async Task GetServiceAccountsByOrganization_ReturnsEmptyList(
         SutProvider<ServiceAccountsController> sutProvider, Guid id)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(id).Returns(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(id).Returns(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         var result = await sutProvider.Sut.ListByOrganizationAsync(id);
 
@@ -52,7 +52,7 @@ public class ServiceAccountsControllerTests
     public async Task GetServiceAccountsByOrganization_Success(SutProvider<ServiceAccountsController> sutProvider,
         ServiceAccountSecretsDetails resultServiceAccount)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(default).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(Guid.NewGuid());
         sutProvider.GetDependency<IServiceAccountSecretsDetailsQuery>().GetManyByOrganizationIdAsync(default, default, default, default)
             .ReturnsForAnyArgs(new List<ServiceAccountSecretsDetails> { resultServiceAccount });
@@ -71,7 +71,7 @@ public class ServiceAccountsControllerTests
     public async Task GetServiceAccountsByOrganization_AccessDenied_Throws(
         SutProvider<ServiceAccountsController> sutProvider, Guid orgId)
     {
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(default).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(default).ReturnsForAnyArgs(false);
 
         await Assert.ThrowsAsync<NotFoundException>(() =>
             sutProvider.Sut.ListByOrganizationAsync(orgId));
@@ -353,7 +353,7 @@ public class ServiceAccountsControllerTests
         {
             sa.OrganizationId = organizationId;
         }
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(false);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Is(organizationId)).ReturnsForAnyArgs(false);
         sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
         await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.BulkDeleteAsync(ids));
         await sutProvider.GetDependency<IDeleteServiceAccountsCommand>().DidNotReceiveWithAnyArgs().DeleteServiceAccounts(Arg.Any<List<ServiceAccount>>());
@@ -375,7 +375,7 @@ public class ServiceAccountsControllerTests
         sutProvider.GetDependency<IAuthorizationService>()
             .AuthorizeAsync(Arg.Any<ClaimsPrincipal>(), data.First(),
                 Arg.Any<IEnumerable<IAuthorizationRequirement>>()).Returns(AuthorizationResult.Failed());
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
@@ -403,7 +403,7 @@ public class ServiceAccountsControllerTests
                     Arg.Any<IEnumerable<IAuthorizationRequirement>>()).ReturnsForAnyArgs(AuthorizationResult.Success());
         }
 
-        sutProvider.GetDependency<ICurrentContext>().AccessSecretsManager(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
+        sutProvider.GetDependency<ISecretsManagerAccessQuery>().HasAccessAsync(Arg.Is(organizationId)).ReturnsForAnyArgs(true);
         sutProvider.GetDependency<IServiceAccountRepository>().GetManyByIds(Arg.Is(ids)).ReturnsForAnyArgs(data);
         sutProvider.GetDependency<IUserService>().GetProperUserId(default).ReturnsForAnyArgs(userId);
 
