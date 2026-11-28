@@ -44,6 +44,13 @@ public class GlobalSettings : IGlobalSettings
     public string LicenseCertificatePath { get; set; }
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
+    /// <summary>
+    /// The secret of the internal account lookup's clients (<c>lookup.{service}</c>): internal clients
+    /// that ask whether an address has an account on this server and whether an organization here
+    /// blocks account creation on its domain. Unset, the clients don't exist and the lookup answers
+    /// <c>404</c>. Never logged.
+    /// </summary>
+    public virtual string AccountLookupClientSecret { get; set; }
     public virtual string OidcIdentityClientKey { get; set; }
     public virtual string HibpApiKey { get; set; }
     public virtual bool DisableUserRegistration { get; set; }

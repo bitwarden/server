@@ -75,6 +75,11 @@ public static class ServiceCollectionExtensions
             services.AddClientProvider<InternalClientProvider>("internal");
         }
 
+        if (CoreHelpers.SettingHasValue(globalSettings.AccountLookupClientSecret))
+        {
+            services.AddClientProvider<AccountLookupClientProvider>(AccountLookupClientProvider.Prefix);
+        }
+
         services.AddClientProvider<UserClientProvider>("user");
         services.AddClientProvider<OrganizationClientProvider>("organization");
         services.AddClientProvider<SecretsManagerApiKeyProvider>(SecretsManagerApiKeyProvider.ApiKeyPrefix);
