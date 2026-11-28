@@ -5,6 +5,7 @@ using Bit.Core.Vault.Enums;
 using Bit.Pam.Enums;
 using Bit.Seeder.Queries;
 using Bit.Seeder.Scenes;
+using Bit.Test.Common.Helpers;
 using Duende.IdentityModel.Client;
 using Microsoft.EntityFrameworkCore;
 using Xunit;
@@ -267,7 +268,7 @@ public class PamAccessConnectorSceneTests : IClassFixture<InPlaySeederApiApplica
             })).GetProperty("apiKeyId").GetGuid();
 
         var response = await _client.DeleteAsync($"/seed/{playId}");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var remaining = await _factory.QueryAsync(db => db.ApiKeys.CountAsync(k => k.Id == apiKeyId));
         Assert.Equal(0, remaining);

@@ -77,7 +77,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         await CreateProjectsAsync(org.Id);
 
         var response = await _client.GetAsync($"/organizations/{org.Id}/projects");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<ProjectResponseModel>>();
         Assert.NotNull(result);
@@ -92,7 +92,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var (projectIds, org) = await SetupProjectsWithAccessAsync(permissionType);
 
         var response = await _client.GetAsync($"/organizations/{org.Id}/projects");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var result = await response.Content.ReadFromJsonAsync<ListResponseModel<ProjectResponseModel>>();
         Assert.NotNull(result);
@@ -153,7 +153,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var request = new ProjectCreateRequestModel { Name = _mockEncryptedString };
 
         var response = await _client.PostAsJsonAsync($"/organizations/{org.Id}/projects", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<ProjectResponseModel>();
 
         Assert.NotNull(result);
@@ -220,7 +220,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var request = new ProjectUpdateRequestModel { Name = mockEncryptedString2 };
 
         var response = await _client.PutAsJsonAsync($"/projects/{initialProject.Id}", request);
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<ProjectResponseModel>();
         Assert.NotEqual(initialProject.Name, result!.Name);
         AssertHelper.AssertRecent(result.RevisionDate);
@@ -343,7 +343,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var project = await SetupProjectWithAccessAsync(permissionType);
 
         var response = await _client.GetAsync($"/projects/{project.Id}");
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadFromJsonAsync<ProjectResponseModel>();
         Assert.Equal(project.Name, result!.Name);
         Assert.Equal(project.RevisionDate, result.RevisionDate);
@@ -397,7 +397,7 @@ public class ProjectsControllerTests : IClassFixture<ApiApplicationFactory>, IAs
         var (projectIds, _) = await SetupProjectsWithAccessAsync(permissionType);
 
         var response = await _client.PostAsync("/projects/delete", JsonContent.Create(projectIds));
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var results = await response.Content.ReadFromJsonAsync<ListResponseModel<BulkDeleteResponseModel>>();
         Assert.NotNull(results);

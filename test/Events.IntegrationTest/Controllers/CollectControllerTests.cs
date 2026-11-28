@@ -9,6 +9,7 @@ using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
 using Bit.Events.Models;
+using Bit.Test.Common.Helpers;
 
 namespace Bit.Events.IntegrationTest.Controllers;
 
@@ -67,7 +68,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -85,7 +86,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -103,7 +104,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -121,7 +122,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -139,7 +140,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -157,7 +158,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -175,7 +176,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -193,7 +194,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -211,7 +212,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -229,7 +230,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -244,7 +245,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -260,7 +261,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -278,7 +279,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -293,7 +294,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -309,7 +310,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -345,7 +346,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -365,7 +366,7 @@ public class CollectControllerTests : IAsyncLifetime
 
         var response = await _client.PostAsJsonAsync<IEnumerable<EventModel>>("collect", events);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -381,7 +382,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -410,7 +411,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -441,7 +442,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
     }
 
     [Fact]
@@ -460,7 +461,7 @@ public class CollectControllerTests : IAsyncLifetime
             },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var stored = await GetSingleExportedVaultEventAsync(eventRepository);
         Assert.True(stored.Date >= sentAt.AddSeconds(-30),
@@ -478,7 +479,7 @@ public class CollectControllerTests : IAsyncLifetime
             new EventModel { Type = EventType.User_ClientExportedVault },
         ]);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var stored = await GetSingleExportedVaultEventAsync(eventRepository);
         Assert.True(stored.Date >= sentAt.AddSeconds(-30),

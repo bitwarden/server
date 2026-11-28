@@ -9,6 +9,7 @@ using Bit.Core.Entities;
 using Bit.Core.Enums;
 using Bit.Core.Models.Data;
 using Bit.Core.Repositories;
+using Bit.Test.Common.Helpers;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.KeyManagement.Controllers;
@@ -147,7 +148,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
         var pending = await _client.GetAsync(PendingUpgradesUri());
 
         // Assert - the owner's membership is not listed
-        pending.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(pending);
         Assert.DoesNotContain(organizationUser.Id.ToString(), await pending.Content.ReadAsStringAsync());
 
         // Act - the admin posts a key for the owner anyway
@@ -171,7 +172,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
 
         // Act - the admin reads the pending upgrade
         var pending = await _client.GetAsync(PendingUpgradesUri());
-        pending.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(pending);
         var pendingBody = await pending.Content.ReadAsStringAsync();
 
         // Assert - the response contains the token and the key id
@@ -181,7 +182,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
 
         // Act - the admin posts the re-wrapped key
         var upgrade = await _client.PostAsJsonAsync(UpgradesUri(), RequestFor(organizationUser.Id, _userKeyId));
-        upgrade.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(upgrade);
 
         // Assert - the key is replaced and the token is cleared
         var written = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
@@ -190,7 +191,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
         Assert.Null(written.V2UpgradeToken);
 
         var pendingAfter = await _client.GetAsync(PendingUpgradesUri());
-        pendingAfter.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(pendingAfter);
         Assert.DoesNotContain(organizationUser.Id.ToString(), await pendingAfter.Content.ReadAsStringAsync());
     }
 
@@ -203,14 +204,14 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
 
         // Act - the owner reads their own pending upgrade
         var pending = await _client.GetAsync(PendingUpgradesUri());
-        pending.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(pending);
 
         // Assert - the owner's own membership is listed
         Assert.Contains(organizationUser.Id.ToString(), await pending.Content.ReadAsStringAsync());
 
         // Act - the owner posts their own re-wrapped key
         var upgrade = await _client.PostAsJsonAsync(UpgradesUri(), RequestFor(organizationUser.Id, _userKeyId));
-        upgrade.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(upgrade);
 
         // Assert - the key is replaced and the token is cleared
         var written = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
@@ -219,7 +220,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
         Assert.Null(written.V2UpgradeToken);
 
         var pendingAfter = await _client.GetAsync(PendingUpgradesUri());
-        pendingAfter.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(pendingAfter);
         Assert.DoesNotContain(organizationUser.Id.ToString(), await pendingAfter.Content.ReadAsStringAsync());
     }
 
@@ -233,7 +234,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
 
         // Act - the admin reads the pending upgrade
         var pending = await _client.GetAsync(PendingUpgradesUri());
-        pending.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(pending);
         var pendingBody = await pending.Content.ReadAsStringAsync();
 
         // Assert - the membership is listed with a null token
@@ -243,7 +244,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
         // Act - the admin sends no key
         var upgrade = await _client.PostAsJsonAsync(UpgradesUri(),
             RequestFor(organizationUser.Id, _userKeyId, accountRecoveryKey: null));
-        upgrade.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(upgrade);
 
         // Assert - the member is unenrolled and the token is cleared
         var written = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
@@ -252,7 +253,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
         Assert.Null(written.V2UpgradeToken);
 
         var pendingAfter = await _client.GetAsync(PendingUpgradesUri());
-        pendingAfter.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(pendingAfter);
         Assert.DoesNotContain(organizationUser.Id.ToString(), await pendingAfter.Content.ReadAsStringAsync());
     }
 
@@ -269,7 +270,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
             RequestFor(organizationUser.Id, _userKeyId, accountRecoveryKey: null));
 
         // Assert
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var written = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
         Assert.NotNull(written);
@@ -277,7 +278,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
         Assert.Null(written.V2UpgradeToken);
 
         var pendingAfter = await _client.GetAsync(PendingUpgradesUri());
-        pendingAfter.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(pendingAfter);
         Assert.DoesNotContain(organizationUser.Id.ToString(), await pendingAfter.Content.ReadAsStringAsync());
     }
 
@@ -294,7 +295,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
             RequestFor(organizationUser.Id, "fedcba9876543210fedcba9876543210"));
 
         // Assert - the upgrade is skipped rather than rejected, and stays pending for the admin to read again
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var written = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
         Assert.NotNull(written);
@@ -302,7 +303,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
         Assert.Equal(_v2UpgradeToken, written.V2UpgradeToken);
 
         var pendingAfter = await _client.GetAsync(PendingUpgradesUri());
-        pendingAfter.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(pendingAfter);
         Assert.Contains(organizationUser.Id.ToString(), await pendingAfter.Content.ReadAsStringAsync());
     }
 
@@ -361,7 +362,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
         var pending = await _client.GetAsync(PendingUpgradesUri());
 
         // Assert - the member is not listed
-        pending.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(pending);
         Assert.DoesNotContain(organizationUser.Id.ToString(), await pending.Content.ReadAsStringAsync());
 
         // Act - the owner posts a key for the member anyway
@@ -397,7 +398,7 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
         var pending = await _client.GetAsync(PendingUpgradesUri());
 
         // Assert
-        pending.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(pending);
         Assert.DoesNotContain(organizationUser.Id.ToString(), await pending.Content.ReadAsStringAsync());
     }
 
@@ -423,14 +424,14 @@ public class OrganizationUsersKeysControllerTests : IClassFixture<ApiApplication
         var pending = await _client.GetAsync(PendingUpgradesUri());
 
         // Assert - the member is listed
-        pending.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(pending);
         Assert.Contains(organizationUser.Id.ToString(), await pending.Content.ReadAsStringAsync());
 
         // Act - the caller posts the re-wrapped key
         var upgrade = await _client.PostAsJsonAsync(UpgradesUri(), RequestFor(organizationUser.Id, _userKeyId));
 
         // Assert - the key is replaced and the token is cleared
-        upgrade.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(upgrade);
         var written = await _organizationUserRepository.GetByIdAsync(organizationUser.Id);
         Assert.NotNull(written);
         Assert.Equal(_v2AccountRecoveryKey, written.ResetPasswordKey);

@@ -13,6 +13,7 @@ using Bit.Core.Models;
 using Bit.Core.Platform.Push;
 using Bit.Core.Repositories;
 using Bit.Core.Services;
+using Bit.Test.Common.Helpers;
 using Microsoft.AspNetCore.Identity;
 using NSubstitute;
 using Xunit;
@@ -89,7 +90,7 @@ public class EmailChangeTests : IClassFixture<ApiApplicationFactory>, IAsyncLife
 
         var response = await PostEmailSelfServiceAsync(_client, newEmail, token, MasterPasswordHash);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var updatedUser = await _userRepository.GetByEmailAsync(newEmail);
         Assert.NotNull(updatedUser);
@@ -207,7 +208,7 @@ public class EmailChangeTests : IClassFixture<ApiApplicationFactory>, IAsyncLife
 
         var response = await PostEmailSelfServiceAsync(_client, newEmail, token, MasterPasswordHash);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         var updatedUser = await _userRepository.GetByEmailAsync(newEmail);
         Assert.NotNull(updatedUser);
@@ -285,7 +286,7 @@ public class EmailChangeTests : IClassFixture<ApiApplicationFactory>, IAsyncLife
 
         var response = await PostEmailTokenAsync(newEmail, MasterPasswordHash);
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         await _mailService.Received(1)
             .SendChangeEmailEmailAsync(newEmail, Arg.Is<string>(t => !string.IsNullOrEmpty(t)));
@@ -311,7 +312,7 @@ public class EmailChangeTests : IClassFixture<ApiApplicationFactory>, IAsyncLife
 
         // Success is returned to the caller so the API surface does not leak whether the new
         // email is already registered; the existing account is notified out-of-band instead.
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
 
         await _mailService.Received(1)
             .SendChangeEmailAlreadyExistsEmailAsync(_ownerEmail, existingEmail);

@@ -8,6 +8,7 @@ using Bit.Seeder.Scenes;
 using Bit.Seeder.Services;
 using Bit.SeederApi.Models.Request;
 using Bit.SeederApi.Models.Response;
+using Bit.Test.Common.Helpers;
 using Duende.IdentityModel.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -176,7 +177,7 @@ public class UserStripeBillingSceneTests : IAsyncLifetime
 
     private static async Task<JsonElement> ReadResultAsync(HttpResponseMessage response)
     {
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var model = await response.Content.ReadFromJsonAsync<SceneResponseModel>();
         Assert.NotNull(model?.Result);
         return (JsonElement)model.Result;

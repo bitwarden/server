@@ -1,5 +1,6 @@
 ﻿using System.Net;
 using Bit.SeederApi.Models.Request;
+using Bit.Test.Common.Helpers;
 using Duende.IdentityModel.Client;
 using Xunit;
 
@@ -42,7 +43,7 @@ public class QueryControllerTests : IClassFixture<SeederApiApplicationFactory>, 
             Arguments = System.Text.Json.JsonSerializer.SerializeToElement(new { email = testEmail })
         });
 
-        response.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(response);
         var result = await response.Content.ReadAsStringAsync();
 
         Assert.NotNull(result);

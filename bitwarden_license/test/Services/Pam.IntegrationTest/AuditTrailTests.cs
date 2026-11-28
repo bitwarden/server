@@ -10,6 +10,7 @@ using Bit.Core.Repositories;
 using Bit.Pam.Enums;
 using Bit.Pam.Models;
 using Bit.Pam.Repositories;
+using Bit.Test.Common.Helpers;
 using NSubstitute;
 using Xunit;
 
@@ -111,7 +112,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
                 conditions = JsonNode.Parse("""[{"kind":"human_approval","approverCount":1}]"""),
                 collections = Array.Empty<Guid>(),
             });
-        created.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(created);
         var ruleId = (await created.Content.ReadFromJsonAsync<JsonObject>())!["id"]!.GetValue<Guid>();
 
         var renamed = await Client.PutAsJsonAsync(
@@ -123,10 +124,10 @@ public class AuditTrailTests(ApiApplicationFactory factory)
                 conditions = JsonNode.Parse("""[{"kind":"human_approval","approverCount":1}]"""),
                 collections = Array.Empty<Guid>(),
             });
-        renamed.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(renamed);
 
         var deleted = await Client.DeleteAsync($"organizations/{Organization.Id}/access-rules/{ruleId}");
-        deleted.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(deleted);
 
         var rows = (await GetJsonAsync(AuditUrl))["data"]!.AsArray();
 
@@ -229,7 +230,7 @@ public class AuditTrailTests(ApiApplicationFactory factory)
                 collections = Array.Empty<Guid>(),
             });
         // The rule write itself still succeeds.
-        created.EnsureSuccessStatusCode();
+        await Assert.SuccessResponseAsync(created);
 
         var stored = await Factory.GetService<IAccessAuditEventRepository>()
             .GetPageByOrganizationIdAsync(Organization.Id, new AccessAuditTrailFilter
