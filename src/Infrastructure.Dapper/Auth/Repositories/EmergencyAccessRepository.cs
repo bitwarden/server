@@ -144,7 +144,7 @@ public class EmergencyAccessRepository : Repository<EmergencyAccess, Guid>, IEme
             }
 
             // Bulk copy data into temp table
-            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints, transaction))
             {
                 bulkCopy.DestinationTableName = "#TempEmergencyAccess";
                 var emergencyAccessTable = emergencyAccessKeys.ToDataTable();

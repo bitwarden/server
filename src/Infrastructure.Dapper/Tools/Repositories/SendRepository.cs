@@ -158,7 +158,7 @@ public class SendRepository : Repository<Send, Guid>, ISendRepository
             }
 
             // Bulk copy data into temp table
-            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+            using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints, transaction))
             {
                 bulkCopy.DestinationTableName = "#TempSend";
                 var sendsTable = sendsList.ToDataTable();

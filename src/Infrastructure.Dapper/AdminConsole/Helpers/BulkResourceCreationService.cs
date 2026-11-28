@@ -19,7 +19,7 @@ public static class BulkResourceCreationService
             .ThenBySqlGuid(cu => cu.OrganizationUserId)
             .ToList();
 
-        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction);
+        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints, transaction);
         bulkCopy.DestinationTableName = "[dbo].[CollectionUser]";
         bulkCopy.BatchSize = 500;
         bulkCopy.BulkCopyTimeout = 120;
@@ -33,7 +33,7 @@ public static class BulkResourceCreationService
 
     public static async Task CreateCiphersAsync(SqlConnection connection, SqlTransaction transaction, IEnumerable<Cipher> ciphers, string errorMessage = _defaultErrorMessage)
     {
-        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction);
+        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints, transaction);
         bulkCopy.DestinationTableName = "[dbo].[Cipher]";
         var dataTable = BuildCiphersTable(bulkCopy, ciphers, errorMessage);
         await bulkCopy.WriteToServerAsync(dataTable);
@@ -41,7 +41,7 @@ public static class BulkResourceCreationService
 
     public static async Task CreateFoldersAsync(SqlConnection connection, SqlTransaction transaction, IEnumerable<Folder> folders, string errorMessage = _defaultErrorMessage)
     {
-        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction);
+        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints, transaction);
         bulkCopy.DestinationTableName = "[dbo].[Folder]";
         var dataTable = BuildFoldersTable(bulkCopy, folders, errorMessage);
         await bulkCopy.WriteToServerAsync(dataTable);
@@ -49,7 +49,7 @@ public static class BulkResourceCreationService
 
     public static async Task CreateCollectionCiphersAsync(SqlConnection connection, SqlTransaction transaction, IEnumerable<CollectionCipher> collectionCiphers, string errorMessage = _defaultErrorMessage)
     {
-        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction);
+        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints, transaction);
         bulkCopy.DestinationTableName = "[dbo].[CollectionCipher]";
         var dataTable = BuildCollectionCiphersTable(bulkCopy, collectionCiphers, errorMessage);
         await bulkCopy.WriteToServerAsync(dataTable);
@@ -57,7 +57,7 @@ public static class BulkResourceCreationService
 
     public static async Task CreateTempCiphersAsync(SqlConnection connection, SqlTransaction transaction, IEnumerable<Cipher> ciphers, string errorMessage = _defaultErrorMessage)
     {
-        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction);
+        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints, transaction);
         bulkCopy.DestinationTableName = "#TempCipher";
         var dataTable = BuildCiphersTable(bulkCopy, ciphers, errorMessage);
         await bulkCopy.WriteToServerAsync(dataTable);
@@ -118,7 +118,7 @@ public static class BulkResourceCreationService
         // This lets us use the SqlBulkCopy.ColumnOrderHints to improve performance and reduce deadlocks.
         var sortedCollections = collections.OrderBySqlGuid(c => c.Id).ToList();
 
-        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction);
+        using var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints, transaction);
         bulkCopy.DestinationTableName = "[dbo].[Collection]";
         bulkCopy.BatchSize = 500;
         bulkCopy.BulkCopyTimeout = 120;

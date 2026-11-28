@@ -43,7 +43,7 @@ public class ProviderOrganizationRepository : Repository<ProviderOrganization, G
             {
                 try
                 {
-                    using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity, transaction))
+                    using (var bulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.KeepIdentity | SqlBulkCopyOptions.CheckConstraints, transaction))
                     {
                         bulkCopy.DestinationTableName = "[dbo].[ProviderOrganization]";
                         var dataTable = BuildProviderOrganizationsTable(bulkCopy, entities);
