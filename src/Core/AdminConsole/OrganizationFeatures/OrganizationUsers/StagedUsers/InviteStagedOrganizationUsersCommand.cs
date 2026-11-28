@@ -172,15 +172,14 @@ public class InviteStagedOrganizationUsersCommand(
     /// </remarks>
     private async Task InviteAsync(List<OrganizationUser> organizationUsers, Organization organization, Guid performedBy)
     {
-        var revisionDate = timeProvider.GetUtcNow().UtcDateTime;
+        var revisionDate = timeProvider.GetUtcNow();
         var previousRevisionDates = organizationUsers.ToDictionary(
             organizationUser => organizationUser.Id,
             organizationUser => organizationUser.RevisionDate);
 
         foreach (var organizationUser in organizationUsers)
         {
-            organizationUser.Status = OrganizationUserStatusType.Invited;
-            organizationUser.RevisionDate = revisionDate;
+            organizationUser.Invite(revisionDate);
         }
 
         await organizationUserRepository.ReplaceManyAsync(organizationUsers);

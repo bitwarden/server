@@ -1,7 +1,6 @@
 ﻿using Bit.Core.AdminConsole.Models.Business;
 using Bit.Core.Entities;
 using Bit.Core.Enums;
-using Bit.Core.Utilities;
 
 namespace Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.InviteUsers.Models;
 
@@ -11,18 +10,13 @@ public static class CreateOrganizationUserExtensions
         DateTimeOffset performedAt,
         InviteOrganization organization)
     {
-        var orgUser = new OrganizationUser
-        {
-            Id = CoreHelpers.GenerateComb(),
-            OrganizationId = organization.OrganizationId,
-            Email = organizationUserInvite.Email.ToLowerInvariant(),
-            Type = organizationUserInvite.Type,
-            Status = OrganizationUserStatusType.Invited,
-            AccessSecretsManager = organizationUserInvite.AccessSecretsManager,
-            ExternalId = string.IsNullOrWhiteSpace(organizationUserInvite.ExternalId) ? null : organizationUserInvite.ExternalId,
-            CreationDate = performedAt.UtcDateTime,
-            RevisionDate = performedAt.UtcDateTime
-        };
+        var orgUser = OrganizationUser.CreateInvited(
+            organization.OrganizationId,
+            organizationUserInvite.Email,
+            organizationUserInvite.Type,
+            string.IsNullOrWhiteSpace(organizationUserInvite.ExternalId) ? null : organizationUserInvite.ExternalId,
+            performedAt);
+        orgUser.AccessSecretsManager = organizationUserInvite.AccessSecretsManager;
 
         if (organizationUserInvite.Type == OrganizationUserType.Custom)
         {

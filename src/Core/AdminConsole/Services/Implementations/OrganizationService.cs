@@ -600,6 +600,7 @@ public class OrganizationService : IOrganizationService
         var orgUserInvitedCount = 0;
         var exceptions = new List<Exception>();
         var events = new List<(OrganizationUser, EventType, DateTime?)>();
+        var now = _timeProvider.GetUtcNow();
         foreach (var (invite, externalId) in invites)
         {
             // Prevent duplicate invitations
@@ -621,19 +622,9 @@ public class OrganizationService : IOrganizationService
                         continue;
                     }
 
-                    var orgUser = new OrganizationUser
-                    {
-                        OrganizationId = organizationId,
-                        UserId = null,
-                        Email = email.ToLowerInvariant(),
-                        Key = null,
-                        Type = invite.Type.Value,
-                        Status = OrganizationUserStatusType.Invited,
-                        AccessSecretsManager = invite.AccessSecretsManager,
-                        ExternalId = externalId,
-                        CreationDate = DateTime.UtcNow,
-                        RevisionDate = DateTime.UtcNow,
-                    };
+                    var orgUser = OrganizationUser.CreateInvited(organizationId, email, invite.Type.Value, externalId,
+                        now);
+                    orgUser.AccessSecretsManager = invite.AccessSecretsManager;
 
                     if (invite.Type == OrganizationUserType.Custom)
                     {
@@ -682,14 +673,13 @@ public class OrganizationService : IOrganizationService
         // Promote the staged rows set aside above. They keep their Id and ExternalId because SCIM and
         // Directory Connector key off both, and only the fields the invite specifies are overwritten.
         // The reminder fields match what sending the invites stores, because the promotion is saved after the send.
-        var inviteReminderDueDate = _timeProvider.GetUtcNow().UtcDateTime
+        var inviteReminderDueDate = now.UtcDateTime
             .AddHours(InviteReminderSchedule.GetIntervalHours(_globalSettings, _logger));
         foreach (var (orgUser, invite) in stagedInvitations.Values)
         {
             orgUser.Type = invite.Type.Value;
-            orgUser.Status = OrganizationUserStatusType.Invited;
+            orgUser.Invite(now);
             orgUser.AccessSecretsManager = invite.AccessSecretsManager;
-            orgUser.RevisionDate = DateTime.UtcNow;
             orgUser.InviteReminderDueDate = inviteReminderDueDate;
             orgUser.InviteRemindersSentCount = 0;
             // Custom permissions only apply to the Custom role, and a staged row may already carry some.

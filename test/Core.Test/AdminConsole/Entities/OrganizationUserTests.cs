@@ -195,6 +195,30 @@ public class OrganizationUserTests
     }
 
     [Fact]
+    public void CreateInvited_WithCreationDate_SetsCreationAndRevisionDatesInUtc()
+    {
+        var creationDate = new DateTimeOffset(2026, 11, 18, 9, 30, 0, TimeSpan.FromHours(-6));
+
+        var orgUser = OrganizationUser.CreateInvited(Guid.NewGuid(), "invitee@example.com", OrganizationUserType.User,
+            creationDate: creationDate);
+
+        Assert.Equal(creationDate.UtcDateTime, orgUser.CreationDate);
+        Assert.Equal(creationDate.UtcDateTime, orgUser.RevisionDate);
+        Assert.Equal(DateTimeKind.Utc, orgUser.CreationDate.Kind);
+    }
+
+    [Fact]
+    public void CreateInvited_NoCreationDate_StampsCurrentUtcTime()
+    {
+        var before = DateTime.UtcNow;
+
+        var orgUser = OrganizationUser.CreateInvited(Guid.NewGuid(), "invitee@example.com", OrganizationUserType.User);
+
+        Assert.InRange(orgUser.CreationDate, before, DateTime.UtcNow);
+        Assert.Equal(orgUser.CreationDate, orgUser.RevisionDate);
+    }
+
+    [Fact]
     public void CreateAccepted_ReturnsAcceptedShape()
     {
         var organizationId = Guid.NewGuid();
@@ -286,12 +310,30 @@ public class OrganizationUserTests
         var orgUser = OrganizationUser.CreateStaged(Guid.NewGuid(), "staged@example.com", "external-id",
             OrganizationUserType.User);
 
+        orgUser.RevisionDate = DateTime.UtcNow.AddDays(-1);
+        var before = DateTime.UtcNow;
+
         orgUser.Invite();
 
         Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
         Assert.Equal("staged@example.com", orgUser.Email);
         Assert.Null(orgUser.UserId);
         Assert.Null(orgUser.Key);
+        Assert.InRange(orgUser.RevisionDate, before, DateTime.UtcNow);
+    }
+
+    [Fact]
+    public void Invite_WithRevisionDate_SetsRevisionDateInUtc()
+    {
+        var orgUser = OrganizationUser.CreateStaged(Guid.NewGuid(), "staged@example.com", "external-id",
+            OrganizationUserType.User);
+        var revisionDate = new DateTimeOffset(2026, 11, 18, 9, 30, 0, TimeSpan.FromHours(-6));
+
+        orgUser.Invite(revisionDate);
+
+        Assert.Equal(OrganizationUserStatusType.Invited, orgUser.Status);
+        Assert.Equal(revisionDate.UtcDateTime, orgUser.RevisionDate);
+        Assert.Equal(DateTimeKind.Utc, orgUser.RevisionDate.Kind);
     }
 
     [Fact]

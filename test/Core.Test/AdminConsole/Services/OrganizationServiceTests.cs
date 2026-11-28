@@ -32,6 +32,7 @@ using Bit.Core.Tokens;
 using Bit.Test.Common.AutoFixture;
 using Bit.Test.Common.AutoFixture.Attributes;
 using Bit.Test.Common.Fakes;
+using Microsoft.Extensions.Time.Testing;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
 using NSubstitute.ReturnsExtensions;
@@ -618,6 +619,15 @@ public class OrganizationServiceTests
             .SendInvitesAsync(Arg.Is<SendInvitesRequest>(info =>
                 info.Organization == organization &&
                 info.Users.Length == invites.SelectMany(x => x.invite.Emails).Distinct().Count()));
+
+        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>().Received(1)
+            .SendInvitesAsync(Arg.Is<SendInvitesRequest>(info =>
+                info.Users.All(u =>
+                    u.OrganizationId == organization.Id &&
+                    u.Status == OrganizationUserStatusType.Invited &&
+                    u.Email == u.Email!.ToLowerInvariant() &&
+                    u.UserId == null &&
+                    u.Key == null)));
 
         await sutProvider.GetDependency<IEventService>().Received(1).LogOrganizationUserEventsAsync(Arg.Any<IEnumerable<(OrganizationUser, EventType, DateTime?)>>());
     }
@@ -1827,6 +1837,60 @@ public class OrganizationServiceTests
         await sutProvider.GetDependency<ISendOrganizationInvitesCommand>()
             .Received(1)
             .SendInvitesAsync(Arg.Is<SendInvitesRequest>(r => r.Users.Single().Id == stagedUser.Id));
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUser_EmailBelongsToStagedUser_StampsRevisionDateFromTimeProvider(
+        Organization organization, OrganizationUserInvite invite, string externalId, OrganizationUser invitor,
+        OrganizationUser stagedUser, SutProvider<OrganizationService> sutProvider)
+    {
+        var now = new DateTimeOffset(2026, 11, 18, 12, 0, 0, TimeSpan.Zero);
+        // The injected SutProvider already registered a TimeProvider under the constructor's parameter name.
+        sutProvider.SetDependency<TimeProvider>(new FakeTimeProvider(now), "timeProvider");
+        stagedUser.Status = OrganizationUserStatusType.Staged;
+        stagedUser.RevisionDate = now.UtcDateTime.AddDays(-1);
+        InviteUser_ArrangeExistingOrgUser(organization, invite, stagedUser, sutProvider);
+
+        await sutProvider.Sut.InviteUserAsync(organization.Id, invitor.UserId, systemUser: null, invite, externalId);
+
+        Assert.Equal(OrganizationUserStatusType.Invited, stagedUser.Status);
+        Assert.Equal(now.UtcDateTime, stagedUser.RevisionDate);
+    }
+
+    [Theory]
+    [OrganizationInviteCustomize(InviteeUserType = OrganizationUserType.User,
+        InvitorUserType = OrganizationUserType.Owner), OrganizationCustomize, BitAutoData]
+    public async Task InviteUsers_NewMembers_StampsDatesFromTimeProvider(Organization organization,
+        IEnumerable<(OrganizationUserInvite invite, string externalId)> invites, OrganizationUser invitor,
+        SutProvider<OrganizationService> sutProvider)
+    {
+        var now = new DateTimeOffset(2026, 11, 18, 12, 0, 0, TimeSpan.Zero);
+        organization.Seats = 100;
+        // The injected SutProvider already registered a TimeProvider under the constructor's parameter name.
+        sutProvider.SetDependency<TimeProvider>(new FakeTimeProvider(now), "timeProvider");
+        sutProvider.SetDependency(_orgUserInviteTokenDataFactory, "orgUserInviteTokenDataFactory");
+        sutProvider.Create();
+
+        InviteUser_ArrangeCurrentContextPermissions(organization, sutProvider);
+        var organizationUserRepository = sutProvider.GetDependency<IOrganizationUserRepository>();
+        sutProvider.GetDependency<IOrganizationRepository>().GetByIdAsync(organization.Id).Returns(organization);
+        sutProvider.GetDependency<IOrganizationRepository>()
+            .GetOccupiedSeatCountByOrganizationIdAsync(organization.Id)
+            .Returns(new OrganizationSeatCounts { Sponsored = 0, Users = 1 });
+        sutProvider.GetDependency<IHasConfirmedOwnersExceptQuery>()
+            .HasConfirmedOwnersExceptAsync(organization.Id, Arg.Any<IEnumerable<Guid>>())
+            .Returns(true);
+        SetupOrgUserRepositoryCreateManyAsyncMock(organizationUserRepository);
+        SetupOrgUserRepositoryCreateAsyncMock(organizationUserRepository);
+
+        await sutProvider.Sut.InviteUsersAsync(organization.Id, invitor.UserId, systemUser: null, invites);
+
+        await sutProvider.GetDependency<ISendOrganizationInvitesCommand>().Received(1)
+            .SendInvitesAsync(Arg.Is<SendInvitesRequest>(info =>
+                info.Users.Length > 0 &&
+                info.Users.All(u => u.CreationDate == now.UtcDateTime && u.RevisionDate == now.UtcDateTime)));
     }
 
     [Theory]

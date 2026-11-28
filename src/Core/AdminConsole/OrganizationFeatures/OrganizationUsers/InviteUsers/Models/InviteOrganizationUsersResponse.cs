@@ -13,7 +13,12 @@ public class InviteOrganizationUsersResponse(Guid organizationId)
     public InviteOrganizationUsersResponse(InviteOrganizationUsersValidationRequest usersValidationRequest)
         : this(usersValidationRequest.InviteOrganization.OrganizationId)
     {
-        InvitedUsers = usersValidationRequest.Invites.Select(x => new OrganizationUser { Email = x.Email });
+        InvitedUsers =
+        [
+            .. usersValidationRequest.Invites
+                .Select(x => OrganizationUser.CreateInvited(
+                    usersValidationRequest.InviteOrganization.OrganizationId, x.Email, x.Type, x.ExternalId))
+        ];
     }
 
     public InviteOrganizationUsersResponse(IEnumerable<OrganizationUser> invitedOrganizationUsers, Guid organizationId)
@@ -30,16 +35,5 @@ public class ScimInviteOrganizationUsersResponse
     public ScimInviteOrganizationUsersResponse()
     {
 
-    }
-
-    public ScimInviteOrganizationUsersResponse(InviteOrganizationUsersRequest request)
-    {
-        var userToInvite = request.Invites.First();
-
-        InvitedUser = new OrganizationUser
-        {
-            Email = userToInvite.Email,
-            ExternalId = userToInvite.ExternalId
-        };
     }
 }
