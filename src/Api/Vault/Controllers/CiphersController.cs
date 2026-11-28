@@ -32,6 +32,7 @@ using Bit.Core.Vault.Models.Data;
 using Bit.Core.Vault.Queries;
 using Bit.Core.Vault.Repositories;
 using Bit.Core.Vault.Services;
+using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -1649,6 +1650,7 @@ public class CiphersController : Controller
     [SelfHosted(SelfHostedOnly = true)]
     [RequestSizeLimit(Constants.FileSize501mb)]
     [DisableFormValueModelBinding]
+    [MultipartFileUpload]
     public async Task PostFileForExistingAttachment(Guid id, string attachmentId)
     {
         if (!Request?.ContentType.Contains("multipart/") ?? true)
@@ -1780,6 +1782,7 @@ public class CiphersController : Controller
     /// </summary>
     [AllowAnonymous]
     [HttpGet("attachment/download")]
+    [ProducesResponseType(typeof(FileStreamResult), StatusCodes.Status200OK, "application/octet-stream")]
     public async Task<IActionResult> DownloadAttachmentAsync([FromQuery] string token)
     {
         if (string.IsNullOrEmpty(token))
@@ -1813,6 +1816,7 @@ public class CiphersController : Controller
     [HttpPost("{id}/attachment/{attachmentId}/share")]
     [RequestSizeLimit(Constants.FileSize101mb)]
     [DisableFormValueModelBinding]
+    [MultipartFileUpload("key")]
     public async Task PostAttachmentShare(string id, string attachmentId, Guid organizationId)
     {
         ValidateAttachment();
