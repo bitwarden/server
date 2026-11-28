@@ -2684,6 +2684,32 @@ public class CiphersControllerTests
     }
 
     [Theory, BitAutoData]
+    public async Task Get_LeasingGatedCipher_BrowserExtensionBelowMinimumVersion_ThrowsNotFound(
+        Guid cipherId, Guid userId, User user, SutProvider<CiphersController> sutProvider)
+    {
+        user.Id = userId;
+        sutProvider.GetDependency<IUserService>().GetUserByPrincipalAsync(default).ReturnsForAnyArgs(user);
+        var cipherDetails = new CipherDetails
+        {
+            Id = cipherId,
+            UserId = userId,
+            Type = CipherType.Login,
+            Data = """{"Name":"2.name|encrypted","Password":"2.password|encrypted"}""",
+        };
+        sutProvider.GetDependency<ICipherRepository>().GetByIdAsync(cipherId, userId)
+            .Returns(Task.FromResult(cipherDetails));
+        sutProvider.GetDependency<ICipherLeaseGate>()
+            .AuthorizeReadAsync(userId, Arg.Any<Cipher>())
+            .Returns((FullCipherAccess)null);
+        sutProvider.GetDependency<ICurrentContext>().DeviceType.Returns(DeviceType.ChromeExtension);
+        sutProvider.GetDependency<ICurrentContext>().ClientVersion.Returns(new Version("2026.11.0"));
+        sutProvider.GetDependency<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PamBrowserPartialCiphers).Returns(true);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => sutProvider.Sut.Get(cipherId));
+    }
+
+    [Theory, BitAutoData]
     public async Task GetAll_UnsupportedClient_OmitsGatedCiphers(
         Guid userId, User user, SutProvider<CiphersController> sutProvider)
     {

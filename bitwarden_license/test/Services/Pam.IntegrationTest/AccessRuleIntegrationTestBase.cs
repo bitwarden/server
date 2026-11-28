@@ -17,7 +17,8 @@ namespace Bit.Services.Pam.IntegrationTest;
 
 /// <summary>
 /// Base for the PAM integration tests: the Api host over SQLite, the PAM flag on, and an enterprise organization.
-/// Setup runs per test, so a test that turns the PAM flag off does not leak into its siblings.
+/// Setup runs per test, so a test that turns the PAM flag off does not leak into its siblings. The client reports
+/// <see cref="Constants.PamPartialCipherMinimumVersion"/>, so it can be sent partial ciphers.
 /// </summary>
 public abstract class AccessRuleIntegrationTestBase : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
@@ -29,6 +30,7 @@ public abstract class AccessRuleIntegrationTestBase : IClassFixture<ApiApplicati
         // Every PAM group sits behind a feature flag, so without a substitute feature service nothing is routable.
         Factory.SubstituteService<IFeatureService>(_ => { });
         Client = factory.CreateClient();
+        Client.DefaultRequestHeaders.Add("Bitwarden-Client-Version", Constants.PamPartialCipherMinimumVersion);
         LoginHelper = new LoginHelper(factory, Client);
         FeatureService = factory.GetService<IFeatureService>();
         _emailPrefix = emailPrefix;
