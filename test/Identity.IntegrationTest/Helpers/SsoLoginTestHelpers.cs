@@ -47,6 +47,8 @@ public static class SsoLoginTestHelpers
         }, challenge, trustedDeviceEnabled);
 
         await configureFactory(factory);
+        // TODO: Send this request with AuthorizationCodeGrantTestHelpers.PostAuthorizationCodeAsync. The trusted device
+        // tests expect the device identifier "test_id" that this request sends.
         var context = await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(
             new Dictionary<string, string>
             {
