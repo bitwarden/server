@@ -259,8 +259,8 @@ public class SubmitAccessRequestCommandTests
         SetupCipher(sutProvider, userId, cipherId);
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true, ruleId);
         sutProvider.GetDependency<IAccessRequestRepository>()
-            .CreateAsync(Arg.Any<AccessRequest>())
-            .Returns(callInfo => callInfo.Arg<AccessRequest>());
+            .CreateIfNoOpenAsync(Arg.Any<AccessRequest>(), Arg.Any<DateTime>())
+            .Returns(AccessRequestCreateOutcome.Created);
 
         var start = _now.AddHours(1);
         var end = _now.AddHours(2);
@@ -338,7 +338,7 @@ public class SubmitAccessRequestCommandTests
 
         Assert.Contains("maximum of 1800 seconds", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(default!);
+            .CreateIfNoOpenAsync(default!, default);
     }
 
     [Theory, BitAutoData]
@@ -350,8 +350,8 @@ public class SubmitAccessRequestCommandTests
         SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true,
             maxLeaseDurationSeconds: 1800);
         sutProvider.GetDependency<IAccessRequestRepository>()
-            .CreateAsync(Arg.Any<AccessRequest>())
-            .Returns(callInfo => callInfo.Arg<AccessRequest>());
+            .CreateIfNoOpenAsync(Arg.Any<AccessRequest>(), Arg.Any<DateTime>())
+            .Returns(AccessRequestCreateOutcome.Created);
 
         var result = await sutProvider.Sut.SubmitAsync(userId, cipherId, new AccessRequestSubmission
         {
@@ -433,7 +433,7 @@ public class SubmitAccessRequestCommandTests
                 new AccessRequestSubmission { Start = _now.AddHours(-2), End = _now.AddHours(-1), Reason = "x" }));
         Assert.Contains("end date must be in the future", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(default!);
+            .CreateIfNoOpenAsync(default!, default);
     }
 
     [Theory, BitAutoData]
@@ -484,7 +484,7 @@ public class SubmitAccessRequestCommandTests
                 new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2), Reason = "x" }));
         Assert.Contains("already have an approved request", ex.Message);
         await sutProvider.GetDependency<IAccessRequestRepository>().DidNotReceiveWithAnyArgs()
-            .CreateAsync(default!);
+            .CreateIfNoOpenAsync(default!, default);
     }
 
     [Theory, BitAutoData]
@@ -571,6 +571,62 @@ public class SubmitAccessRequestCommandTests
             emitted.Select(e => (e.Kind, e.Phase)));
     }
 
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_Human_LosesRaceToPendingRequest_ThrowsAndDoesNotNotify(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .CreateIfNoOpenAsync(Arg.Any<AccessRequest>(), Arg.Any<DateTime>())
+            .Returns(AccessRequestCreateOutcome.PendingRequestExists);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2), Reason = "audit" }));
+
+        Assert.Contains("already have a pending request", ex.Message);
+        await sutProvider.GetDependency<IApproverInboxNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyCollectionApproversAsync(default);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_Human_LosesRaceToActiveLease_Throws(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: true);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .CreateIfNoOpenAsync(Arg.Any<AccessRequest>(), Arg.Any<DateTime>())
+            .Returns(AccessRequestCreateOutcome.ActiveLeaseExists);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { Start = _now.AddHours(1), End = _now.AddHours(2), Reason = "audit" }));
+
+        Assert.Contains("already have active access", ex.Message);
+    }
+
+    [Theory, BitAutoData]
+    public async Task SubmitAsync_Automatic_LosesRaceToApprovedRequest_ThrowsAndDoesNotNotify(
+        Guid userId, Guid cipherId, Guid orgId, Guid collectionId)
+    {
+        var sutProvider = Setup();
+        SetupCipher(sutProvider, userId, cipherId);
+        SetupResolution(sutProvider, userId, cipherId, orgId, collectionId, requiresHuman: false);
+        SetupEvaluation(sutProvider, AccessEvaluation.Allow);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .CreateAutoApprovedAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>())
+            .Returns(AccessRequestCreateOutcome.ApprovedRequestExists);
+
+        var ex = await Assert.ThrowsAsync<BadRequestException>(() => sutProvider.Sut.SubmitAsync(userId, cipherId,
+            new AccessRequestSubmission { DurationSeconds = 3600 }));
+
+        Assert.Contains("already have an approved request", ex.Message);
+        await sutProvider.GetDependency<IRequesterNotifier>().DidNotReceiveWithAnyArgs()
+            .NotifyRequesterAsync(default);
+    }
+
     private static List<AccessAuditEventData> CaptureEmitted(SutProvider<SubmitAccessRequestCommand> sutProvider)
     {
         var emitted = new List<AccessAuditEventData>();
@@ -582,13 +638,16 @@ public class SubmitAccessRequestCommandTests
     {
         var sutProvider = new SutProvider<SubmitAccessRequestCommand>().WithFakeTimeProvider().Create();
         sutProvider.GetDependency<FakeTimeProvider>().SetUtcNow(_now);
+        sutProvider.GetDependency<IAccessRequestRepository>()
+            .CreateAutoApprovedAsync(Arg.Any<AccessRequest>(), Arg.Any<AccessDecision>())
+            .Returns(AccessRequestCreateOutcome.Created);
         return sutProvider;
     }
 
     private static void SetupHumanCreate(SutProvider<SubmitAccessRequestCommand> sutProvider) =>
         sutProvider.GetDependency<IAccessRequestRepository>()
-            .CreateAsync(Arg.Any<AccessRequest>())
-            .Returns(callInfo => callInfo.Arg<AccessRequest>());
+            .CreateIfNoOpenAsync(Arg.Any<AccessRequest>(), Arg.Any<DateTime>())
+            .Returns(AccessRequestCreateOutcome.Created);
 
     private static void SetupCipher(SutProvider<SubmitAccessRequestCommand> sutProvider, Guid userId, Guid cipherId,
         Guid? organizationId = null, bool licensed = true, bool userOwned = false)

@@ -12,6 +12,17 @@ BEGIN
 
     BEGIN TRANSACTION
 
+    -- Taken before the claim, the same order request submission uses, so the two never wait on each other.
+    DECLARE @CipherId UNIQUEIDENTIFIER = (SELECT [CipherId] FROM [dbo].[AccessRequest] WHERE [Id] = @AccessRequestId)
+    DECLARE @Resource NVARCHAR(255) = CONCAT(N'PamAccess:', @RequesterId, N':', @CipherId)
+    DECLARE @Lock INT
+    EXEC @Lock = sp_getapplock @Resource = @Resource, @LockMode = 'Exclusive', @LockOwner = 'Transaction', @LockTimeout = 10000
+    IF @Lock < 0
+    BEGIN
+        ROLLBACK TRANSACTION;
+        THROW 50000, 'Could not acquire the access submission lock.', 1
+    END
+
     -- Claims the request row first so activation/retraction serialize on it; reversed order deadlocks (1205).
     UPDATE [dbo].[AccessRequest]
     SET [Action] = 1 -- Approved: unchanged, the write is what matters
@@ -28,6 +39,18 @@ BEGIN
     BEGIN
         ROLLBACK TRANSACTION
         SELECT 0
+        RETURN
+    END
+
+    -- At most one live lease per requester and item, whatever the rule.
+    IF EXISTS (
+        SELECT 1 FROM [dbo].[AccessLease]
+        WHERE [RequesterId] = @RequesterId AND [CipherId] = @CipherId
+            AND [Action] = 0 AND [NotBefore] <= @Now AND [NotAfter] > @Now
+    )
+    BEGIN
+        ROLLBACK TRANSACTION
+        SELECT -2
         RETURN
     END
 
@@ -70,6 +93,7 @@ BEGIN
 
     COMMIT TRANSACTION
 
-    -- 1 = minted, 0 = precondition no longer held (caller re-reads the winner).
+    -- 1 = minted, 0 = precondition no longer held (caller re-reads the winner), -1 = cipher singleton conflict,
+    -- -2 = requester already holds a live lease on the item.
     SELECT CASE WHEN @Rows = 1 THEN 1 ELSE 0 END
 END

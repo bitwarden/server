@@ -178,8 +178,10 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
         await _accessAuditEventEmitter.EmitAsync(approvalAudit with { Phase = AccessAuditEventPhase.Attempt });
 
-        // No lease here; the requester activates separately.
-        await _accessRequestRepository.CreateAutoApprovedAsync(request, decision);
+        // No lease here; the requester activates separately. The repository re-runs the duplicate checks under a
+        // per-requester, per-item lock, so a concurrent submit that passed them above is refused here.
+        var outcome = await _accessRequestRepository.CreateAutoApprovedAsync(request, decision);
+        ThrowIfRefused(outcome);
 
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Outcome });
         await _accessAuditEventEmitter.EmitAsync(approvalAudit with { Phase = AccessAuditEventPhase.Outcome });
@@ -187,6 +189,19 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         await _requesterNotifier.NotifyRequesterAsync(userId);
 
         return AccessRequestResult.Automatic(request, decision);
+    }
+
+    private static void ThrowIfRefused(AccessRequestCreateOutcome outcome)
+    {
+        switch (outcome)
+        {
+            case AccessRequestCreateOutcome.ActiveLeaseExists:
+                throw new BadRequestException("You already have active access to this item.");
+            case AccessRequestCreateOutcome.PendingRequestExists:
+                throw new BadRequestException("You already have a pending request for this item.");
+            case AccessRequestCreateOutcome.ApprovedRequestExists:
+                throw new BadRequestException("You already have an approved request for this item.");
+        }
     }
 
     private async Task<AccessRequestResult> RequestHumanApprovalAsync(
@@ -254,7 +269,9 @@ public class SubmitAccessRequestCommand : ISubmitAccessRequestCommand
         };
         await _accessAuditEventEmitter.EmitAsync(audit with { Phase = AccessAuditEventPhase.Attempt });
 
-        var created = await _accessRequestRepository.CreateAsync(request);
+        request.SetNewId();
+        ThrowIfRefused(await _accessRequestRepository.CreateIfNoOpenAsync(request, now));
+        var created = request;
 
         await _accessAuditEventEmitter.EmitAsync(
             audit with { Phase = AccessAuditEventPhase.Outcome, AccessRequestId = created.Id });

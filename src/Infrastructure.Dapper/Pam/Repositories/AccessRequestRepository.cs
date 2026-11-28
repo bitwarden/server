@@ -23,10 +23,34 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
         : base(connectionString, readOnlyConnectionString)
     { }
 
-    public async Task CreateAutoApprovedAsync(AccessRequest request, AccessDecision decision)
+    public async Task<AccessRequestCreateOutcome> CreateIfNoOpenAsync(AccessRequest request, DateTime now)
     {
         await using var connection = new SqlConnection(ConnectionString);
-        await connection.ExecuteAsync(
+        var result = await connection.ExecuteScalarAsync<int>(
+            $"[{Schema}].[AccessRequest_CreateIfNoOpen]",
+            new
+            {
+                request.Id,
+                request.OrganizationId,
+                request.CollectionId,
+                request.CipherId,
+                request.RequesterId,
+                request.NotBefore,
+                request.NotAfter,
+                request.Reason,
+                request.CreationDate,
+                request.RuleId,
+                Now = now,
+            },
+            commandType: CommandType.StoredProcedure);
+
+        return (AccessRequestCreateOutcome)result;
+    }
+
+    public async Task<AccessRequestCreateOutcome> CreateAutoApprovedAsync(AccessRequest request, AccessDecision decision)
+    {
+        await using var connection = new SqlConnection(ConnectionString);
+        var result = await connection.ExecuteScalarAsync<int>(
             $"[{Schema}].[AccessRequest_CreateAutoApproved]",
             new
             {
@@ -44,6 +68,8 @@ public class AccessRequestRepository : Repository<AccessRequest, Guid>, IAccessR
                 request.RuleId,
             },
             commandType: CommandType.StoredProcedure);
+
+        return (AccessRequestCreateOutcome)result;
     }
 
     public async Task<AccessRequest?> GetActivePendingByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId, DateTime now)

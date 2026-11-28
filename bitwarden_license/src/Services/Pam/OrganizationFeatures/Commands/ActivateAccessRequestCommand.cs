@@ -151,6 +151,15 @@ public class ActivateAccessRequestCommand : IActivateAccessRequestCommand
             throw new ConflictException("Another active lease exists for this item. Try again once it ends.");
         }
 
+        // Applies whatever the rule says: a member never holds two live leases on the same item. This can happen when
+        // two approved requests are activated at the same moment.
+        if (outcome == AccessLeaseMintOutcome.RequesterActiveLeaseConflict)
+        {
+            await _accessAuditEventEmitter.EmitAsync(
+                audit with { Kind = AccessAuditEventKind.LeaseActivationRejected, Phase = AccessAuditEventPhase.Outcome, AccessLeaseId = null });
+            throw new ConflictException("You already have active access to this item.");
+        }
+
         if (outcome == AccessLeaseMintOutcome.PreconditionFailed)
         {
             // Lost the race to another activation; a live winner lease still counts as success.

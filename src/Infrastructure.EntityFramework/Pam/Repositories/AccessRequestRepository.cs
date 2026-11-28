@@ -21,12 +21,81 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         : base(serviceScopeFactory, mapper, context => context.AccessRequests)
     { }
 
-    public async Task CreateAutoApprovedAsync(CoreEntity request, AccessDecision decision)
+    /// <remarks>Serializable, retried on a fresh transaction after a provider serialization failure.</remarks>
+    public Task<AccessRequestCreateOutcome> CreateIfNoOpenAsync(CoreEntity request, DateTime now)
+        => SerializableRetry.RunAsync(async () =>
+        {
+            using var scope = ServiceScopeFactory.CreateScope();
+            var dbContext = GetDatabaseContext(scope);
+
+            await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
+            var conflict = await FindSubmitConflictAsync(dbContext, request.RequesterId, request.CipherId, now);
+            if (conflict is not null)
+            {
+                await transaction.RollbackAsync();
+                return conflict.Value;
+            }
+
+            var requestEntity = Mapper.Map<EfModel>(request);
+            requestEntity.ExtensionOfLeaseId = null;
+            requestEntity.Action = AccessRequestAction.None;
+            requestEntity.ActionDate = null;
+            await dbContext.AccessRequests.AddAsync(requestEntity);
+            await dbContext.SaveChangesAsync();
+            await transaction.CommitAsync();
+
+            return AccessRequestCreateOutcome.Created;
+        });
+
+    /// <summary>
+    /// Mirrors the submit checks: a live lease, then a pending request, then an approved one that has not been activated.
+    /// Null when the submit may proceed.
+    /// </summary>
+    private static async Task<AccessRequestCreateOutcome?> FindSubmitConflictAsync(
+        DatabaseContext dbContext, Guid requesterId, Guid cipherId, DateTime now)
+    {
+        if (await dbContext.AccessLeases.AnyAsync(l => l.RequesterId == requesterId && l.CipherId == cipherId
+            && l.Action == AccessLeaseAction.None && l.NotBefore <= now && l.NotAfter > now))
+        {
+            return AccessRequestCreateOutcome.ActiveLeaseExists;
+        }
+
+        if (await dbContext.AccessRequests.AnyAsync(r => r.RequesterId == requesterId && r.CipherId == cipherId
+            && r.NotAfter > now && r.Action == AccessRequestAction.None))
+        {
+            return AccessRequestCreateOutcome.PendingRequestExists;
+        }
+
+        if (await dbContext.AccessRequests.AnyAsync(r => r.RequesterId == requesterId && r.CipherId == cipherId
+            && r.NotAfter > now && r.Action == AccessRequestAction.Approved
+            && r.ExtensionOfLeaseId == null
+            && !dbContext.AccessLeases.Any(l => l.AccessRequestId == r.Id)))
+        {
+            return AccessRequestCreateOutcome.ApprovedRequestExists;
+        }
+
+        return null;
+    }
+
+    /// <remarks>Serializable, retried on a fresh transaction after a provider serialization failure.</remarks>
+    public Task<AccessRequestCreateOutcome> CreateAutoApprovedAsync(CoreEntity request, AccessDecision decision)
+        => SerializableRetry.RunAsync(() => CreateAutoApprovedCoreAsync(request, decision));
+
+    private async Task<AccessRequestCreateOutcome> CreateAutoApprovedCoreAsync(CoreEntity request, AccessDecision decision)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        await using var transaction = await dbContext.Database.BeginTransactionAsync();
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
+
+        // CreationDate is the submit time.
+        var conflict = await FindSubmitConflictAsync(dbContext, request.RequesterId, request.CipherId, request.CreationDate);
+        if (conflict is not null)
+        {
+            await transaction.RollbackAsync();
+            return conflict.Value;
+        }
 
         // ExtensionOfLeaseId stays null; an original request's lease points back via AccessLease.AccessRequestId.
         var requestEntity = Mapper.Map<EfModel>(request);
@@ -48,6 +117,8 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         await dbContext.SaveChangesAsync();
 
         await transaction.CommitAsync();
+
+        return AccessRequestCreateOutcome.Created;
     }
 
     public async Task<CoreEntity?> GetActivePendingByRequesterIdCipherIdAsync(Guid requesterId, Guid cipherId, DateTime now)
@@ -454,14 +525,17 @@ public class AccessRequestRepository : Repository<CoreEntity, EfModel, Guid>, IA
         return await dbContext.AccessRequests.CountAsync(r => r.ExtensionOfLeaseId == leaseId);
     }
 
-    public async Task<AccessLeaseExtendOutcome> CreateApprovedExtensionAsync(CoreEntity request, AccessDecision decision, DateTime now, string? denialComment)
+    /// <remarks>Serializable, retried on a fresh transaction after a provider serialization failure.</remarks>
+    public Task<AccessLeaseExtendOutcome> CreateApprovedExtensionAsync(CoreEntity request, AccessDecision decision, DateTime now, string? denialComment)
+        => SerializableRetry.RunAsync(() => CreateApprovedExtensionCoreAsync(request, decision, now, denialComment));
+
+    private async Task<AccessLeaseExtendOutcome> CreateApprovedExtensionCoreAsync(CoreEntity request, AccessDecision decision, DateTime now, string? denialComment)
     {
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Serializable replaces the procedure's per-lease UPDLOCK, HOLDLOCK, but a losing concurrent extension may
-        // fail at commit (e.g. PostgreSQL 40001) instead of returning AlreadyExtended; callers should treat that as a
-        // conflict.
+        // Serializable replaces the procedure's per-lease UPDLOCK, HOLDLOCK. A losing concurrent extension may fail at
+        // commit (e.g. PostgreSQL 40001); SerializableRetry replays it, and the replay returns AlreadyExtended.
         await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
         var extensionOfLeaseId = request.ExtensionOfLeaseId;
