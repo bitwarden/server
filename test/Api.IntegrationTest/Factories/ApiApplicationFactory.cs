@@ -52,6 +52,10 @@ public class ApiApplicationFactory : WebApplicationFactoryBase<Startup>
             var jobService = services.First(sd => sd.ServiceType == typeof(IHostedService) && sd.ImplementationType == typeof(Jobs.JobsHostedService));
             services.Remove(jobService);
 
+            // Each Quartz scheduler holds a thread-pool thread for the life of its host, starving parallel test hosts
+            var quartzService = services.First(sd => sd.ServiceType == typeof(IHostedService) && sd.ImplementationType == typeof(Quartz.QuartzHostedService));
+            services.Remove(quartzService);
+
             // The Identity host starts on the first backchannel call, so an anonymous request does not start it.
             services.Configure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
             {
