@@ -9,7 +9,6 @@ namespace Bit.Core;
 public static class Constants
 {
     public const int BypassFiltersEventId = 12482444;
-    public const int FailedSecretVerificationDelay = 2000;
 
     /// <summary>
     /// Self-hosted max storage limit in GB (10 TB).

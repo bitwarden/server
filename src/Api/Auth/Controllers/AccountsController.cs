@@ -147,7 +147,6 @@ public class AccountsController : Controller
 
         if (!await _userService.CheckPasswordAsync(user, model.MasterPasswordHash))
         {
-            await Task.Delay(2000);
             throw new BadRequestException("MasterPasswordHash", "Invalid password.");
         }
 
@@ -204,7 +203,6 @@ public class AccountsController : Controller
             ModelState.AddModelError(string.Empty, error.Description);
         }
 
-        await Task.Delay(2000);
         throw new BadRequestException(ModelState);
     }
 
@@ -241,7 +239,6 @@ public class AccountsController : Controller
             ModelState.AddModelError(string.Empty, error.Description);
         }
 
-        await Task.Delay(2000);
         throw new BadRequestException(ModelState);
     }
 
@@ -280,7 +277,6 @@ public class AccountsController : Controller
             ModelState.AddModelError(string.Empty, error.Description);
         }
 
-        await Task.Delay(2000);
         throw new BadRequestException(ModelState);
     }
 
@@ -402,7 +398,6 @@ public class AccountsController : Controller
         }
 
         ModelState.AddModelError(nameof(model.MasterPasswordHash), "Invalid password.");
-        await Task.Delay(2000);
         throw new BadRequestException(ModelState);
     }
 
@@ -426,7 +421,6 @@ public class AccountsController : Controller
             ModelState.AddModelError(string.Empty, error.Description);
         }
 
-        await Task.Delay(2000);
         throw new BadRequestException(ModelState);
     }
 
@@ -450,7 +444,6 @@ public class AccountsController : Controller
             ModelState.AddModelError(string.Empty, error.Description);
         }
 
-        await Task.Delay(2000);
         throw new BadRequestException(ModelState);
     }
 
@@ -624,7 +617,6 @@ public class AccountsController : Controller
         if (!await _userService.VerifySecretAsync(user, model.Secret))
         {
             ModelState.AddModelError(string.Empty, "User verification failed.");
-            await Task.Delay(2000);
         }
         else
         {
@@ -671,7 +663,6 @@ public class AccountsController : Controller
             ModelState.AddModelError(string.Empty, error.Description);
         }
 
-        await Task.Delay(2000);
         throw new BadRequestException(ModelState);
     }
 
@@ -707,7 +698,6 @@ public class AccountsController : Controller
 
         if (!await _userService.VerifySecretAsync(user, model.Secret))
         {
-            await Task.Delay(2000);
             throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
@@ -725,7 +715,6 @@ public class AccountsController : Controller
 
         if (!await _userService.VerifySecretAsync(user, model.Secret))
         {
-            await Task.Delay(2000);
             throw new BadRequestException(string.Empty, "User verification failed.");
         }
 
@@ -901,7 +890,6 @@ public class AccountsController : Controller
 
         if (!await _userService.VerifySecretAsync(user, request.Secret))
         {
-            await Task.Delay(2000);
             throw new BadRequestException(string.Empty, "User verification failed.");
         }
         user.VerifyDevices = request.VerifyDevices;
