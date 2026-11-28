@@ -13,4 +13,7 @@ public enum AccessLeaseMintOutcome
 
     /// <summary>The rule allows one active lease per cipher, and another is active. Nothing is persisted.</summary>
     SingleActiveLeaseConflict = -1,
+
+    /// <summary>The requester already holds a live lease on the item, whatever the rule. Nothing is persisted.</summary>
+    RequesterActiveLeaseConflict = -2,
 }

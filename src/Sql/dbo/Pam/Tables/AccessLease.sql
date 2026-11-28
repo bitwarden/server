@@ -41,8 +41,11 @@ GO
 
 -- Supports the per-cipher singleton guard, which locks by CipherId alone.
 -- NotAfter DESC lets AccessLease_ReadActiveByCipherId seek in-window rows without a sort.
+-- The INCLUDE covers the in-window checks in AccessLease_CreateFromApprovedRequest, so they never fetch the row:
+-- a revoke locks the row first and the index second, and the row fetch let the two deadlock.
 CREATE NONCLUSTERED INDEX [IX_AccessLease_CipherId_Action_NotAfter]
-    ON [dbo].[AccessLease] ([CipherId] ASC, [Action] ASC, [NotAfter] DESC);
+    ON [dbo].[AccessLease] ([CipherId] ASC, [Action] ASC, [NotAfter] DESC)
+    INCLUDE ([NotBefore], [RequesterId]);
 GO
 
 -- A request produces at most one lease, ever; unique index backstops racing activations.

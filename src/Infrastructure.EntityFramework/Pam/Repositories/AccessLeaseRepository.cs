@@ -110,7 +110,8 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
 
     /// <remarks>
     /// Retried on a fresh transaction after a provider serialization failure; bounded retries propagate on exhaustion.
-    /// Applies only under <paramref name="enforceSingleActiveLease"/>; see <see cref="MintFromApprovedRequestAsync"/>.
+    /// The per-cipher guard applies only under <paramref name="enforceSingleActiveLease"/>; the per-requester guard
+    /// always applies. See <see cref="MintFromApprovedRequestAsync"/>.
     /// </remarks>
     public Task<AccessLeaseMintOutcome> CreateFromApprovedRequestAsync(CoreEntity lease, DateTime now,
         bool enforceSingleActiveLease)
@@ -122,12 +123,9 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
         using var scope = ServiceScopeFactory.CreateScope();
         var dbContext = GetDatabaseContext(scope);
 
-        // Serializable covers only the per-cipher guard, matching the procedure's range lock; every other write
-        // here is protected by the claim below instead.
-        var isolation = enforceSingleActiveLease
-            ? System.Data.IsolationLevel.Serializable
-            : System.Data.IsolationLevel.ReadCommitted;
-        await using var transaction = await dbContext.Database.BeginTransactionAsync(isolation);
+        // Serializable covers the live-lease guards, matching the procedure's lock; every other write here is
+        // protected by the claim below instead.
+        await using var transaction = await dbContext.Database.BeginTransactionAsync(System.Data.IsolationLevel.Serializable);
 
         try
         {
@@ -157,6 +155,17 @@ public class AccessLeaseRepository : Repository<CoreEntity, EfModel, Guid>, IAcc
             var request = await dbContext.AccessRequests
                 .AsNoTracking()
                 .FirstAsync(r => r.Id == lease.AccessRequestId);
+
+            // At most one live lease per requester and item, whatever the rule.
+            var requesterHolds = await dbContext.AccessLeases
+                .Where(l => l.RequesterId == request.RequesterId && l.CipherId == request.CipherId)
+                .Where(LiveAt(now))
+                .AnyAsync();
+            if (requesterHolds)
+            {
+                await transaction.RollbackAsync();
+                return AccessLeaseMintOutcome.RequesterActiveLeaseConflict;
+            }
 
             if (enforceSingleActiveLease)
             {

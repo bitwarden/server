@@ -43,7 +43,9 @@ public interface IAccessLeaseRepository
     /// Race-safely mints the lease for an approved request, copying its window. Returns
     /// <see cref="AccessLeaseMintOutcome.PreconditionFailed"/> for a stale precondition, or
     /// <see cref="AccessLeaseMintOutcome.SingleActiveLeaseConflict"/> when <paramref name="enforceSingleActiveLease"/>
-    /// finds another active lease on the cipher.
+    /// finds another active lease on the cipher, or
+    /// <see cref="AccessLeaseMintOutcome.RequesterActiveLeaseConflict"/> when the requester already holds a live lease
+    /// on the item.
     /// </summary>
     Task<AccessLeaseMintOutcome> CreateFromApprovedRequestAsync(AccessLease lease, DateTime now,
         bool enforceSingleActiveLease);
