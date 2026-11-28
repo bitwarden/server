@@ -14,7 +14,9 @@ namespace Bit.SharedWeb.Swagger;
 ///   user session token via middleware.</item>
 ///   <item>Sets <c>security: []</c> on <c>[AllowAnonymous]</c> endpoints in
 ///   <c>SendsController</c>, so the generator emits no auth requirement for V1 send access
-///   endpoints.</item>
+///   endpoints. Note this matches on the controller name, so it does not cover
+///   <c>SendsAccessController</c>; that controller's endpoints are all
+///   <see cref="Policies.Send"/>-gated and are handled by the first rule.</item>
 /// </list>
 /// </summary>
 public class SendAccessBearerOperationFilter : IDocumentFilter

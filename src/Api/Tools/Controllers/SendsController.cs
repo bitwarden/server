@@ -5,11 +5,8 @@ using Bit.Api.Tools.Models.Response;
 using Bit.Api.Utilities;
 using Bit.Core;
 using Bit.Core.Auth.Identity;
-using Bit.Core.Auth.UserFeatures.SendAccess;
 using Bit.Core.Billing.Premium.Queries;
-using Bit.Core.Enums;
 using Bit.Core.Exceptions;
-using Bit.Core.Platform.Push;
 using Bit.Core.Services;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
@@ -17,7 +14,6 @@ using Bit.Core.Tools.Repositories;
 using Bit.Core.Tools.SendFeatures;
 using Bit.Core.Tools.SendFeatures.Commands.Interfaces;
 using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
-using Bit.Core.Tools.SendFeatures.Services.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
 using Bit.HttpExtensions;
@@ -37,10 +33,7 @@ public class SendsController : Controller
     private readonly INonAnonymousSendCommand _nonAnonymousSendCommand;
     private readonly ISendOwnerQuery _sendOwnerQuery;
     private readonly ILogger<SendsController> _logger;
-    private readonly IPushNotificationService _pushNotificationService;
     private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
-    private readonly IEventService _eventService;
-    private readonly ISendEventClassifier _sendEventClassifier;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
 
     public SendsController(
@@ -51,10 +44,7 @@ public class SendsController : Controller
         ISendOwnerQuery sendOwnerQuery,
         ISendFileStorageService sendFileStorageService,
         ILogger<SendsController> logger,
-        IPushNotificationService pushNotificationService,
         IHasPremiumAccessQuery hasPremiumAccessQuery,
-        IEventService eventService,
-        ISendEventClassifier sendEventClassifier,
         Bitwarden.Server.Sdk.Features.IFeatureService featureService
     )
     {
@@ -65,10 +55,7 @@ public class SendsController : Controller
         _sendOwnerQuery = sendOwnerQuery;
         _sendFileStorageService = sendFileStorageService;
         _logger = logger;
-        _pushNotificationService = pushNotificationService;
         _hasPremiumAccessQuery = hasPremiumAccessQuery;
-        _eventService = eventService;
-        _sendEventClassifier = sendEventClassifier;
         _featureService = featureService;
     }
 
@@ -143,103 +130,6 @@ public class SendsController : Controller
         var responses = sends.Select(s => new SendResponseModel(s));
         var result = new ListResponseModel<SendResponseModel>(responses);
         return result;
-    }
-
-    [Authorize(Policy = Policies.Send)]
-    [HttpPost("access/")]
-    [ProducesResponseType<SendAccessResponseModel>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> AccessUsingAuth()
-    {
-        var guid = User.GetSendId();
-        var send = await _sendRepository.GetByIdAsync(guid);
-        if (send == null)
-        {
-            throw new BadRequestException("Could not locate send");
-        }
-
-        if (!INonAnonymousSendCommand.SendCanBeAccessed(send) || (send.Type == SendType.Item && !_featureService.IsEnabled(FeatureFlagKeys.TemporaryItemSharing)))
-        {
-            throw new NotFoundException();
-        }
-
-        var sendResponse = new SendAccessResponseModel(send);
-        if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
-        {
-            var creator = await _userService.GetUserByIdAsync(send.UserId.Value);
-            sendResponse.CreatorIdentifier = creator.Email;
-        }
-
-        /*
-         * AccessCount is incremented differently depending on Send type:
-         * - Text and Item Sends are incremented at every access
-         * - File Sends are incremented only when the file is downloaded
-         *
-         * Note that this endpoint is initially called for all Send types
-         */
-        if (send.Type == SendType.Text || send.Type == SendType.Item)
-        {
-            send.AccessCount++;
-            await _sendRepository.ReplaceAsync(send);
-            await _pushNotificationService.PushSyncSendUpdateAsync(send);
-        }
-
-        if (send.UserId.HasValue && (send.Type == SendType.Text || send.Type == SendType.Item))
-        {
-            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
-                send.UserId.Value,
-                User.GetSendAccessEmail());
-
-            if (send.Type == SendType.Text)
-            {
-                await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Accessed_Text, orgContext);
-            }
-            else if (send.Type == SendType.Item)
-            {
-                await _eventService.LogSendEventAsync(send.UserId.Value, send.Id, EventType.Send_Accessed_Item, orgContext);
-            }
-        }
-
-        return new ObjectResult(sendResponse);
-    }
-
-    [Authorize(Policy = Policies.Send)]
-    [HttpPost("access/file/{fileId}")]
-    [ProducesResponseType<SendFileDownloadDataResponseModel>(StatusCodes.Status200OK)]
-    [ProducesResponseType(StatusCodes.Status400BadRequest)]
-    [ProducesResponseType(StatusCodes.Status404NotFound)]
-    public async Task<IActionResult> GetSendFileDownloadDataUsingAuth([FromRoute] string fileId)
-    {
-        var sendId = User.GetSendId();
-        var send = await _sendRepository.GetByIdAsync(sendId);
-
-        if (send == null)
-        {
-            throw new BadRequestException("Could not locate send");
-        }
-
-        var (url, result) = await _nonAnonymousSendCommand.GetSendFileDownloadUrlAsync(send, fileId);
-
-        if (result.Equals(SendAccessResult.Denied))
-        {
-            throw new NotFoundException();
-        }
-
-        if (send.UserId.HasValue)
-        {
-            var orgContext = await _sendEventClassifier.BuildAccessContextAsync(
-                send.UserId.Value,
-                User.GetSendAccessEmail());
-
-            await _eventService.LogSendEventAsync(
-                send.UserId.Value,
-                send.Id,
-                EventType.Send_Accessed_File,
-                orgContext);
-        }
-
-        return new ObjectResult(new SendFileDownloadDataResponseModel() { Id = fileId, Url = url });
     }
 
     [Authorize(Policies.Application)]
