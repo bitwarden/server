@@ -107,6 +107,7 @@ public class CustomTokenRequestValidator : BaseRequestValidator<CustomTokenReque
             || clientId.StartsWith("organization")
             || clientId.StartsWith("installation")
             || clientId.StartsWith("internal")
+            || clientId.StartsWith(ClientProviders.JobTriggerRetirementClientProvider.Prefix + ".")
             || context.Result.ValidatedRequest.Client.AllowedScopes.Contains(ApiScopes.ApiSecrets)
             || context.Result.ValidatedRequest.Client.AllowedScopes.Contains(ApiScopes.ApiPamCredentialRotation))
         {

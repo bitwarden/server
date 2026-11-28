@@ -15,6 +15,7 @@
     "api.secrets",
     "api.pam.rotation",
     "api.send.access",
+    "internal.job-trigger-retirement",
     "offline_access"
   ],
   "claims_supported": [
