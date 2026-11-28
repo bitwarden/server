@@ -3,6 +3,7 @@ using System.Text.Json;
 using Bit.Api.IntegrationTest.Factories;
 using Bit.Api.IntegrationTest.Helpers;
 using Bit.Api.Vault.Models.Request;
+using Bit.Core;
 using Bit.Core.AdminConsole.AbilitiesCache;
 using Bit.Core.AdminConsole.Entities;
 using Bit.Core.Billing.Enums;
@@ -14,6 +15,7 @@ using Bit.Core.Repositories;
 using Bit.Core.Vault.Entities;
 using Bit.Core.Vault.Enums;
 using Bit.Core.Vault.Repositories;
+using NSubstitute;
 using Xunit;
 
 namespace Bit.Api.IntegrationTest.Vault.Controllers;
@@ -63,6 +65,11 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
 
         // Turn on the Organization Data Ownership ("use my items") policy.
         await OrganizationTestHelpers.EnableOrganizationDataOwnershipPolicyAsync(_factory, _organization.Id);
+
+        // The feature service substitute is shared by every test in this class, so a test that enables a flag
+        // would otherwise leak it into the tests that run after it. Start each test with the flag off.
+        _factory.GetService<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(false);
 
         await _loginHelper.LoginAsync(_ownerEmail);
     }
@@ -123,6 +130,157 @@ public class CiphersControllerTests : IClassFixture<ApiApplicationFactory>, IAsy
         var updatedCipher = await _cipherRepository.GetByIdAsync(cipher.Id);
         Assert.NotNull(updatedCipher);
         Assert.Equal("{}", updatedCipher.Data);
+    }
+
+    [Fact]
+    public async Task GetOrganizationCipherTypeCounts_Owner_ReturnsCountsPerType()
+    {
+        await ArrangeOrganizationCiphersAsync();
+
+        var response = await _client.GetAsync($"/ciphers/organization-details/type-counts?organizationId={_organization.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var counts = await ReadTypeCountsAsync(response);
+        AssertArrangedCounts(counts, newItemTypesEnabled: false);
+    }
+
+    [Fact]
+    public async Task GetOrganizationCipherTypeCounts_NewItemTypesEnabled_IncludesNewItemTypes()
+    {
+        _factory.GetService<Bitwarden.Server.Sdk.Features.IFeatureService>()
+            .IsEnabled(FeatureFlagKeys.PM32009_NewItemTypes).Returns(true);
+        await ArrangeOrganizationCiphersAsync();
+
+        var response = await _client.GetAsync($"/ciphers/organization-details/type-counts?organizationId={_organization.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var counts = await ReadTypeCountsAsync(response);
+        AssertArrangedCounts(counts, newItemTypesEnabled: true);
+    }
+
+    public static IEnumerable<object[]> TypeCountsAllowedRoles =>
+    [
+        [OrganizationUserType.Admin, null!],
+        [OrganizationUserType.Custom, new Permissions { ManagePolicies = true }],
+        [OrganizationUserType.Custom, new Permissions { EditAnyCollection = true }],
+        [OrganizationUserType.Custom, new Permissions { AccessImportExport = true }],
+        [OrganizationUserType.Custom, new Permissions { AccessReports = true }],
+    ];
+
+    [Theory]
+    [MemberData(nameof(TypeCountsAllowedRoles))]
+    public async Task GetOrganizationCipherTypeCounts_AllowedRole_ReturnsCountsPerType(
+        OrganizationUserType userType, Permissions? permissions)
+    {
+        await ArrangeOrganizationCiphersAsync();
+        var (email, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, userType, permissions);
+        await _loginHelper.LoginAsync(email);
+
+        var response = await _client.GetAsync($"/ciphers/organization-details/type-counts?organizationId={_organization.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var counts = await ReadTypeCountsAsync(response);
+        AssertArrangedCounts(counts, newItemTypesEnabled: false);
+    }
+
+    public static IEnumerable<object[]> TypeCountsDeniedRoles =>
+    [
+        [OrganizationUserType.User, null!],
+        [OrganizationUserType.Custom, new Permissions { ManageUsers = true, DeleteAnyCollection = true }],
+    ];
+
+    [Theory]
+    [MemberData(nameof(TypeCountsDeniedRoles))]
+    public async Task GetOrganizationCipherTypeCounts_DeniedRole_ReturnsNotFound(
+        OrganizationUserType userType, Permissions? permissions)
+    {
+        await ArrangeOrganizationCiphersAsync();
+        var (email, _) = await OrganizationTestHelpers.CreateNewUserWithAccountAsync(
+            _factory, _organization.Id, userType, permissions);
+        await _loginHelper.LoginAsync(email);
+
+        var response = await _client.GetAsync($"/ciphers/organization-details/type-counts?organizationId={_organization.Id}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task GetOrganizationCipherTypeCounts_OwnerOfAnotherOrganization_ReturnsNotFound()
+    {
+        await ArrangeOrganizationCiphersAsync();
+
+        var otherOwnerEmail = $"integration-test{Guid.NewGuid()}@bitwarden.com";
+        await _factory.LoginWithNewAccount(otherOwnerEmail);
+        await OrganizationTestHelpers.SignUpAsync(_factory,
+            plan: PlanType.EnterpriseAnnually,
+            ownerEmail: otherOwnerEmail,
+            passwordManagerSeats: 10,
+            paymentMethod: PaymentMethodType.Card);
+        await _loginHelper.LoginAsync(otherOwnerEmail);
+
+        var response = await _client.GetAsync($"/ciphers/organization-details/type-counts?organizationId={_organization.Id}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+    }
+
+    /// <summary>
+    /// Arranges 2 cards, 1 bank account and 1 trashed card owned by the organization, plus a personal card owned
+    /// by the organization's owner, which must not be counted.
+    /// </summary>
+    private async Task ArrangeOrganizationCiphersAsync()
+    {
+        Task CreateOrganizationCipherAsync(CipherType type, DateTime? deletedDate = null) =>
+            _cipherRepository.CreateAsync(new Cipher
+            {
+                Type = type,
+                OrganizationId = _organization.Id,
+                DeletedDate = deletedDate,
+                Data = "{}",
+            });
+
+        await CreateOrganizationCipherAsync(CipherType.Card);
+        await CreateOrganizationCipherAsync(CipherType.Card);
+        await CreateOrganizationCipherAsync(CipherType.BankAccount);
+        await CreateOrganizationCipherAsync(CipherType.Card, deletedDate: DateTime.UtcNow);
+
+        var owner = await _userRepository.GetByEmailAsync(_ownerEmail);
+        Assert.NotNull(owner);
+        await _cipherRepository.CreateAsync(new Cipher
+        {
+            Type = CipherType.Card,
+            UserId = owner.Id,
+            Data = "{}",
+        });
+    }
+
+    private static async Task<Dictionary<int, int>> ReadTypeCountsAsync(HttpResponseMessage response)
+    {
+        using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
+        return document.RootElement.GetProperty("data").EnumerateArray()
+            .ToDictionary(
+                item => item.GetProperty("type").GetInt32(),
+                item => item.GetProperty("count").GetInt32());
+    }
+
+    private static void AssertArrangedCounts(Dictionary<int, int> counts, bool newItemTypesEnabled)
+    {
+        CipherType[] newItemTypes = [CipherType.BankAccount, CipherType.DriversLicense, CipherType.Passport];
+
+        // Types behind the new item types flag are only reported while it is enabled, even if items of that
+        // type exist.
+        var expectedTypes = Enum.GetValues<CipherType>()
+            .Where(type => newItemTypesEnabled || !newItemTypes.Contains(type))
+            .Select(type => (int)type);
+        Assert.Equal(expectedTypes.Order(), counts.Keys.Order());
+
+        // Trashed items are counted; personal items are not.
+        Assert.Equal(3, counts[(int)CipherType.Card]);
+        Assert.Equal(0, counts[(int)CipherType.Login]);
+        if (newItemTypesEnabled)
+        {
+            Assert.Equal(1, counts[(int)CipherType.BankAccount]);
+        }
     }
 
     public static IEnumerable<object[]> EditorRoles =>

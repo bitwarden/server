@@ -24,6 +24,8 @@ public class CipherOrganizationAuthorizationHandler(ICurrentContext currentConte
         {
             not null when requirement == CipherOrganizationOperations.ReadAnyAsAdmin => await CanReadAnyAsAdminAsync(
                 resource),
+            not null when requirement == CipherOrganizationOperations.ReadTypeCountsAsAdmin =>
+                await CanReadAnyAsAdminAsync(resource) || HasTypeCountsPermission(resource),
             _ => throw new ArgumentOutOfRangeException(nameof(requirement), requirement, null)
         };
 
@@ -31,6 +33,20 @@ public class CipherOrganizationAuthorizationHandler(ICurrentContext currentConte
         {
             context.Succeed(requirement);
         }
+    }
+
+    /// <summary>
+    /// Custom permissions that grant the type counts in addition to <see cref="CanReadAnyAsAdminAsync"/>. Includes
+    /// <c>AccessImportExport</c> and <c>AccessReports</c> to match <c>CiphersController.CanAccessAllCiphersAsync</c>,
+    /// which gates the sibling <c>organization-details</c> routes, and <c>ManagePolicies</c> for the item type
+    /// restriction policy.
+    /// </summary>
+    private bool HasTypeCountsPermission(Guid organizationId)
+    {
+        var org = currentContext.GetOrganization(organizationId);
+        return org is { Permissions.ManagePolicies: true }
+            or { Permissions.AccessImportExport: true }
+            or { Permissions.AccessReports: true };
     }
 
     private async Task<bool> CanReadAnyAsAdminAsync(Guid organizationId)
