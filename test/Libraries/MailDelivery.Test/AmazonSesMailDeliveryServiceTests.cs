@@ -102,6 +102,43 @@ public class AmazonSesMailDeliveryServiceTests : IDisposable
         Assert.Null(captured.ReplyToAddresses);
     }
 
+    [Fact]
+    public async Task SendEmailAsync_WhenFirstAttemptThrowsAndRetrySucceeds_DoesNotThrow()
+    {
+        _amazonSimpleEmailService.SendEmailAsync(Arg.Any<SendEmailRequest>()).Returns(
+            _ => Task.FromException<SendEmailResponse>(new AmazonSimpleEmailServiceException("first attempt")),
+            _ => Task.FromResult(new SendEmailResponse()));
+
+        await _sut.SendEmailAsync(CreateMailMessage());
+
+        await _amazonSimpleEmailService.Received(2).SendEmailAsync(
+            Arg.Is<SendEmailRequest>(r => r.Message.Subject.Data == "Subject"));
+    }
+
+    [Fact]
+    public async Task SendEmailAsync_WhenBothAttemptsThrow_ThrowsRetryException()
+    {
+        var retryException = new AmazonSimpleEmailServiceException("retry");
+        _amazonSimpleEmailService.SendEmailAsync(Arg.Any<SendEmailRequest>()).Returns(
+            _ => Task.FromException<SendEmailResponse>(new AmazonSimpleEmailServiceException("first attempt")),
+            _ => Task.FromException<SendEmailResponse>(retryException));
+
+        var exception = await Assert.ThrowsAsync<AmazonSimpleEmailServiceException>(
+            () => _sut.SendEmailAsync(CreateMailMessage()));
+
+        Assert.Same(retryException, exception);
+        await _amazonSimpleEmailService.Received(2).SendEmailAsync(
+            Arg.Is<SendEmailRequest>(r => r.Message.Subject.Data == "Subject"));
+    }
+
+    private static MailMessage CreateMailMessage() => new()
+    {
+        ToEmails = new List<string> { "to@example.com" },
+        Subject = "Subject",
+        HtmlContent = "HtmlContent",
+        TextContent = "TextContent"
+    };
+
     /// <remarks>
     /// Captures at call time and asserts outside the callback: an <c>Arg.Do</c> passed to
     /// <c>Received()</c> never runs, so assertions placed inside one do not execute.

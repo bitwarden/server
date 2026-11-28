@@ -95,8 +95,10 @@ internal class SendGridMailDeliveryService : IMailDeliveryService, IDisposable
         catch (Exception e)
         {
             _logger.LogWarning(e, "Failed to send email (with exception). Retrying...");
-            await SendAsync(msg, true);
-            throw;
+            if (!await SendAsync(msg, true))
+            {
+                throw;
+            }
         }
     }
 

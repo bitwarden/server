@@ -129,7 +129,6 @@ internal class AmazonSesMailDeliveryService : IMailDeliveryService, IDisposable
         {
             _logger.LogWarning(e, "Failed to send email. Retrying...");
             await SendAsync(request, true);
-            throw;
         }
     }
 

@@ -1,4 +1,5 @@
-﻿using Bit.Core.Models.Mail;
+﻿using System.Net;
+using Bit.Core.Models.Mail;
 using Bit.Core.Platform.Mail.Delivery;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -96,6 +97,54 @@ public class SendGridMailDeliveryServiceTests : IDisposable
 
         Assert.Null(captured.ReplyTo);
     }
+
+    [Fact]
+    public async Task SendEmailAsync_WhenFirstAttemptThrowsAndRetrySucceeds_DoesNotThrow()
+    {
+        _sendGridClient.SendEmailAsync(Arg.Any<SendGridMessage>()).Returns(
+            _ => Task.FromException<Response>(new HttpRequestException("first attempt")),
+            _ => Task.FromResult(new Response(HttpStatusCode.OK, null, null)));
+
+        await _sut.SendEmailAsync(CreateMailMessage());
+
+        await _sendGridClient.Received(2).SendEmailAsync(Arg.Is<SendGridMessage>(m => m.Personalizations[0].Subject == "Subject"));
+    }
+
+    [Fact]
+    public async Task SendEmailAsync_WhenFirstAttemptThrowsAndRetryReturnsNonSuccess_ThrowsFirstAttemptException()
+    {
+        var firstAttemptException = new HttpRequestException("first attempt");
+        _sendGridClient.SendEmailAsync(Arg.Any<SendGridMessage>()).Returns(
+            _ => Task.FromException<Response>(firstAttemptException),
+            _ => Task.FromResult(new Response(HttpStatusCode.InternalServerError, new StringContent("error"), null)));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(() => _sut.SendEmailAsync(CreateMailMessage()));
+
+        Assert.Same(firstAttemptException, exception);
+        await _sendGridClient.Received(2).SendEmailAsync(Arg.Is<SendGridMessage>(m => m.Personalizations[0].Subject == "Subject"));
+    }
+
+    [Fact]
+    public async Task SendEmailAsync_WhenBothAttemptsThrow_ThrowsRetryException()
+    {
+        var retryException = new HttpRequestException("retry");
+        _sendGridClient.SendEmailAsync(Arg.Any<SendGridMessage>()).Returns(
+            _ => Task.FromException<Response>(new HttpRequestException("first attempt")),
+            _ => Task.FromException<Response>(retryException));
+
+        var exception = await Assert.ThrowsAsync<HttpRequestException>(() => _sut.SendEmailAsync(CreateMailMessage()));
+
+        Assert.Same(retryException, exception);
+        await _sendGridClient.Received(2).SendEmailAsync(Arg.Is<SendGridMessage>(m => m.Personalizations[0].Subject == "Subject"));
+    }
+
+    private static MailMessage CreateMailMessage() => new()
+    {
+        ToEmails = new List<string> { "to@example.com" },
+        Subject = "Subject",
+        HtmlContent = "HtmlContent",
+        TextContent = "TextContent"
+    };
 
     /// <remarks>
     /// Captures at call time and asserts outside the callback: an <c>Arg.Do</c> passed to
