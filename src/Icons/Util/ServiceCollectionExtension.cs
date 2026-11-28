@@ -3,7 +3,11 @@
 using System.Net;
 using AngleSharp.Html.Parser;
 using Bit.Core.Utilities;
+using Bit.Icons.Models;
 using Bit.Icons.Services;
+using Microsoft.Extensions.Caching.Memory;
+using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace Bit.Icons.Extensions;
 
@@ -52,6 +56,28 @@ public static class ServiceCollectionExtension
     public static void AddHtmlParsing(this IServiceCollection services)
     {
         services.AddSingleton<IHtmlParser, HtmlParser>();
+    }
+
+    /// <summary>
+    /// Registers a separate <see cref="IMemoryCache"/> for each consumer, keyed by the names in
+    /// <see cref="IconsCacheConstants"/>. Two calls to <c>AddMemoryCache</c> would not do this:
+    /// it registers <see cref="IMemoryCache"/> with <c>TryAdd</c>, so the second call adds no
+    /// second cache and only appends another options callback, leaving both consumers sharing one
+    /// cache sized by whichever limit was configured last.
+    /// </summary>
+    public static void AddCaches(this IServiceCollection services, IconsSettings iconsSettings,
+        ChangePasswordUriSettings changePasswordUriSettings)
+    {
+        services.TryAddKeyedSingleton<IMemoryCache>(IconsCacheConstants.IconsCacheName, (_, _) =>
+            new MemoryCache(Options.Create(new MemoryCacheOptions
+            {
+                SizeLimit = iconsSettings.CacheSizeLimit
+            })));
+        services.TryAddKeyedSingleton<IMemoryCache>(IconsCacheConstants.ChangePasswordUriCacheName, (_, _) =>
+            new MemoryCache(Options.Create(new MemoryCacheOptions
+            {
+                SizeLimit = changePasswordUriSettings.CacheSizeLimit
+            })));
     }
 
     public static void AddServices(this IServiceCollection services)
