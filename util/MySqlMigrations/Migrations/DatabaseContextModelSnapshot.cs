@@ -1943,6 +1943,9 @@ namespace Bit.MySqlMigrations.Migrations
 
                     b.HasKey("Id");
 
+                    b.HasIndex("CipherId")
+                        .HasAnnotation("SqlServer:Clustered", false);
+
                     b.HasIndex("DeletionDate")
                         .HasAnnotation("SqlServer:Clustered", false);
 

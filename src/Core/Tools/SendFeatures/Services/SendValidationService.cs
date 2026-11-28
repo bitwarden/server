@@ -4,10 +4,10 @@ using System.Text.Json;
 using Bit.Core.AdminConsole.Models.Data.Organizations.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies;
 using Bit.Core.AdminConsole.OrganizationFeatures.Policies.PolicyRequirements;
+using Bit.Core.Billing.Premium.Queries;
 using Bit.Core.Billing.Pricing;
 using Bit.Core.Exceptions;
 using Bit.Core.Repositories;
-using Bit.Core.Services;
 using Bit.Core.Settings;
 using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
@@ -22,7 +22,7 @@ public class SendValidationService : ISendValidationService
 {
     private readonly IUserRepository _userRepository;
     private readonly IOrganizationRepository _organizationRepository;
-    private readonly IUserService _userService;
+    private readonly IHasPremiumAccessQuery _hasPremiumAccessQuery;
     private readonly GlobalSettings _globalSettings;
     private readonly IPolicyRequirementQuery _policyRequirementQuery;
     private readonly IPricingClient _pricingClient;
@@ -32,7 +32,7 @@ public class SendValidationService : ISendValidationService
     public SendValidationService(
         IUserRepository userRepository,
         IOrganizationRepository organizationRepository,
-        IUserService userService,
+        IHasPremiumAccessQuery hasPremiumAccessQuery,
         IPolicyRequirementQuery policyRequirementQuery,
         GlobalSettings globalSettings,
         IPricingClient pricingClient,
@@ -41,7 +41,7 @@ public class SendValidationService : ISendValidationService
     {
         _userRepository = userRepository;
         _organizationRepository = organizationRepository;
-        _userService = userService;
+        _hasPremiumAccessQuery = hasPremiumAccessQuery;
         _policyRequirementQuery = policyRequirementQuery;
         _globalSettings = globalSettings;
         _pricingClient = pricingClient;
@@ -144,22 +144,27 @@ public class SendValidationService : ISendValidationService
     /// 1. Ensure the Send owner has access to the item being shared
     /// 2. Ensure the item being shared is not archived, deleted, or an SSH key
     /// Only a new or changed item id is checked, so saves that keep it (e.g. removing auth after
-    /// the item was deleted) still succeed.
+    /// the item was deleted) still succeed. A validated item id is also recorded in
+    /// <see cref="Send.CipherId"/>, the indexed column item Sends are looked up by.
     /// </summary>
     private async Task ValidateItemSendAsync(Guid? userId, Send send)
     {
         var itemId = ItemIdOf(send);
         if (!itemId.HasValue)
         {
+            send.CipherId = null;
             return;
         }
 
         // `send` already carries the incoming data; compare against the persisted Send.
+        // An unchanged item keeps the persisted CipherId, unless it is stored as null. In that case we use
+        // the metadata field to heal the persisted column so the Send can potentially get cleaned up quicker.
         if (send.Id != default)
         {
             var stored = await _sendRepository.GetByIdAsync(send.Id);
             if (stored != null && ItemIdOf(stored) == itemId)
             {
+                send.CipherId = itemId;
                 return;
             }
         }
@@ -179,6 +184,8 @@ public class SendValidationService : ISendValidationService
         {
             throw new BadRequestException("Item not found.");
         }
+
+        send.CipherId = itemId.Value;
     }
 
     private static Guid? ItemIdOf(Send send)
@@ -214,7 +221,7 @@ public class SendValidationService : ISendValidationService
         if (send.UserId.HasValue)
         {
             var user = await _userRepository.GetByIdAsync(send.UserId.Value) ?? throw new NotFoundException("Send user not found");
-            if (!await _userService.CanAccessPremium(user))
+            if (!await PremiumAccessHelper.CanAccessPremiumAsync(user, _hasPremiumAccessQuery))
             {
                 throw new BadRequestException("You must have premium status to use file Sends.");
             }

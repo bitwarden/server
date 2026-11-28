@@ -11,6 +11,7 @@ using Bit.Core.Enums;
 using Bit.Core.Exceptions;
 using Bit.Core.Platform.Push;
 using Bit.Core.Services;
+using Bit.Core.Tools.Entities;
 using Bit.Core.Tools.Enums;
 using Bit.Core.Tools.Models.Data;
 using Bit.Core.Tools.Repositories;
@@ -20,6 +21,7 @@ using Bit.Core.Tools.SendFeatures.Queries.Interfaces;
 using Bit.Core.Tools.SendFeatures.Services.Interfaces;
 using Bit.Core.Tools.Services;
 using Bit.Core.Utilities;
+using Bit.Core.Vault.Repositories;
 using Bit.HttpExtensions;
 using Bit.SharedWeb.Swagger;
 using Microsoft.AspNetCore.Authorization;
@@ -42,6 +44,7 @@ public class SendsController : Controller
     private readonly IEventService _eventService;
     private readonly ISendEventClassifier _sendEventClassifier;
     private readonly Bitwarden.Server.Sdk.Features.IFeatureService _featureService;
+    private readonly ICipherRepository _cipherRepository;
 
     public SendsController(
         ISendRepository sendRepository,
@@ -55,7 +58,8 @@ public class SendsController : Controller
         IHasPremiumAccessQuery hasPremiumAccessQuery,
         IEventService eventService,
         ISendEventClassifier sendEventClassifier,
-        Bitwarden.Server.Sdk.Features.IFeatureService featureService
+        Bitwarden.Server.Sdk.Features.IFeatureService featureService,
+        ICipherRepository cipherRepository
     )
     {
         _sendRepository = sendRepository;
@@ -70,6 +74,7 @@ public class SendsController : Controller
         _eventService = eventService;
         _sendEventClassifier = sendEventClassifier;
         _featureService = featureService;
+        _cipherRepository = cipherRepository;
     }
 
     #region Anonymous endpoints
@@ -164,6 +169,12 @@ public class SendsController : Controller
             throw new NotFoundException();
         }
 
+        // An item Send whose vault item was deleted is denied until a background job removes it.
+        if (await ItemCipherIsMissingAsync(send))
+        {
+            throw new NotFoundException();
+        }
+
         var sendResponse = new SendAccessResponseModel(send);
         if (send.UserId.HasValue && !send.HideEmail.GetValueOrDefault())
         {
@@ -202,6 +213,21 @@ public class SendsController : Controller
         }
 
         return new ObjectResult(sendResponse);
+    }
+
+    /// <summary>
+    /// Whether an item-type Send's vault item is gone. The item id is read from the Send's data, so Sends created
+    /// before the CipherId column was populated are still checked. Malformed data counts as missing.
+    /// </summary>
+    private async Task<bool> ItemCipherIsMissingAsync(Send send)
+    {
+        if (send.Type != SendType.Item)
+        {
+            return false;
+        }
+
+        var itemId = SendItemData.TryGetItemId(send.Data);
+        return !itemId.HasValue || await _cipherRepository.GetByIdAsync(itemId.Value) == null;
     }
 
     [Authorize(Policy = Policies.Send)]

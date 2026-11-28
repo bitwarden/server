@@ -543,7 +543,6 @@ public class CipherService : ICipherService
             throw new NotFoundException();
         }
 
-
         await DeleteAttachmentsForOrganizationAsync(organizationId, excludeDefaultUserCollectionCiphers: true);
 
         await _cipherRepository.DeleteByOrganizationIdAsync(organizationId);
@@ -551,24 +550,14 @@ public class CipherService : ICipherService
         await _eventService.LogOrganizationEventAsync(org, EventType.Organization_PurgedVault);
     }
 
+    public async Task PurgeUserVaultAsync(Guid userId)
+    {
+        await _cipherRepository.DeleteByUserIdAsync(userId);
+    }
+
     public async Task DeleteAttachmentsForOrganizationAsync(Guid organizationId, bool excludeDefaultUserCollectionCiphers = false)
     {
-        var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(organizationId);
-
-        if (excludeDefaultUserCollectionCiphers)
-        {
-            var defaultCollectionIds = (await _collectionRepository.GetManyByOrganizationIdAsync(organizationId))
-                .Where(c => c.Type == CollectionType.DefaultUserCollection)
-                .Select(c => c.Id)
-                .ToHashSet();
-
-            var cipherIdsInDefaultCollection = (await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId))
-                .Where(cc => defaultCollectionIds.Contains(cc.CollectionId))
-                .Select(cc => cc.CipherId)
-                .ToHashSet();
-
-            ciphers = ciphers.Where(c => !cipherIdsInDefaultCollection.Contains(c.Id)).ToList();
-        }
+        var ciphers = await GetOrganizationCiphersAsync(organizationId, excludeDefaultUserCollectionCiphers);
 
         var cipherIdsWithAttachments = ciphers.Where(c => c.GetAttachments()?.Count > 0).Select(c => c.Id);
 
@@ -981,6 +970,32 @@ public class CipherService : ICipherService
 
             await ValidateChangeInCollectionsAsync(cipher, newCollectionIds, userId, targetContainsDefault);
         }
+    }
+
+    /// <summary>
+    /// Loads the organization's ciphers. When <paramref name="excludeDefaultUserCollectionCiphers" /> is set,
+    /// ciphers in any member's default collection are left out, matching what an organization purge removes.
+    /// </summary>
+    private async Task<ICollection<Cipher>> GetOrganizationCiphersAsync(Guid organizationId, bool excludeDefaultUserCollectionCiphers)
+    {
+        var ciphers = await _cipherRepository.GetManyByOrganizationIdAsync(organizationId);
+
+        if (!excludeDefaultUserCollectionCiphers)
+        {
+            return ciphers;
+        }
+
+        var defaultCollectionIds = (await _collectionRepository.GetManyByOrganizationIdAsync(organizationId))
+            .Where(c => c.Type == CollectionType.DefaultUserCollection)
+            .Select(c => c.Id)
+            .ToHashSet();
+
+        var cipherIdsInDefaultCollection = (await _collectionCipherRepository.GetManyByOrganizationIdAsync(organizationId))
+            .Where(cc => defaultCollectionIds.Contains(cc.CollectionId))
+            .Select(cc => cc.CipherId)
+            .ToHashSet();
+
+        return ciphers.Where(c => !cipherIdsInDefaultCollection.Contains(c.Id)).ToList();
     }
 
     /// <summary>
