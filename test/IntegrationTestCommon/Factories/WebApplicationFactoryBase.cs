@@ -126,6 +126,15 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
     protected override IHostBuilder? CreateHostBuilder()
     {
         var builder = base.CreateHostBuilder();
+        // Tests never change the configuration files, so the host does not need to watch them. On macOS, a test run
+        // that builds more than 256 hosts with these watches hangs while it builds the next host.
+        builder?.ConfigureHostConfiguration(config =>
+        {
+            config.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                { "hostBuilder:reloadConfigOnChange", "false" },
+            });
+        });
         // Disable OTel to prevent OTLP export attempts hanging test runs in CI.
         builder?.ConfigureAppConfiguration((_, config) =>
         {
