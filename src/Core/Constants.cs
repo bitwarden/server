@@ -304,6 +304,7 @@ public static partial class FeatureFlagKeys
     public const string AccessIntelligenceAdoptionUxImprovements = "pm-34723-access-intelligence-adoption-ux-improvements";
     public const string EventManagementForGenericHec = "event-management-for-generic-hec";
     public const string BrowserExtensionHealthReport = "pm-35928-premium-user-health-reports";
+    public const string BrowserPasskeyReport = "pm-35248-browser-passkey-report";
     public const string OrganizationEventCleanup = "pm-33527-organization-event-cleanup";
     public const string AccessIntelligencePerformanceAtScale = "pm-43231-access-intelligence-performance-at-scale";
     public const string HealthReportExclusions = "pm-39196-health-report-exclusions";
