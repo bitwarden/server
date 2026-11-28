@@ -44,6 +44,19 @@ public class GlobalSettings : IGlobalSettings
     public string LicenseCertificatePath { get; set; }
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
+    /// <summary>
+    /// The secret of the <c>release.{service}</c> clients: internal clients that may delete named users, organizations
+    /// and providers outright through Identity's internal deletion endpoint. Unset, the clients don't exist and the
+    /// deletion answers <c>404</c>. Never logged.
+    /// </summary>
+    public virtual string StaleCopyDeletionClientSecret { get; set; }
+    /// <summary>
+    /// The local port of the internal listener the internal deletion answers on, and on no other. It must be an
+    /// additional Kestrel endpoint (an <c>ASPNETCORE_URLS</c> entry or <c>Kestrel:Endpoints</c>), different from
+    /// the public port, that only the install's own network reaches and the proxy never forwards to. Unset, the
+    /// internal deletion answers <c>404</c>.
+    /// </summary>
+    public virtual int? StaleCopyDeletionPort { get; set; }
     public virtual string OidcIdentityClientKey { get; set; }
     public virtual string HibpApiKey { get; set; }
     public virtual bool DisableUserRegistration { get; set; }

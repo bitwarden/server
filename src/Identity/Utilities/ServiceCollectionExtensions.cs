@@ -75,6 +75,11 @@ public static class ServiceCollectionExtensions
             services.AddClientProvider<InternalClientProvider>("internal");
         }
 
+        if (CoreHelpers.SettingHasValue(globalSettings.StaleCopyDeletionClientSecret))
+        {
+            services.AddClientProvider<StaleCopyDeletionClientProvider>(StaleCopyDeletionClientProvider.Prefix);
+        }
+
         services.AddClientProvider<UserClientProvider>("user");
         services.AddClientProvider<OrganizationClientProvider>("organization");
         services.AddClientProvider<SecretsManagerApiKeyProvider>(SecretsManagerApiKeyProvider.ApiKeyPrefix);
