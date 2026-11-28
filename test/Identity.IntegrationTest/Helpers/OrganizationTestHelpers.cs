@@ -22,7 +22,8 @@ public static class OrganizationTestHelpers
         Guid userId,
         OrganizationUserType organizationUserType,
         Permissions? permissions = null,
-        bool accessSecretsManager = false)
+        bool accessSecretsManager = false,
+        bool accessPam = false)
     {
         var organizationId = Guid.NewGuid();
         await factory.Services.GetRequiredService<IOrganizationRepository>().CreateAsync(new Organization
@@ -31,8 +32,10 @@ public static class OrganizationTestHelpers
             Name = $"Org Name | {organizationId}",
             Enabled = true,
             Plan = "Enterprise",
+            UsePolicies = true,
             BillingEmail = $"billing-email+{organizationId}@example.com",
             UseSecretsManager = accessSecretsManager,
+            UsePam = accessPam,
         });
 
         var organizationUser = new OrganizationUser
@@ -42,6 +45,7 @@ public static class OrganizationTestHelpers
             Status = OrganizationUserStatusType.Confirmed,
             Type = organizationUserType,
             AccessSecretsManager = accessSecretsManager,
+            AccessPam = accessPam,
         };
         if (permissions != null)
         {

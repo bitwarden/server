@@ -130,27 +130,34 @@ public class IdentityApplicationFactory : WebApplicationFactoryBase<Startup>
         return (accessTokenString, refreshTokenString);
     }
 
+    /// <param name="includeDevice">
+    /// When <c>false</c>, the request omits the device type, identifier, and name.
+    /// </param>
     public async Task<HttpContext> ContextFromPasswordAsync(
         string username,
         string password,
         string deviceIdentifier = DefaultDeviceIdentifier,
         string clientId = "web",
         DeviceType deviceType = DeviceType.FirefoxBrowser,
-        string deviceName = "firefox")
+        string deviceName = "firefox",
+        bool includeDevice = true)
     {
-        var context = await Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
+        var form = new Dictionary<string, string>
         {
             { "scope", "api offline_access" },
             { "client_id", clientId },
-            { "deviceType", ((int)deviceType).ToString(CultureInfo.InvariantCulture) },
-            { "deviceIdentifier", deviceIdentifier },
-            { "deviceName", deviceName },
             { "grant_type", "password" },
             { "username", username },
             { "password", password },
-        }));
+        };
+        if (includeDevice)
+        {
+            form.Add("deviceType", ((int)deviceType).ToString(CultureInfo.InvariantCulture));
+            form.Add("deviceIdentifier", deviceIdentifier);
+            form.Add("deviceName", deviceName);
+        }
 
-        return context;
+        return await Server.PostAsync("/connect/token", new FormUrlEncodedContent(form));
     }
 
     /// <param name="twoFactorRemember">

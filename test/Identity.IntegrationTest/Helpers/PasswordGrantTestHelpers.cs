@@ -14,17 +14,16 @@ public static class PasswordGrantTestHelpers
 {
     public const string DefaultPassword = "master_password_hash";
     public const string DefaultUsername = "test@email.qa";
-    public const string DefaultDeviceIdentifier = "test_identifier";
     public const DeviceType DefaultDeviceType = DeviceType.FirefoxBrowser;
     public const string DefaultDeviceName = "firefox";
 
-    public static async Task RegisterUserAsync(
+    public static async Task<User> RegisterUserAsync(
         IdentityApplicationFactory factory,
         string username = DefaultUsername,
         string password = DefaultPassword
 )
     {
-        await factory.RegisterNewIdentityFactoryUserAsync(
+        return await factory.RegisterNewIdentityFactoryUserAsync(
             new RegisterFinishRequestModel
             {
                 Email = username,

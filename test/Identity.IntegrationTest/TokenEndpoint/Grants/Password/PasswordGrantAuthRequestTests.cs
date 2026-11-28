@@ -1,570 +1,277 @@
-﻿using System.Text.Json;
-using Bit.Core.Auth.Entities;
+﻿using Bit.Core.Auth.Entities;
 using Bit.Core.Auth.Enums;
 using Bit.Core.Entities;
-using Bit.Core.Enums;
 using Bit.Core.Repositories;
 using Bit.IntegrationTestCommon.Factories;
-using Bit.Test.Common.Helpers;
-using Microsoft.AspNetCore.Identity;
 using Xunit;
 using static Bit.Identity.IntegrationTest.Helpers.PasswordGrantTestHelpers;
 using static Bit.Identity.IntegrationTest.Helpers.TokenEndpointTestHelpers;
+using static Bit.Identity.IntegrationTest.Helpers.TokenResponseAssertions;
 
 namespace Bit.Identity.IntegrationTest.TokenEndpoint.Grants.Password;
 
+/// <summary>
+/// Integration tests for a <c>password</c> grant that sends an approved auth request ("login with device") in place
+/// of the master password. Each failure test starts from the valid auth request of the success test and changes one
+/// thing.
+/// </summary>
 public class PasswordGrantAuthRequestTests
 {
+    private const string IncorrectCredentialsMessage = "Username or password is incorrect. Try again.";
+
+    /// <summary>
+    /// The access code differs from the master password, so a login succeeds only through the auth request check.
+    /// </summary>
+    private const string AccessCode = "auth_request_access_code";
+
+    /// <summary>
+    /// How long after its creation an auth request can log a user in.
+    /// </summary>
+    private static readonly TimeSpan AuthRequestLifetime = TimeSpan.FromMinutes(15);
+
+    /// <summary>
+    /// An approved, answered, unused auth request on a known device logs the user in with its access code, and the
+    /// login marks the auth request as used.
+    /// </summary>
     [Fact]
     public async Task ValidateAsync_ValidateContextAsync_ValidAuthRequest_Success()
     {
-        // Arrange
-        var localFactory = new IdentityApplicationFactory();
+        using var factory = new IdentityApplicationFactory();
+        var user = await RegisterUserAsync(factory);
+        await AddKnownDevice(factory, user.Id);
+        var authRequest = await CreateAuthRequestAsync(factory, user.Id);
+        Assert.Null(authRequest.AuthenticationDate);
 
-        // Ensure User
-        await RegisterUserAsync(localFactory);
-        var userManager = localFactory.GetService<UserManager<User>>();
-        var user = await userManager.FindByEmailAsync(DefaultUsername);
-        Assert.NotNull(user);
+        var context = await PostAuthRequestLoginAsync(factory, authRequest.Id, AccessCode);
 
-        // Ensure device is known b/c auth requests aren't allowed for unknown devices.
-        await AddKnownDevice(localFactory, user.Id);
-
-        // The access code differs from the master password, so the login succeeds only through the
-        // auth request check.
-        const string accessCode = "auth_request_access_code";
-
-        // Create valid auth request and tie it to the user
-        var authRequest = CreateAuthRequest(r =>
-        {
-            r.ResponseDate = DateTime.UtcNow.AddMinutes(-2); // 2 minutes ago
-            r.Approved = true; // approved
-            r.CreationDate = DateTime.UtcNow.AddMinutes(-5); // not expired
-            r.Type = AuthRequestType.AuthenticateAndUnlock; // authN request
-            r.AuthenticationDate = null; // not used for authN yet
-            r.UserId = user.Id;  // connect request to user
-            r.AccessCode = accessCode; // differs from the master password
-        });
-
-        var authRequestRepository = localFactory.GetService<IAuthRequestRepository>();
-        await authRequestRepository.CreateAsync(authRequest);
-
-        var expectedAuthRequest = await authRequestRepository.GetManyByUserIdAsync(user.Id);
-        Assert.NotEmpty(expectedAuthRequest);
-
-        // Act
-        var context = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "scope", "api offline_access" },
-                { "client_id", "web" },
-                { "deviceType", DeviceTypeAsString(DefaultDeviceType) },
-                { "deviceIdentifier", DefaultDeviceIdentifier },
-                { "deviceName", DefaultDeviceName },
-                { "grant_type", "password" },
-                { "username", DefaultUsername },
-                { "password", accessCode },
-                { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
-            }));
-
-        // Assert
-        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
-
-        var token = AssertHelper.AssertJsonProperty(root, "access_token", JsonValueKind.String).GetString();
-        Assert.NotNull(token);
+        using var body = await AssertDefaultTokenBodyAsync(context);
+        var authRequestAfter = await factory.GetService<IAuthRequestRepository>().GetByIdAsync(authRequest.Id);
+        Assert.NotNull(authRequestAfter!.AuthenticationDate);
     }
 
+    /// <summary>
+    /// An auth request login from a device that the user has not used before is rejected.
+    /// </summary>
     [Fact]
     public async Task ValidateAsync_ValidateContextAsync_ValidAuthRequest_UnknownDevice_Failure()
     {
-        // Arrange
-        var localFactory = new IdentityApplicationFactory();
+        using var factory = new IdentityApplicationFactory();
+        var user = await RegisterUserAsync(factory);
+        var authRequest = await CreateAuthRequestAsync(factory, user.Id);
 
-        // Ensure User
-        await RegisterUserAsync(localFactory);
-        var userManager = localFactory.GetService<UserManager<User>>();
-        var user = await userManager.FindByEmailAsync(DefaultUsername);
-        Assert.NotNull(user);
+        var context = await PostAuthRequestLoginAsync(factory, authRequest.Id, AccessCode);
 
-        // Create valid auth request and tie it to the user
-        var authRequest = CreateAuthRequest(r =>
-        {
-            r.ResponseDate = DateTime.UtcNow.AddMinutes(-2); // 2 minutes ago
-            r.Approved = true; // approved
-            r.CreationDate = DateTime.UtcNow.AddMinutes(-5); // not expired
-            r.Type = AuthRequestType.AuthenticateAndUnlock; // authN request
-            r.AuthenticationDate = null; // not used for authN yet
-            r.UserId = user.Id;  // connect request to user
-            r.AccessCode = DefaultPassword; // matches the password
-        });
-
-        var authRequestRepository = localFactory.GetService<IAuthRequestRepository>();
-        await authRequestRepository.CreateAsync(authRequest);
-
-        var expectedAuthRequest = await authRequestRepository.GetManyByUserIdAsync(user.Id);
-        Assert.NotEmpty(expectedAuthRequest);
-
-        // Act
-        var context = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "scope", "api offline_access" },
-                { "client_id", "web" },
-                { "deviceType", DeviceTypeAsString(DefaultDeviceType) },
-                { "deviceIdentifier", DefaultDeviceIdentifier },
-                { "deviceName", DefaultDeviceName },
-                { "grant_type", "password" },
-                { "username", DefaultUsername },
-                { "password", DefaultPassword },
-                { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
-            }));
-
-        // Assert
-        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
-
-        var errorModel = AssertHelper.AssertJsonProperty(root, "ErrorModel", JsonValueKind.Object);
-        var errorMessage = AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString();
-        Assert.Equal("auth request flow unsupported on unknown device", errorMessage);
+        await AssertErrorModelAsync(context, "auth request flow unsupported on unknown device",
+            expectedError: "device_error");
     }
 
+    /// <summary>
+    /// An auth request older than its lifetime is rejected.
+    /// </summary>
     [Fact]
     public async Task ValidateAsync_ValidateContextAsync_Expired_AuthRequest_Failure()
     {
-        // Arrange
-        var localFactory = new IdentityApplicationFactory();
-        // Ensure User
-        await RegisterUserAsync(localFactory);
-        var userManager = localFactory.GetService<UserManager<User>>();
+        using var factory = new IdentityApplicationFactory();
+        var user = await RegisterUserAsync(factory);
+        await AddKnownDevice(factory, user.Id);
+        var authRequest = await CreateAuthRequestAsync(factory, user.Id,
+            r => r.CreationDate = DateTime.UtcNow - AuthRequestLifetime - TimeSpan.FromMinutes(1));
 
-        var user = await userManager.FindByEmailAsync(DefaultUsername);
-        Assert.NotNull(user);
+        var context = await PostAuthRequestLoginAsync(factory, authRequest.Id, AccessCode);
 
-        // Ensure device is known b/c auth requests aren't allowed for unknown devices.
-        await AddKnownDevice(localFactory, user.Id);
-
-        // Create AuthRequest
-        var authRequest = CreateAuthRequest(r =>
-        {
-            r.ResponseDate = DateTime.UtcNow.AddMinutes(-10); // 10 minutes ago
-            r.Approved = true; // approved
-            r.CreationDate = DateTime.UtcNow.AddMinutes(-16); // expired after 15 minutes
-            r.Type = AuthRequestType.AuthenticateAndUnlock; // authN request
-            r.AuthenticationDate = null; // not used for authN yet
-            r.UserId = user.Id;  // connect request to user
-            r.AccessCode = DefaultPassword; // matches the password
-        });
-
-        var authRequestRepository = localFactory.GetService<IAuthRequestRepository>();
-        await authRequestRepository.CreateAsync(authRequest);
-
-        var expectedAuthRequest = await authRequestRepository.GetManyByUserIdAsync(user.Id);
-        Assert.NotEmpty(expectedAuthRequest);
-
-        // Act
-        var context = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "scope", "api offline_access" },
-                { "client_id", "web" },
-                { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
-                { "deviceIdentifier", DefaultDeviceIdentifier },
-                { "deviceName", "firefox" },
-                { "grant_type", "password" },
-                { "username", DefaultUsername },
-                { "password", DefaultPassword },
-                { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
-            }));
-
-        // Assert
-
-        await AssertStandardError(context);
+        await AssertErrorModelAsync(context, IncorrectCredentialsMessage);
     }
 
+    /// <summary>
+    /// An auth request that the user denied is rejected.
+    /// </summary>
     [Fact]
     public async Task ValidateAsync_ValidateContextAsync_Unapproved_AuthRequest_Failure()
     {
-        // Arrange
-        var localFactory = new IdentityApplicationFactory();
-        // Ensure User
-        await RegisterUserAsync(localFactory);
-        var userManager = localFactory.GetService<UserManager<User>>();
+        using var factory = new IdentityApplicationFactory();
+        var user = await RegisterUserAsync(factory);
+        await AddKnownDevice(factory, user.Id);
+        var authRequest = await CreateAuthRequestAsync(factory, user.Id, r => r.Approved = false);
 
-        var user = await userManager.FindByEmailAsync(DefaultUsername);
-        Assert.NotNull(user);
+        var context = await PostAuthRequestLoginAsync(factory, authRequest.Id, AccessCode);
 
-        // Ensure device is known b/c auth requests aren't allowed for unknown devices.
-        await AddKnownDevice(localFactory, user.Id);
-
-        // Create AuthRequest
-        var authRequest = CreateAuthRequest(r =>
-        {
-            r.ResponseDate = DateTime.UtcNow.AddMinutes(-2); // 2 minutes ago
-            r.Approved = false; // NOT approved
-            r.CreationDate = DateTime.UtcNow.AddMinutes(-5); // still valid
-            r.Type = AuthRequestType.AuthenticateAndUnlock; // authN request
-            r.AuthenticationDate = null; // not used for authN yet
-            r.UserId = user.Id;  // connect request to user
-            r.AccessCode = DefaultPassword; // matches the password
-        });
-
-        var authRequestRepository = localFactory.GetService<IAuthRequestRepository>();
-        await authRequestRepository.CreateAsync(authRequest);
-
-        var expectedAuthRequest = await authRequestRepository.GetManyByUserIdAsync(user.Id);
-        Assert.NotEmpty(expectedAuthRequest);
-
-        // Act
-        var context = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "scope", "api offline_access" },
-                { "client_id", "web" },
-                { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
-                { "deviceIdentifier", DefaultDeviceIdentifier },
-                { "deviceName", "firefox" },
-                { "grant_type", "password" },
-                { "username", DefaultUsername },
-                { "password", DefaultPassword },
-                { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
-            }));
-
-        // Assert
-
-        await AssertStandardError(context);
+        await AssertErrorModelAsync(context, IncorrectCredentialsMessage);
     }
 
     public static IEnumerable<object[]> InvalidAuthRequestTypes()
     {
-        // yield the two enum values that should fail
         yield return [AuthRequestType.Unlock];
         yield return [AuthRequestType.AdminApproval];
     }
 
+    /// <summary>
+    /// Only an auth request of type <see cref="AuthRequestType.AuthenticateAndUnlock"/> can log a user in.
+    /// </summary>
     [Theory]
     [MemberData(nameof(InvalidAuthRequestTypes))]
     public async Task ValidateAsync_ValidateContextAsync_AuthRequest_Invalid_Type_Failure(AuthRequestType invalidType)
     {
-        // Arrange
-        var localFactory = new IdentityApplicationFactory();
-        // Ensure User
-        await RegisterUserAsync(localFactory);
-        var userManager = localFactory.GetService<UserManager<User>>();
+        using var factory = new IdentityApplicationFactory();
+        var user = await RegisterUserAsync(factory);
+        await AddKnownDevice(factory, user.Id);
+        var authRequest = await CreateAuthRequestAsync(factory, user.Id, r => r.Type = invalidType);
 
-        var user = await userManager.FindByEmailAsync(DefaultUsername);
-        Assert.NotNull(user);
+        var context = await PostAuthRequestLoginAsync(factory, authRequest.Id, AccessCode);
 
-        // Ensure device is known b/c auth requests aren't allowed for unknown devices.
-        await AddKnownDevice(localFactory, user.Id);
-
-        // Create AuthRequest
-        var authRequest = CreateAuthRequest(r =>
-        {
-            r.ResponseDate = DateTime.UtcNow.AddMinutes(-2); // 2 minutes ago
-            r.Approved = true; // approved
-            r.CreationDate = DateTime.UtcNow.AddMinutes(-5); // still valid
-            r.Type = invalidType; // invalid type for authN
-            r.AuthenticationDate = null; // not used for authN yet
-            r.UserId = user.Id;  // connect request to user
-            r.AccessCode = DefaultPassword; // matches the password
-        });
-
-        var authRequestRepository = localFactory.GetService<IAuthRequestRepository>();
-        await authRequestRepository.CreateAsync(authRequest);
-
-        var expectedAuthRequest = await authRequestRepository.GetManyByUserIdAsync(user.Id);
-        Assert.NotEmpty(expectedAuthRequest);
-
-        // Act
-        var context = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "scope", "api offline_access" },
-                { "client_id", "web" },
-                { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
-                { "deviceIdentifier", DefaultDeviceIdentifier },
-                { "deviceName", "firefox" },
-                { "grant_type", "password" },
-                { "username", DefaultUsername },
-                { "password", DefaultPassword },
-                { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
-            }));
-
-        // Assert
-
-        await AssertStandardError(context);
+        await AssertErrorModelAsync(context, IncorrectCredentialsMessage);
     }
 
+    /// <summary>
+    /// An auth request of another user cannot log this user in.
+    /// </summary>
     [Fact]
     public async Task ValidateAsync_ValidateContextAsync_AuthRequest_WrongUser_Failure()
     {
-        // Arrange
-        var localFactory = new IdentityApplicationFactory();
+        using var factory = new IdentityApplicationFactory();
+        var user = await RegisterUserAsync(factory);
+        var otherUser = await RegisterUserAsync(factory, "user2@email.com", "user2_password");
+        await AddKnownDevice(factory, user.Id);
+        var authRequest = await CreateAuthRequestAsync(factory, otherUser.Id);
 
-        // Ensure User 1 exists
-        await RegisterUserAsync(localFactory);
-        var userManager = localFactory.GetService<UserManager<User>>();
-        var user = await userManager.FindByEmailAsync(DefaultUsername);
-        Assert.NotNull(user);
+        var context = await PostAuthRequestLoginAsync(factory, authRequest.Id, AccessCode);
 
-
-
-        // Ensure User 2 exists so we can satisfy auth request foreign key constraint
-        var user2Username = "user2@email.com";
-        var user2Password = "user2_password";
-        await RegisterUserAsync(localFactory, user2Username, user2Password);
-        var user2 = await userManager.FindByEmailAsync(user2Username);
-        Assert.NotNull(user2);
-
-        // Ensure device is known b/c auth requests aren't allowed for unknown devices.
-        await AddKnownDevice(localFactory, user.Id);
-
-        // Create valid auth request for user 2
-        var authRequest = CreateAuthRequest(r =>
-        {
-            r.ResponseDate = DateTime.UtcNow.AddMinutes(-2); // 2 minutes ago
-            r.Approved = true; // approved
-            r.CreationDate = DateTime.UtcNow.AddMinutes(-5); // not expired
-            r.Type = AuthRequestType.AuthenticateAndUnlock; // authN request
-            r.AuthenticationDate = null; // not used for authN yet
-            r.UserId = user2.Id;  // connect request to user2
-            r.AccessCode = DefaultPassword; // matches the password
-        });
-        var authRequestRepository = localFactory.GetService<IAuthRequestRepository>();
-        await authRequestRepository.CreateAsync(authRequest);
-
-        var expectedAuthRequest = await authRequestRepository.GetManyByUserIdAsync(user2.Id);
-        Assert.NotEmpty(expectedAuthRequest);
-
-        // Act
-        var context = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "scope", "api offline_access" },
-                { "client_id", "web" },
-                { "deviceType", DeviceTypeAsString(DefaultDeviceType) },
-                { "deviceIdentifier", DefaultDeviceIdentifier },
-                { "deviceName", DefaultDeviceName },
-                { "grant_type", "password" },
-                { "username", DefaultUsername },
-                { "password", DefaultPassword },
-                { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
-            }));
-
-        // Assert
-        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
-
-        var errorModel = AssertHelper.AssertJsonProperty(root, "ErrorModel", JsonValueKind.Object);
-        var errorMessage = AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString();
-        Assert.Equal("Username or password is incorrect. Try again.", errorMessage);
+        await AssertErrorModelAsync(context, IncorrectCredentialsMessage);
     }
 
+    /// <summary>
+    /// An auth request that the user has not answered yet is rejected.
+    /// </summary>
     [Fact]
     public async Task ValidateAsync_ValidateContextAsync_Unanswered_AuthRequest_Failure()
     {
-        // Arrange
-        var localFactory = new IdentityApplicationFactory();
-        // Ensure User
-        await RegisterUserAsync(localFactory);
-        var userManager = localFactory.GetService<UserManager<User>>();
+        using var factory = new IdentityApplicationFactory();
+        var user = await RegisterUserAsync(factory);
+        await AddKnownDevice(factory, user.Id);
+        var authRequest = await CreateAuthRequestAsync(factory, user.Id, r => r.ResponseDate = null);
 
-        var user = await userManager.FindByEmailAsync(DefaultUsername);
-        Assert.NotNull(user);
+        var context = await PostAuthRequestLoginAsync(factory, authRequest.Id, AccessCode);
 
-        // Ensure device is known b/c auth requests aren't allowed for unknown devices.
-        await AddKnownDevice(localFactory, user.Id);
-
-        // Create AuthRequest
-        var authRequest = CreateAuthRequest(r =>
-        {
-            r.ResponseDate = null; // not answered
-            r.Approved = true; // approved
-            r.CreationDate = DateTime.UtcNow.AddMinutes(-5); // still valid
-            r.Type = AuthRequestType.AuthenticateAndUnlock; // authN request
-            r.AuthenticationDate = null; // not used for authN yet
-            r.UserId = user.Id;  // connect request to user
-            r.AccessCode = DefaultPassword; // matches the password
-        });
-
-        var authRequestRepository = localFactory.GetService<IAuthRequestRepository>();
-        await authRequestRepository.CreateAsync(authRequest);
-
-        var expectedAuthRequest = await authRequestRepository.GetManyByUserIdAsync(user.Id);
-        Assert.NotEmpty(expectedAuthRequest);
-
-        // Act
-        var context = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "scope", "api offline_access" },
-                { "client_id", "web" },
-                { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
-                { "deviceIdentifier", DefaultDeviceIdentifier },
-                { "deviceName", "firefox" },
-                { "grant_type", "password" },
-                { "username", DefaultUsername },
-                { "password", DefaultPassword },
-                { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
-            }));
-
-        // Assert
-
-        await AssertStandardError(context);
+        await AssertErrorModelAsync(context, IncorrectCredentialsMessage);
     }
 
+    /// <summary>
+    /// With an auth request, only its access code is accepted. The master password of the user is rejected.
+    /// </summary>
     [Fact]
     public async Task ValidateAsync_ValidateContextAsync_WrongPassword_AuthRequest_Failure()
     {
-        // Arrange
-        var localFactory = new IdentityApplicationFactory();
-        // Ensure User
-        await RegisterUserAsync(localFactory);
-        var userManager = localFactory.GetService<UserManager<User>>();
+        using var factory = new IdentityApplicationFactory();
+        var user = await RegisterUserAsync(factory);
+        await AddKnownDevice(factory, user.Id);
+        var authRequest = await CreateAuthRequestAsync(factory, user.Id);
 
-        var user = await userManager.FindByEmailAsync(DefaultUsername);
-        Assert.NotNull(user);
+        var context = await PostAuthRequestLoginAsync(factory, authRequest.Id, DefaultPassword);
 
-        // Ensure device is known b/c auth requests aren't allowed for unknown devices.
-        await AddKnownDevice(localFactory, user.Id);
-
-        // Create AuthRequest
-        var authRequest = CreateAuthRequest(r =>
-        {
-            r.ResponseDate = DateTime.UtcNow.AddMinutes(-2); // answered
-            r.Approved = true; // approved
-            r.CreationDate = DateTime.UtcNow.AddMinutes(-5); // still valid
-            r.Type = AuthRequestType.AuthenticateAndUnlock; // authN request
-            r.AuthenticationDate = null; // not used for authN yet
-            r.UserId = user.Id;  // connect request to user
-            r.AccessCode = "WRONG_BAD_PASSWORD"; // does not match the password
-        });
-
-        var authRequestRepository = localFactory.GetService<IAuthRequestRepository>();
-        await authRequestRepository.CreateAsync(authRequest);
-
-        var expectedAuthRequest = await authRequestRepository.GetManyByUserIdAsync(user.Id);
-        Assert.NotEmpty(expectedAuthRequest);
-
-        // Act
-        var context = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "scope", "api offline_access" },
-                { "client_id", "web" },
-                { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
-                { "deviceIdentifier", DefaultDeviceIdentifier },
-                { "deviceName", "firefox" },
-                { "grant_type", "password" },
-                { "username", DefaultUsername },
-                { "password", DefaultPassword },
-                { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
-            }));
-
-        // Assert
-
-        await AssertStandardError(context);
+        await AssertErrorModelAsync(context, IncorrectCredentialsMessage);
     }
 
+    /// <summary>
+    /// An auth request that has already logged a user in cannot log in again.
+    /// </summary>
     [Fact]
     public async Task ValidateAsync_ValidateContextAsync_Spent_AuthRequest_Failure()
     {
-        // Arrange
-        var localFactory = new IdentityApplicationFactory();
-        // Ensure User
-        await RegisterUserAsync(localFactory);
-        var userManager = localFactory.GetService<UserManager<User>>();
+        using var factory = new IdentityApplicationFactory();
+        var user = await RegisterUserAsync(factory);
+        await AddKnownDevice(factory, user.Id);
+        var authRequest = await CreateAuthRequestAsync(factory, user.Id,
+            r => r.AuthenticationDate = DateTime.UtcNow.AddMinutes(-2));
 
-        var user = await userManager.FindByEmailAsync(DefaultUsername);
-        Assert.NotNull(user);
+        var context = await PostAuthRequestLoginAsync(factory, authRequest.Id, AccessCode);
 
-        // Ensure device is known b/c auth requests aren't allowed for unknown devices.
-        await AddKnownDevice(localFactory, user.Id);
-
-        // Create AuthRequest
-        var authRequest = CreateAuthRequest(r =>
-        {
-            r.ResponseDate = DateTime.UtcNow.AddMinutes(-2); // answered
-            r.Approved = true; // approved
-            r.CreationDate = DateTime.UtcNow.AddMinutes(-5); // still valid
-            r.Type = AuthRequestType.AuthenticateAndUnlock; // authN request
-            r.AuthenticationDate = DateTime.UtcNow.AddMinutes(-2); // spent request - already has been used for authN
-            r.UserId = user.Id;  // connect request to user
-            r.AccessCode = DefaultPassword; // does not match the password
-        });
-
-        var authRequestRepository = localFactory.GetService<IAuthRequestRepository>();
-        await authRequestRepository.CreateAsync(authRequest);
-
-        var expectedAuthRequest = await authRequestRepository.GetManyByUserIdAsync(user.Id);
-        Assert.NotEmpty(expectedAuthRequest);
-
-        // Act
-        var context = await localFactory.Server.PostAsync("/connect/token",
-            new FormUrlEncodedContent(new Dictionary<string, string>
-            {
-                { "scope", "api offline_access" },
-                { "client_id", "web" },
-                { "deviceType", DeviceTypeAsString(DeviceType.FirefoxBrowser) },
-                { "deviceIdentifier", DefaultDeviceIdentifier },
-                { "deviceName", "firefox" },
-                { "grant_type", "password" },
-                { "username", DefaultUsername },
-                { "password", DefaultPassword },
-                { "AuthRequest", authRequest.Id.ToString().ToLowerInvariant() }
-            }));
-
-        // Assert
-        await AssertStandardError(context);
+        await AssertErrorModelAsync(context, IncorrectCredentialsMessage);
     }
 
-    private AuthRequest CreateAuthRequest(Action<AuthRequest>? customize = null)
+    /// <summary>
+    /// An auth request ID that does not exist is rejected.
+    /// </summary>
+    [Fact]
+    public async Task PasswordGrant_UnknownAuthRequestId_IsRejected()
     {
-        var req = new AuthRequest
+        using var factory = new IdentityApplicationFactory();
+        var user = await RegisterUserAsync(factory);
+        await AddKnownDevice(factory, user.Id);
+        await CreateAuthRequestAsync(factory, user.Id);
+
+        var context = await PostAuthRequestLoginAsync(factory, Guid.NewGuid(), AccessCode);
+
+        await AssertErrorModelAsync(context, IncorrectCredentialsMessage);
+    }
+
+    /// <summary>
+    /// An auth request ID that is not a GUID is rejected.
+    /// </summary>
+    [Fact]
+    public async Task PasswordGrant_NonGuidAuthRequestId_IsRejected()
+    {
+        using var factory = new IdentityApplicationFactory();
+        var user = await RegisterUserAsync(factory);
+        await AddKnownDevice(factory, user.Id);
+        await CreateAuthRequestAsync(factory, user.Id);
+
+        var context = await PostAuthRequestLoginAsync(factory, "not_a_guid", AccessCode);
+
+        await AssertErrorModelAsync(context, IncorrectCredentialsMessage);
+    }
+
+    /// <summary>
+    /// Saves an auth request that is valid for a login of the user with <see cref="AccessCode"/>: approved,
+    /// answered, not expired, and not used. <paramref name="customize"/> changes it before it is saved.
+    /// </summary>
+    private static async Task<AuthRequest> CreateAuthRequestAsync(IdentityApplicationFactory factory, Guid userId,
+        Action<AuthRequest>? customize = null)
+    {
+        var authRequest = new AuthRequest
         {
-            // required fields with defaults
-            UserId = Guid.NewGuid(),
+            UserId = userId,
             Type = AuthRequestType.AuthenticateAndUnlock,
-            RequestDeviceIdentifier = DefaultDeviceIdentifier,
+            RequestDeviceIdentifier = IdentityApplicationFactory.DefaultDeviceIdentifier,
             RequestIpAddress = "1.1.1.1",
-            AccessCode = DefaultPassword,
+            AccessCode = AccessCode,
             PublicKey = "test_public_key",
-            CreationDate = DateTime.UtcNow,
+            CreationDate = DateTime.UtcNow.AddMinutes(-5),
+            ResponseDate = DateTime.UtcNow.AddMinutes(-2),
+            Approved = true,
+            AuthenticationDate = null,
         };
-
-        // let the caller tweak whatever they need
-        customize?.Invoke(req);
-
-        return req;
+        customize?.Invoke(authRequest);
+        return await factory.GetService<IAuthRequestRepository>().CreateAsync(authRequest);
     }
 
-    private async Task AddKnownDevice(IdentityApplicationFactory factory, Guid userId)
+    private static Task<HttpContext> PostAuthRequestLoginAsync(IdentityApplicationFactory factory,
+        Guid authRequestId, string password) =>
+        PostAuthRequestLoginAsync(factory, authRequestId.ToString(), password);
+
+    private static async Task<HttpContext> PostAuthRequestLoginAsync(IdentityApplicationFactory factory,
+        string authRequestId, string password)
     {
-        var userDevice = new Device
+        return await factory.Server.PostAsync("/connect/token", new FormUrlEncodedContent(new Dictionary<string, string>
         {
-            Identifier = DefaultDeviceIdentifier,
+            { "scope", "api offline_access" },
+            { "client_id", "web" },
+            { "deviceType", DeviceTypeAsString(DefaultDeviceType) },
+            { "deviceIdentifier", IdentityApplicationFactory.DefaultDeviceIdentifier },
+            { "deviceName", DefaultDeviceName },
+            { "grant_type", "password" },
+            { "username", DefaultUsername },
+            { "password", password },
+            { "AuthRequest", authRequestId },
+        }));
+    }
+
+    private static async Task AddKnownDevice(IdentityApplicationFactory factory, Guid userId)
+    {
+        await factory.GetService<IDeviceRepository>().CreateAsync(new Device
+        {
+            Identifier = IdentityApplicationFactory.DefaultDeviceIdentifier,
             Type = DefaultDeviceType,
             Name = DefaultDeviceName,
             UserId = userId,
-        };
-        var deviceRepository = factory.GetService<IDeviceRepository>();
-        await deviceRepository.CreateAsync(userDevice);
-    }
-
-    private async Task AssertStandardError(HttpContext context)
-    {
-        /*
-       An improvement on the current failure flow would be to document which part of
-       the flow failed since all of the failures are basically the same.
-       This doesn't build confidence in the tests.
-       */
-
-        var body = await AssertHelper.AssertResponseTypeIs<JsonDocument>(context);
-        var root = body.RootElement;
-
-        var errorModel = AssertHelper.AssertJsonProperty(root, "ErrorModel", JsonValueKind.Object);
-        var errorMessage = AssertHelper.AssertJsonProperty(errorModel, "Message", JsonValueKind.String).GetString();
-        Assert.Equal("Username or password is incorrect. Try again.", errorMessage);
+        });
     }
 }
