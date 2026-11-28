@@ -1,0 +1,61 @@
+{
+  "invoice_payment": {
+    "id": "inpay_creditpluspayment01",
+    "object": "invoice_payment",
+    "amount_paid": 7000,
+    "amount_requested": 7000,
+    "created": 1794479316,
+    "currency": "usd",
+    "invoice": {
+      "id": "in_creditpluspayment02",
+      "object": "invoice",
+      "customer": "cus_creditpluspayment03",
+      "metadata": {},
+      "parent": {
+        "subscription_details": {
+          "metadata": {
+            "organizationId": "afcdb9ac-19db-4299-876a-d9604cc60ac1"
+          },
+          "subscription": "sub_creditpluspayment04"
+        },
+        "type": "subscription_details"
+      }
+    },
+    "livemode": false,
+    "payment": {
+      "payment_record": "pr_creditpluspayment05",
+      "type": "payment_record"
+    },
+    "status": "paid",
+    "status_transitions": {
+      "paid_at": 1794479314
+    }
+  },
+  "payment_record": {
+    "id": "pr_creditpluspayment05",
+    "object": "payment_record",
+    "amount": {
+      "currency": "usd",
+      "value": 7000
+    },
+    "customer_details": {
+      "customer": "cus_creditpluspayment03",
+      "name": "Example Customer Inc"
+    },
+    "livemode": false,
+    "payment_method_details": {
+      "custom": {
+        "display_name": "In Wire - EXAMPLE CO",
+        "type": "custom"
+      },
+      "type": "custom"
+    },
+    "processor_details": {
+      "custom": {
+        "payment_reference": "11/12/2026 - EXAMPLE CO"
+      },
+      "type": "custom"
+    },
+    "reported_by": "self"
+  }
+}

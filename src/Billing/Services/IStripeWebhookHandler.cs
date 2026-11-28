@@ -78,3 +78,12 @@ public interface ICouponDeletedHandler : IStripeWebhookHandler;
 /// </summary>
 public interface ICheckoutSessionCompletedHandler : IStripeWebhookHandler;
 
+/// <summary>
+/// Defines the contract for handling Stripe invoice payment paid events.
+/// </summary>
+public interface IInvoicePaymentPaidHandler : IStripeWebhookHandler;
+
+/// <summary>
+/// Defines the contract for handling Stripe invoice paid events.
+/// </summary>
+public interface IInvoicePaidHandler : IStripeWebhookHandler;

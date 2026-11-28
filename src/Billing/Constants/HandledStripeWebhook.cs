@@ -16,4 +16,6 @@ public static class HandledStripeWebhook
     public const string SetupIntentSucceeded = "setup_intent.succeeded";
     public const string CouponDeleted = "coupon.deleted";
     public const string CheckoutSessionCompleted = "checkout.session.completed";
+    public const string InvoicePaymentPaid = "invoice_payment.paid";
+    public const string InvoicePaid = "invoice.paid";
 }

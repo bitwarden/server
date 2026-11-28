@@ -527,6 +527,31 @@ public class StripeEventServiceTests
     }
 
     [Fact]
+    public async Task ValidateCloudRegion_InvoicePaymentPaid_Success()
+    {
+        // Arrange
+        var mockInvoicePayment = new InvoicePayment { Id = "inpay_test" };
+        var stripeEvent = CreateMockEvent("evt_test", "invoice_payment.paid", mockInvoicePayment);
+
+        mockInvoicePayment.Invoice = new Invoice { Id = "in_test", Customer = CreateMockCustomer() };
+
+        _stripeFacade.GetInvoicePayment(
+                mockInvoicePayment.Id,
+                Arg.Any<InvoicePaymentGetOptions>())
+            .Returns(mockInvoicePayment);
+
+        // Act
+        var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
+
+        // Assert
+        Assert.True(cloudRegionValid);
+
+        await _stripeFacade.Received(1).GetInvoicePayment(
+            mockInvoicePayment.Id,
+            Arg.Is<InvoicePaymentGetOptions>(o => o.Expand.Contains("invoice.customer")));
+    }
+
+    [Fact]
     public async Task ValidateCloudRegion_UpcomingInvoice_Success()
     {
         // Arrange
@@ -575,6 +600,29 @@ public class StripeEventServiceTests
         await _stripeFacade.Received(1).GetInvoice(
             mockInvoice.Id,
             Arg.Any<InvoiceGetOptions>());
+    }
+
+    [Fact]
+    public async Task ValidateCloudRegion_InvoicePaid_Success()
+    {
+        // Arrange
+        var mockInvoice = new Invoice { Id = "in_test", Customer = CreateMockCustomer() };
+        var stripeEvent = CreateMockEvent("evt_test", "invoice.paid", mockInvoice);
+
+        _stripeFacade.GetInvoice(
+                mockInvoice.Id,
+                Arg.Any<InvoiceGetOptions>())
+            .Returns(mockInvoice);
+
+        // Act
+        var cloudRegionValid = await _stripeEventService.ValidateCloudRegion(stripeEvent);
+
+        // Assert
+        Assert.True(cloudRegionValid);
+
+        await _stripeFacade.Received(1).GetInvoice(
+            mockInvoice.Id,
+            Arg.Is<InvoiceGetOptions>(o => o.Expand.Contains("customer")));
     }
 
     [Fact]

@@ -122,4 +122,21 @@ public interface IStripeFacade
         CouponGetOptions couponGetOptions = null,
         RequestOptions requestOptions = null,
         CancellationToken cancellationToken = default);
+
+    IAsyncEnumerable<InvoicePayment> ListInvoicePaymentsAutoPagingAsync(
+        InvoicePaymentListOptions options = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
+
+    Task<InvoicePayment> GetInvoicePayment(
+        string invoicePaymentId,
+        InvoicePaymentGetOptions invoicePaymentGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
+
+    Task<PaymentRecord> GetPaymentRecord(
+        string paymentRecordId,
+        PaymentRecordGetOptions paymentRecordGetOptions = null,
+        RequestOptions requestOptions = null,
+        CancellationToken cancellationToken = default);
 }

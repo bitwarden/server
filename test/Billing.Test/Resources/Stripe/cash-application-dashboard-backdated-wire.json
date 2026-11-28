@@ -1,0 +1,61 @@
+{
+  "invoice_payment": {
+    "id": "inpay_dashboardbackdatedwire01",
+    "object": "invoice_payment",
+    "amount_paid": 7200,
+    "amount_requested": 7200,
+    "created": 1794482860,
+    "currency": "usd",
+    "invoice": {
+      "id": "in_dashboardbackdatedwire02",
+      "object": "invoice",
+      "customer": "cus_dashboardbackdatedwire03",
+      "metadata": {},
+      "parent": {
+        "subscription_details": {
+          "metadata": {
+            "organizationId": "ad2eb166-81fb-45aa-a30b-50464804cad5"
+          },
+          "subscription": "sub_dashboardbackdatedwire04"
+        },
+        "type": "subscription_details"
+      }
+    },
+    "livemode": false,
+    "payment": {
+      "payment_record": "pr_dashboardbackdatedwire05",
+      "type": "payment_record"
+    },
+    "status": "paid",
+    "status_transitions": {
+      "paid_at": 1780459200
+    }
+  },
+  "payment_record": {
+    "id": "pr_dashboardbackdatedwire05",
+    "object": "payment_record",
+    "amount": {
+      "currency": "usd",
+      "value": 7200
+    },
+    "customer_details": {
+      "customer": "cus_dashboardbackdatedwire03",
+      "name": "Example Customer Inc"
+    },
+    "livemode": false,
+    "payment_method_details": {
+      "custom": {
+        "display_name": "WIRE",
+        "type": "custom"
+      },
+      "type": "custom"
+    },
+    "processor_details": {
+      "custom": {
+        "payment_reference": "06/03/2026 - EXAMPLE CO"
+      },
+      "type": "custom"
+    },
+    "reported_by": "self"
+  }
+}

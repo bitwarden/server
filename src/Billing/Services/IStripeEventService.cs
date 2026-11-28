@@ -83,6 +83,17 @@ public interface IStripeEventService
     Task<Session> GetCheckoutSession(Event stripeEvent, bool fresh = false, List<string>? expand = null);
 
     /// <summary>
+    /// Extracts the <see cref="InvoicePayment"/> object from the Stripe <see cref="Event"/>. When <paramref name="fresh"/> is true,
+    /// uses the invoice payment ID extracted from the event to retrieve the most up-to-date invoice payment from Stripe's API
+    /// and optionally expands it with the provided <see cref="expand"/> options.
+    /// </summary>
+    /// <param name="stripeEvent">The Stripe webhook event.</param>
+    /// <param name="fresh">Determines whether to retrieve a fresh copy of the invoice payment object from Stripe.</param>
+    /// <param name="expand">This parameter allows you to specify additional properties to expand when retrieving the invoice payment from Stripe.</param>
+    /// <returns>An <see cref="InvoicePayment"/> object.</returns>
+    Task<InvoicePayment> GetInvoicePayment(Event stripeEvent, bool fresh = false, List<string>? expand = null);
+
+    /// <summary>
     /// Ensures that the customer associated with the Stripe <see cref="Event"/> is in the correct region for this server.
     /// We use the customer instead of the subscription given that all subscriptions have customers, but not all
     /// customers have subscriptions.

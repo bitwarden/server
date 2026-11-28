@@ -34,7 +34,13 @@ public sealed class BillingApplicationFactory : IAsyncDisposable
 
     private readonly WebApplicationFactory<Bit.Billing.Program> _factory;
 
-    public BillingApplicationFactory(ITestDatabase testDatabase)
+    /// <param name="testDatabase">The API host's database, shared with this host.</param>
+    /// <param name="additionalConfiguration">
+    /// Extra configuration for the Billing host, e.g. local feature flag values
+    /// (<c>Features:FlagValues:{key}</c>) for flag-gated handlers.
+    /// </param>
+    public BillingApplicationFactory(ITestDatabase testDatabase,
+        IReadOnlyDictionary<string, string?>? additionalConfiguration = null)
     {
         _factory = new WebApplicationFactory<Bit.Billing.Program>().WithWebHostBuilder(builder =>
         {
@@ -52,6 +58,11 @@ public sealed class BillingApplicationFactory : IAsyncDisposable
                     ["globalSettings:databaseProvider"] = "sqlite",
                 };
                 testDatabase.ModifyGlobalSettings(configValues);
+                foreach (var (key, value) in additionalConfiguration ?? new Dictionary<string, string?>())
+                {
+                    configValues[key] = value;
+                }
+
                 config.AddInMemoryCollection(configValues);
             });
 

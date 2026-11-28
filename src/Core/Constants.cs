@@ -197,6 +197,7 @@ public static partial class FeatureFlagKeys
     public const string PM38728_SendInvoicePriceMigration = "pm-38728-send-invoice-price-migration";
     public const string PM39883_Pam_Billing_Support = "pm-39883-pam-billing-support";
     public const string PM42214_FeatureBasedUpgradePaths = "pm-42214-feature-based-upgrade-paths";
+    public const string PM46970_PostStripeCashApplicationTransactions = "pm-46970-post-stripe-cash-application-transactions";
 
     /* Key Management Team */
     public const string PrivateKeyRegeneration = "pm-12241-private-key-regeneration";

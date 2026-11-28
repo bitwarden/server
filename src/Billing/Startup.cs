@@ -73,6 +73,9 @@ public class Startup
         services.AddScoped<ISetupIntentSucceededHandler, SetupIntentSucceededHandler>();
         services.AddScoped<ICouponDeletedHandler, CouponDeletedHandler>();
         services.AddScoped<ICheckoutSessionCompletedHandler, CheckoutSessionCompletedHandler>();
+        services.TryAddScoped<INonChargeCashApplicationRecorder, NonChargeCashApplicationRecorder>();
+        services.TryAddScoped<IInvoicePaymentPaidHandler, InvoicePaymentPaidHandler>();
+        services.TryAddScoped<IInvoicePaidHandler, InvoicePaidHandler>();
         services.AddScoped<IStripeEventProcessor, StripeEventProcessor>();
 
         // Identity

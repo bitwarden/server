@@ -96,6 +96,18 @@ public class StripeEventService(
         return await stripeAdapter.GetCheckoutSessionAsync(checkoutSession.Id, new SessionGetOptions { Expand = expand });
     }
 
+    public async Task<InvoicePayment> GetInvoicePayment(Event stripeEvent, bool fresh = false, List<string>? expand = null)
+    {
+        var invoicePayment = Extract<InvoicePayment>(stripeEvent);
+
+        if (!fresh)
+        {
+            return invoicePayment;
+        }
+
+        return await stripeFacade.GetInvoicePayment(invoicePayment.Id, new InvoicePaymentGetOptions { Expand = expand });
+    }
+
     public async Task<bool> ValidateCloudRegion(Event stripeEvent)
     {
         if (EventTypeAppliesToAllRegions(stripeEvent.Type))
@@ -119,7 +131,8 @@ public class StripeEventService(
                 await GetCustomerMetadataFromUpcomingInvoiceEvent(stripeEvent),
 
             HandledStripeWebhook.PaymentSucceeded or HandledStripeWebhook.PaymentFailed
-                or HandledStripeWebhook.InvoiceCreated or HandledStripeWebhook.InvoiceFinalized =>
+                or HandledStripeWebhook.InvoiceCreated or HandledStripeWebhook.InvoiceFinalized
+                or HandledStripeWebhook.InvoicePaid =>
                 (await GetInvoice(stripeEvent, true, customerExpansion)).Customer?.Metadata,
 
             HandledStripeWebhook.PaymentMethodAttached =>
@@ -133,6 +146,9 @@ public class StripeEventService(
 
             HandledStripeWebhook.CheckoutSessionCompleted =>
                     (await GetCheckoutSession(stripeEvent, true, customerExpansion)).Customer?.Metadata,
+
+            HandledStripeWebhook.InvoicePaymentPaid =>
+                (await GetInvoicePayment(stripeEvent, true, ["invoice.customer"])).Invoice?.Customer?.Metadata,
 
             _ => null
         };
