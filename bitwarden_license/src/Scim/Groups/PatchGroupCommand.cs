@@ -18,6 +18,7 @@ namespace Bit.Scim.Groups;
 public class PatchGroupCommand : IPatchGroupCommand
 {
     private readonly IGroupRepository _groupRepository;
+    private readonly IOrganizationUserRepository _organizationUserRepository;
     private readonly IGroupService _groupService;
     private readonly IUpdateGroupCommand _updateGroupCommand;
     private readonly ILogger<PatchGroupCommand> _logger;
@@ -26,6 +27,7 @@ public class PatchGroupCommand : IPatchGroupCommand
 
     public PatchGroupCommand(
         IGroupRepository groupRepository,
+        IOrganizationUserRepository organizationUserRepository,
         IGroupService groupService,
         IUpdateGroupCommand updateGroupCommand,
         ILogger<PatchGroupCommand> logger,
@@ -33,6 +35,7 @@ public class PatchGroupCommand : IPatchGroupCommand
         TimeProvider timeProvider)
     {
         _groupRepository = groupRepository;
+        _organizationUserRepository = organizationUserRepository;
         _groupService = groupService;
         _updateGroupCommand = updateGroupCommand;
         _logger = logger;
@@ -56,6 +59,7 @@ public class PatchGroupCommand : IPatchGroupCommand
             case PatchOps.Replace when operation.Path?.ToLowerInvariant() == PatchPaths.Members:
                 {
                     var ids = GetOperationValueIds(operation.Value);
+                    await ValidateMembersBelongToOrganizationAsync(group, ids);
                     await _groupRepository.UpdateUsersAsync(group.Id, ids, _timeProvider.GetUtcNow().UtcDateTime);
                     break;
                 }
@@ -208,6 +212,8 @@ public class PatchGroupCommand : IPatchGroupCommand
 
     private async Task AddMembersAsync(Group group, HashSet<Guid> usersToAdd)
     {
+        await ValidateMembersBelongToOrganizationAsync(group, usersToAdd);
+
         // Azure Entra ID is known to send redundant "add" requests for each existing member every time any member
         // is removed. To avoid excessive load on the database, we check against the high availability replica and
         // return early if they already exist.
@@ -219,6 +225,22 @@ public class PatchGroupCommand : IPatchGroupCommand
         }
 
         await _groupRepository.AddGroupUsersByIdAsync(group.Id, usersToAdd, _timeProvider.GetUtcNow().UtcDateTime);
+    }
+
+    private async Task ValidateMembersBelongToOrganizationAsync(Group group, IEnumerable<Guid> organizationUserIds)
+    {
+        var ids = organizationUserIds.ToHashSet();
+        if (ids.Count == 0)
+        {
+            return;
+        }
+
+        var organizationUsers = await _organizationUserRepository.GetManyAsync(ids);
+        if (organizationUsers.Count != ids.Count ||
+            organizationUsers.Any(organizationUser => organizationUser.OrganizationId != group.OrganizationId))
+        {
+            throw new BadRequestException("Group members must belong to the same organization.");
+        }
     }
 
     private static HashSet<Guid> GetOperationValueIds(JsonElement objArray)

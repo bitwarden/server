@@ -48,6 +48,16 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task<OrganizationUserOrganizationDetails?> GetDetailsByUserAsync(Guid userId, Guid organizationId,
         OrganizationUserStatusType? status = null);
     /// <summary>
+    /// Get all group IDs that an organization user belongs to.
+    /// </summary>
+    /// <param name="organizationUserId">The organization user ID.</param>
+    /// <param name="useReadOnlyReplica">
+    /// Whether to use the high-availability database replica. This is for paths with high traffic where immediate data
+    /// consistency is not required. You generally do not want this.
+    /// </param>
+    /// <returns>A collection of group IDs the user belongs to.</returns>
+    Task<ICollection<Guid>> GetManyGroupIdsByUserIdAsync(Guid organizationUserId, bool useReadOnlyReplica = false);
+    /// <summary>
     /// Replace the group memberships for an organization user.
     /// </summary>
     /// <param name="orgUserId">The organization user whose group memberships will be replaced.</param>
@@ -61,6 +71,7 @@ public interface IOrganizationUserRepository : IRepository<OrganizationUser, Gui
     Task ReplaceManyAsync(IEnumerable<OrganizationUser> organizationUsers);
     Task<ICollection<OrganizationUser>> GetManyByManyUsersAsync(IEnumerable<Guid> userIds);
     Task<ICollection<OrganizationUser>> GetManyAsync(IEnumerable<Guid> Ids);
+    Task<ICollection<OrganizationUserEmail>> GetManyEmailsByOrganizationIdAsync(Guid organizationId, IEnumerable<Guid> ids);
     Task DeleteManyAsync(IEnumerable<Guid> userIds);
     Task<OrganizationUser?> GetByOrganizationEmailAsync(Guid organizationId, string email);
     /// <summary>

@@ -1993,4 +1993,89 @@ public class OrganizationUserRepositoryTests
         var remainingSsoUser = await ssoUserRepository.GetByUserIdOrganizationIdAsync(organizationB.Id, user.Id);
         Assert.NotNull(remainingSsoUser);
     }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyGroupIdsByUserIdAsync_ReturnsAllGroupsForUser(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user);
+
+        var group1 = await groupRepository.CreateTestGroupAsync(org);
+        var group2 = await groupRepository.CreateTestGroupAsync(org);
+        var group3 = await groupRepository.CreateTestGroupAsync(org);
+
+        // Add orgUser to group1 and group2
+        var groupUserIds = new List<Guid> { orgUser.Id };
+        await groupRepository.AddGroupUsersByIdAsync(group1.Id, groupUserIds, DateTime.UtcNow);
+        await groupRepository.AddGroupUsersByIdAsync(group2.Id, groupUserIds, DateTime.UtcNow);
+
+        // Act
+        var actual = await organizationUserRepository.GetManyGroupIdsByUserIdAsync(orgUser.Id);
+
+        // Assert
+        Assert.Equal(2, actual.Count);
+        Assert.Contains(group1.Id, actual);
+        Assert.Contains(group2.Id, actual);
+        Assert.DoesNotContain(group3.Id, actual);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyGroupIdsByUserIdAsync_ReturnsEmptyWhenUserHasNoGroups(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var org = await organizationRepository.CreateTestOrganizationAsync();
+        var orgUser = await organizationUserRepository.CreateTestOrganizationUserAsync(org, user);
+
+        // Act
+        var actual = await organizationUserRepository.GetManyGroupIdsByUserIdAsync(orgUser.Id);
+
+        // Assert
+        Assert.Empty(actual);
+    }
+
+    [DatabaseTheory, DatabaseData]
+    public async Task GetManyGroupIdsByUserIdAsync_RespectOrganizationBoundary(
+        IUserRepository userRepository,
+        IOrganizationRepository organizationRepository,
+        IOrganizationUserRepository organizationUserRepository,
+        IGroupRepository groupRepository)
+    {
+        // Arrange
+        var user = await userRepository.CreateTestUserAsync();
+        var org1 = await organizationRepository.CreateTestOrganizationAsync();
+        var org2 = await organizationRepository.CreateTestOrganizationAsync();
+
+        var orgUser1 = await organizationUserRepository.CreateTestOrganizationUserAsync(org1, user);
+        var orgUser2 = await organizationUserRepository.CreateTestOrganizationUserAsync(org2, user);
+
+        var group1 = await groupRepository.CreateTestGroupAsync(org1);
+        var group2 = await groupRepository.CreateTestGroupAsync(org2);
+
+        // Add orgUser1 to group1 and orgUser2 to group2
+        await groupRepository.AddGroupUsersByIdAsync(group1.Id, new List<Guid> { orgUser1.Id }, DateTime.UtcNow);
+        await groupRepository.AddGroupUsersByIdAsync(group2.Id, new List<Guid> { orgUser2.Id }, DateTime.UtcNow);
+
+        // Act
+        var actualOrg1 = await organizationUserRepository.GetManyGroupIdsByUserIdAsync(orgUser1.Id);
+        var actualOrg2 = await organizationUserRepository.GetManyGroupIdsByUserIdAsync(orgUser2.Id);
+
+        // Assert
+        Assert.Single(actualOrg1);
+        Assert.Contains(group1.Id, actualOrg1);
+        Assert.DoesNotContain(group2.Id, actualOrg1);
+
+        Assert.Single(actualOrg2);
+        Assert.Contains(group2.Id, actualOrg2);
+        Assert.DoesNotContain(group1.Id, actualOrg2);
+    }
 }

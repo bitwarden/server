@@ -1,4 +1,5 @@
-﻿using System.Net.Mime;
+﻿using System.Globalization;
+using System.Net.Mime;
 using System.Security.Claims;
 using System.Text;
 using System.Text.Encodings.Web;
@@ -36,6 +37,15 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
     {
         base.ConfigureWebHost(builder);
 
+        builder.ConfigureAppConfiguration((_, configuration) =>
+        {
+            configuration.AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["globalSettings:selfHosted"] = "false",
+                ["globalSettings:dataProtection:directory"] = null,
+            });
+        });
+
         builder.ConfigureServices(services =>
         {
             services
@@ -57,12 +67,25 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
         });
     }
 
-    public async Task<HttpContext> GroupsGetAsync(Guid organizationId, Guid id)
+    public async Task<HttpContext> GroupsGetAsync(
+        Guid organizationId,
+        Guid id,
+        int? memberStartIndex = null,
+        int? memberCount = null)
     {
-        return await Server.GetAsync($"/v2/{organizationId}/groups/{id}");
+        var queryString = BuildMembershipQueryString("memberStartIndex", "memberCount", memberStartIndex, memberCount);
+        return await Server.GetAsync(
+            $"/v2/{organizationId}/groups/{id}",
+            httpContext => httpContext.Request.QueryString = queryString);
     }
 
-    public async Task<HttpContext> GroupsGetListAsync(Guid organizationId, string filter, int? count, int? startIndex)
+    public async Task<HttpContext> GroupsGetListAsync(
+        Guid organizationId,
+        string filter,
+        int? count,
+        int? startIndex,
+        int? memberStartIndex = null,
+        int? memberCount = null)
     {
         var queryString = new QueryString("?");
 
@@ -73,12 +96,22 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
 
         if (count.HasValue)
         {
-            queryString = queryString.Add("count", count.ToString());
+            queryString = queryString.Add("count", count.Value.ToString(CultureInfo.InvariantCulture));
         }
 
         if (startIndex.HasValue)
         {
-            queryString = queryString.Add("startIndex", startIndex.ToString());
+            queryString = queryString.Add("startIndex", startIndex.Value.ToString(CultureInfo.InvariantCulture));
+        }
+
+        if (memberStartIndex.HasValue)
+        {
+            queryString = queryString.Add("memberStartIndex", memberStartIndex.Value.ToString(CultureInfo.InvariantCulture));
+        }
+
+        if (memberCount.HasValue)
+        {
+            queryString = queryString.Add("memberCount", memberCount.Value.ToString(CultureInfo.InvariantCulture));
         }
 
         return await Server.GetAsync($"/v2/{organizationId}/groups", httpContext => httpContext.Request.QueryString = queryString);
@@ -104,12 +137,25 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
         return await Server.DeleteAsync($"/v2/{organizationId}/groups/{id}", null);
     }
 
-    public async Task<HttpContext> UsersGetAsync(Guid organizationId, Guid id)
+    public async Task<HttpContext> UsersGetAsync(
+        Guid organizationId,
+        Guid id,
+        int? groupStartIndex = null,
+        int? groupCount = null)
     {
-        return await Server.GetAsync($"/v2/{organizationId}/users/{id}");
+        var queryString = BuildMembershipQueryString("groupStartIndex", "groupCount", groupStartIndex, groupCount);
+        return await Server.GetAsync(
+            $"/v2/{organizationId}/users/{id}",
+            httpContext => httpContext.Request.QueryString = queryString);
     }
 
-    public async Task<HttpContext> UsersGetListAsync(Guid organizationId, string filter, int? count, int? startIndex)
+    public async Task<HttpContext> UsersGetListAsync(
+        Guid organizationId,
+        string filter,
+        int? count,
+        int? startIndex,
+        int? groupStartIndex = null,
+        int? groupCount = null)
     {
         var queryString = new QueryString("?");
 
@@ -120,12 +166,22 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
 
         if (count.HasValue)
         {
-            queryString = queryString.Add("count", count.ToString());
+            queryString = queryString.Add("count", count.Value.ToString(CultureInfo.InvariantCulture));
         }
 
         if (startIndex.HasValue)
         {
-            queryString = queryString.Add("startIndex", startIndex.ToString());
+            queryString = queryString.Add("startIndex", startIndex.Value.ToString(CultureInfo.InvariantCulture));
+        }
+
+        if (groupStartIndex.HasValue)
+        {
+            queryString = queryString.Add("groupStartIndex", groupStartIndex.Value.ToString(CultureInfo.InvariantCulture));
+        }
+
+        if (groupCount.HasValue)
+        {
+            queryString = queryString.Add("groupCount", groupCount.Value.ToString(CultureInfo.InvariantCulture));
         }
 
         return await Server.GetAsync($"/v2/{organizationId}/users", httpContext => httpContext.Request.QueryString = queryString);
@@ -170,6 +226,24 @@ public class ScimApplicationFactory : WebApplicationFactoryBase<Startup>
         databaseContext.GroupUsers.RemoveRange(databaseContext.GroupUsers);
         databaseContext.SaveChanges();
         InitializeDbForTests(databaseContext);
+    }
+
+    private static QueryString BuildMembershipQueryString(
+        string startIndexParameter,
+        string countParameter,
+        int? startIndex,
+        int? count)
+    {
+        var queryString = QueryString.Empty;
+        if (startIndex.HasValue)
+        {
+            queryString = queryString.Add(startIndexParameter, startIndex.Value.ToString(CultureInfo.InvariantCulture));
+        }
+        if (count.HasValue)
+        {
+            queryString = queryString.Add(countParameter, count.Value.ToString(CultureInfo.InvariantCulture));
+        }
+        return queryString;
     }
 
     private List<Infrastructure.EntityFramework.Models.User> GetSeedingUsers()
