@@ -28,6 +28,23 @@ public class OrganizationKeys
 }
 
 /// <summary>
+/// A sealed organization invite and the secret that opens it, for an organization invite link.
+/// </summary>
+public class OrganizationInvite
+{
+    /// <summary>
+    /// The sealed invite blob stored on the server in <c>OrganizationInviteLink.Invite</c>.
+    /// </summary>
+    public required string Invite { get; set; }
+
+    /// <summary>
+    /// The base64url invite secret that goes in the invite link's <c>?key=</c> part. It is never stored on the
+    /// server; treat it as a credential and do not log it.
+    /// </summary>
+    public required string Secret { get; set; }
+}
+
+/// <summary>
 /// The result of encrypting an attachment: the encrypted metadata plus the EncArrayBuffer blob to store.
 /// </summary>
 public class EncryptedAttachment
@@ -106,6 +123,34 @@ public class RustSdkService
             var result = ParseResponse(resultPtr);
 
             return result;
+        }
+    }
+
+    /// <summary>
+    /// Makes a sealed organization invite and its invite secret with the same SDK code the clients use to create
+    /// an invite link. The invite is bound to the organization's public key, derived from its wrapped private key.
+    /// </summary>
+    /// <param name="organizationKeyBase64">The base64-encoded organization symmetric key.</param>
+    /// <param name="wrappedPrivateKey">The organization's private key wrapped with the organization key
+    /// (<c>Organization.PrivateKey</c>).</param>
+    /// <param name="supportsConfirmation">Whether an invitee can recover the organization key from the invite.</param>
+    public static unsafe OrganizationInvite MakeOrganizationInvite(
+        string organizationKeyBase64,
+        string wrappedPrivateKey,
+        bool supportsConfirmation = false)
+    {
+        var organizationKeyBytes = StringToRustString(organizationKeyBase64);
+        var wrappedPrivateKeyBytes = StringToRustString(wrappedPrivateKey);
+
+        fixed (byte* organizationKeyPtr = organizationKeyBytes)
+        fixed (byte* wrappedPrivateKeyPtr = wrappedPrivateKeyBytes)
+        {
+            var resultPtr = NativeMethods.make_organization_invite(
+                organizationKeyPtr, wrappedPrivateKeyPtr, supportsConfirmation);
+
+            var result = ParseResponse(resultPtr);
+
+            return JsonSerializer.Deserialize<OrganizationInvite>(result, CaseInsensitiveOptions)!;
         }
     }
 

@@ -372,6 +372,45 @@ curl -X POST http://localhost:5000/seed \
 </details>
 
 <details>
+<summary>Seeding an Organization Invite Link</summary>
+
+`OrganizationInviteLinkScene` creates an invite link for an existing organization and returns the full, working
+invite URL, including the `?key=` secret. The sealed invite and its secret come from the same SDK code the clients use,
+so a new user whose email is in an allowed domain can open the URL and reach account creation for the organization.
+
+The organization must be able to use invite links (Enterprise plans can by default; otherwise pass
+`overrides.useInviteLinks: true` to `SingleOrganizationScene`) and must not already have a link. Pass the
+`organizationKeyB64` that `SingleOrganizationScene` returned.
+
+Request fields:
+
+- `organizationId`, `organizationKeyB64`, `allowedDomains` (required). Domains are lowercased and trimmed, and blank
+  entries are dropped, as the server does; at least one must remain.
+- `supportsConfirmation` (default false). The server does not support auto-confirmation through a link yet.
+
+The response contains `inviteLinkId`, `code`, `inviteUrlFragment` (`#/join/{organizationId}/{code}?key={secret}`) and
+`inviteUrl` (the fragment on `globalSettings.baseServiceUri.vault`). Use the fragment when your web vault address
+differs from the SeederApi's configured one. The secret is a credential: it exists only in the response and is never
+stored on the server, so do not log it.
+
+```bash
+curl -X POST http://localhost:5000/seed \
+  -H "Content-Type: application/json" \
+  -d '{
+    "template": "OrganizationInviteLinkScene",
+    "arguments": {
+      "organizationId": "<organizationId>",
+      "organizationKeyB64": "<organizationKeyB64>",
+      "allowedDomains": ["acme.example"]
+    }
+  }'
+```
+
+The web vault only shows the join page when the `pm-32497-generate-invite-link` feature flag is on.
+
+</details>
+
+<details>
 <summary>Creating Real Stripe Billing for a Seeded Organization or User</summary>
 
 By default the SeederApi makes no Stripe calls. The `gateway*` fields above link identifiers the caller created
