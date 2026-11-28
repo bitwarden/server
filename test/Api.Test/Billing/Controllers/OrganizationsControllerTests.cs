@@ -3,8 +3,11 @@ using AutoFixture.Xunit2;
 using Bit.Api.AdminConsole.Models.Request.Organizations;
 using Bit.Api.Billing.Controllers;
 using Bit.Api.Models.Request.Organizations;
+using Bit.Api.Providers.Models.Response;
 using Bit.Core;
 using Bit.Core.AdminConsole.Entities;
+using Bit.Core.AdminConsole.Enums.Provider;
+using Bit.Core.AdminConsole.Models.Data.Provider;
 using Bit.Core.AdminConsole.OrganizationFeatures.OrganizationUsers.Interfaces;
 using Bit.Core.AdminConsole.Repositories;
 using Bit.Core.Auth.Enums;
@@ -48,6 +51,7 @@ public class OrganizationsControllerTests : IDisposable
     private readonly IOrganizationRepository _organizationRepository;
     private readonly IOrganizationService _organizationService;
     private readonly IOrganizationUserRepository _organizationUserRepository;
+    private readonly IProviderUserRepository _providerUserRepository;
     private readonly IStripePaymentService _paymentService;
     private readonly ISsoConfigRepository _ssoConfigRepository;
     private readonly IUserService _userService;
@@ -73,6 +77,7 @@ public class OrganizationsControllerTests : IDisposable
         _organizationRepository = Substitute.For<IOrganizationRepository>();
         _organizationService = Substitute.For<IOrganizationService>();
         _organizationUserRepository = Substitute.For<IOrganizationUserRepository>();
+        _providerUserRepository = Substitute.For<IProviderUserRepository>();
         _paymentService = Substitute.For<IStripePaymentService>();
         Substitute.For<IPolicyRepository>();
         _ssoConfigRepository = Substitute.For<ISsoConfigRepository>();
@@ -94,6 +99,7 @@ public class OrganizationsControllerTests : IDisposable
         _sut = new OrganizationsController(
             _organizationRepository,
             _organizationUserRepository,
+            _providerUserRepository,
             _organizationService,
             _userService,
             _paymentService,
@@ -305,6 +311,76 @@ public class OrganizationsControllerTests : IDisposable
         await _addSecretsManagerSubscriptionCommand.Received(1)
             .RunAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
         await _organizationUserRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<OrganizationUser>());
+    }
+
+    [Theory, AutoData]
+    public async Task OrganizationsController_PostSubscribeSecretsManagerAsync_ProviderUserNotMember_ReturnsProviderResponse(
+        Guid organizationId,
+        SecretsManagerSubscribeRequestModel model,
+        Organization organization,
+        Guid userId,
+        ProviderUserOrganizationDetails providerUserOrganizationDetails,
+        ProviderUserOrganizationDetails otherProviderOrganizationDetails)
+    {
+        organization.Id = organizationId;
+        providerUserOrganizationDetails.OrganizationId = organizationId;
+        providerUserOrganizationDetails.UseSecretsManager = true;
+        providerUserOrganizationDetails.SsoConfig = new SsoConfigurationData
+        {
+            MemberDecryptionType = MemberDecryptionType.KeyConnector,
+            KeyConnectorUrl = "https://example.com"
+        }.Serialize();
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        _currentContext.EditSubscription(organizationId).Returns(true);
+
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+
+        _organizationUserRepository.GetByOrganizationAsync(organization.Id, userId).ReturnsNull();
+
+        _organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id, OrganizationUserStatusType.Confirmed)
+            .ReturnsNull();
+
+        _providerUserRepository.GetManyOrganizationDetailsByUserAsync(userId, ProviderUserStatusType.Confirmed)
+            .Returns([otherProviderOrganizationDetails, providerUserOrganizationDetails]);
+
+        var response = await _sut.PostSubscribeSecretsManagerAsync(organizationId, model);
+
+        Assert.IsType<ProfileProviderOrganizationResponseModel>(response);
+        Assert.Equal(organizationId, response.Id);
+        Assert.Equal(providerUserOrganizationDetails.Name, response.Name);
+        Assert.True(response.UseSecretsManager);
+
+        await _addSecretsManagerSubscriptionCommand.Received(1)
+            .RunAsync(organization, model.AdditionalSmSeats, model.AdditionalServiceAccounts);
+        await _organizationUserRepository.DidNotReceiveWithAnyArgs().ReplaceAsync(Arg.Any<OrganizationUser>());
+    }
+
+    [Theory, AutoData]
+    public async Task OrganizationsController_PostSubscribeSecretsManagerAsync_NeitherMemberNorProviderUser_ThrowsNotFoundException(
+        Guid organizationId,
+        SecretsManagerSubscribeRequestModel model,
+        Organization organization,
+        Guid userId)
+    {
+        organization.Id = organizationId;
+
+        _organizationRepository.GetByIdAsync(organizationId).Returns(organization);
+
+        _currentContext.EditSubscription(organizationId).Returns(true);
+
+        _userService.GetProperUserId(Arg.Any<ClaimsPrincipal>()).Returns(userId);
+
+        _organizationUserRepository.GetByOrganizationAsync(organization.Id, userId).ReturnsNull();
+
+        _organizationUserRepository.GetDetailsByUserAsync(userId, organization.Id, OrganizationUserStatusType.Confirmed)
+            .ReturnsNull();
+
+        _providerUserRepository.GetManyOrganizationDetailsByUserAsync(userId, ProviderUserStatusType.Confirmed)
+            .Returns([]);
+
+        await Assert.ThrowsAsync<NotFoundException>(() => _sut.PostSubscribeSecretsManagerAsync(organizationId, model));
     }
 
     [Theory, AutoData]
