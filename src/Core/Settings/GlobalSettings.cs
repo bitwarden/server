@@ -44,6 +44,20 @@ public class GlobalSettings : IGlobalSettings
     public string LicenseCertificatePath { get; set; }
     public virtual string PushRelayBaseUri { get; set; }
     public virtual string InternalIdentityKey { get; set; }
+    /// <summary>
+    /// The secret of the internal cohort assignment sync's clients (<c>cohorts.{service}</c>): internal clients that
+    /// run the Admin Portal's bulk cohort assignment upload with a client-credentials token for
+    /// <c>internal.cohort-assignment-sync</c>. Unset, the clients don't exist and the sync answers <c>404</c>. Never
+    /// logged.
+    /// </summary>
+    public virtual string CohortAssignmentSyncClientSecret { get; set; }
+    /// <summary>
+    /// The local port of the internal listener the cohort assignment sync answers on, and on no other. It must be an
+    /// additional Kestrel endpoint (an <c>ASPNETCORE_URLS</c> entry or <c>Kestrel:Endpoints</c>), different from
+    /// the public port, that only the install's own network reaches and the proxy never forwards to. Unset, the
+    /// cohort assignment sync answers <c>404</c>.
+    /// </summary>
+    public virtual int? CohortAssignmentSyncPort { get; set; }
     public virtual string OidcIdentityClientKey { get; set; }
     public virtual string HibpApiKey { get; set; }
     public virtual bool DisableUserRegistration { get; set; }
