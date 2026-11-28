@@ -68,6 +68,11 @@ public class SingleUserScene(
         /// Stores an undecryptable private key, the state the web Data Recovery tool detects and replaces.
         /// </summary>
         public bool CorruptPrivateKey { get; set; } = false;
+        /// <summary>
+        /// Backdates the account by this many days (CreationDate = now - N). 0 (default) seeds a present-day account.
+        /// Accounts under 24 hours old skip new device verification, so use 1 or more to exercise it.
+        /// </summary>
+        public int AccountAgeDays { get; set; } = 0;
     }
 
     private const int MinKdfIterations = 5_000;
@@ -79,6 +84,12 @@ public class SingleUserScene(
         {
             throw new ArgumentOutOfRangeException(nameof(request.KdfIterations), kdfIterations,
                 $"KdfIterations must be between {MinKdfIterations:N0} and {KdfConstants.PBKDF2_ITERATIONS.Max:N0}.");
+        }
+
+        if (request.AccountAgeDays < 0)
+        {
+            throw new ArgumentOutOfRangeException(nameof(request.AccountAgeDays), request.AccountAgeDays,
+                "AccountAgeDays must be 0 or greater.");
         }
 
         if (request.SelfHosted && request.Premium)
@@ -99,7 +110,8 @@ public class SingleUserScene(
                 Gateway = request.Gateway,
                 GatewayCustomerId = request.GatewayCustomerId,
                 GatewaySubscriptionId = request.GatewaySubscriptionId,
-                KdfIterations = request.KdfIterations ?? UserSeed.DefaultKdfIterations
+                KdfIterations = request.KdfIterations ?? UserSeed.DefaultKdfIterations,
+                CreationDate = request.AccountAgeDays > 0 ? DateTime.UtcNow.AddDays(-request.AccountAgeDays) : null
             },
             passwordHasher,
             manglerService);

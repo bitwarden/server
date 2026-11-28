@@ -282,6 +282,8 @@ curl -X POST http://localhost:5000/seed \
   account email. The response includes `twoFactorRecoveryCode` so the recovery login flow can be tested.
 - `corruptPrivateKey` — when true, stores an undecryptable private key. The web Data Recovery tool only flags it
   when the user also has at least one personal cipher (seed one with `UserLoginCipherScene`).
+- `accountAgeDays` — backdates the account's creation date by this many days. Defaults to 0 (created now). Accounts
+  under 24 hours old skip new device verification, so set 1 or more to test it.
 
 Enum fields (`gateway`) must be sent as their **numeric value**. In the example below, `gateway: 0` is `Stripe`.
 
