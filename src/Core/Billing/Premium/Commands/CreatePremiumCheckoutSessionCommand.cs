@@ -32,7 +32,8 @@ public class CreatePremiumCheckoutSessionCommand(
     IPricingClient pricingClient,
     ISubscriberService subscriberService,
     IGlobalSettings globalSettings,
-    ILogger<CreatePremiumCheckoutSessionCommand> logger
+    ILogger<CreatePremiumCheckoutSessionCommand> logger,
+    IRestoreExistingPremiumSubscriptionCommand restoreExistingPremiumSubscriptionCommand
 ) : BaseBillingCommand<CreatePremiumCheckoutSessionCommand>(logger), ICreatePremiumCheckoutSessionCommand
 {
     private readonly IStripeAdapter stripeAdapter = stripeAdapter;
@@ -48,6 +49,18 @@ public class CreatePremiumCheckoutSessionCommand(
         if (user.Premium)
         {
             return new BadRequest("User is already a premium user.");
+        }
+
+        var existingSubscription = await restoreExistingPremiumSubscriptionCommand.Run(user);
+        if (existingSubscription is { Status: StripeConstants.SubscriptionStatus.Active or StripeConstants.SubscriptionStatus.Trialing })
+        {
+            return new PremiumCheckoutSessionResponseModel(
+                $"{globalSettings.BaseServiceUri.VaultWithHash}/settings/subscription/user-subscription");
+        }
+
+        if (existingSubscription != null)
+        {
+            return new BadRequest(RestoreExistingPremiumSubscriptionCommand.UnpaidSubscriptionMessage);
         }
 
         // If the user doesn't have a Stripe customer ID, create one.

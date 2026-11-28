@@ -44,6 +44,7 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
     private readonly IHasPaymentMethodQuery _hasPaymentMethodQuery = Substitute.For<IHasPaymentMethodQuery>();
     private readonly IUpdatePaymentMethodCommand _updatePaymentMethodCommand = Substitute.For<IUpdatePaymentMethodCommand>();
     private readonly ISubscriptionDiscountService _subscriptionDiscountService = Substitute.For<ISubscriptionDiscountService>();
+    private readonly IRestoreExistingPremiumSubscriptionCommand _restoreExistingPremiumSubscriptionCommand = Substitute.For<IRestoreExistingPremiumSubscriptionCommand>();
     private readonly CreatePremiumCloudHostedSubscriptionCommand _command;
 
     public CreatePremiumCloudHostedSubscriptionCommandTests()
@@ -75,7 +76,8 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
             _pricingClient,
             _hasPaymentMethodQuery,
             _updatePaymentMethodCommand,
-            _subscriptionDiscountService);
+            _subscriptionDiscountService,
+            _restoreExistingPremiumSubscriptionCommand);
     }
 
     #region Helper Methods
@@ -139,6 +141,43 @@ public class CreatePremiumCloudHostedSubscriptionCommandTests
         Assert.True(result.IsT1);
         var badRequest = result.AsT1;
         Assert.Equal("Already a premium user.", badRequest.Response);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_ExistingActiveSubscription_RestoresPremiumWithoutNewSubscription(
+        User user,
+        PremiumSubscriptionPurchase subscriptionPurchase)
+    {
+        // Arrange
+        user.Premium = false;
+        _restoreExistingPremiumSubscriptionCommand.Run(user)
+            .Returns(new StripeSubscription { Id = "sub_live", Status = StripeConstants.SubscriptionStatus.Active });
+
+        // Act
+        var result = await _command.Run(user, subscriptionPurchase);
+
+        // Assert
+        Assert.True(result.IsT0);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionAsync(default!);
+    }
+
+    [Theory, BitAutoData]
+    public async Task Run_ExistingUnpaidSubscription_ReturnsBadRequestWithoutNewSubscription(
+        User user,
+        PremiumSubscriptionPurchase subscriptionPurchase)
+    {
+        // Arrange
+        user.Premium = false;
+        _restoreExistingPremiumSubscriptionCommand.Run(user)
+            .Returns(new StripeSubscription { Id = "sub_unpaid", Status = StripeConstants.SubscriptionStatus.Unpaid });
+
+        // Act
+        var result = await _command.Run(user, subscriptionPurchase);
+
+        // Assert
+        Assert.True(result.IsT1);
+        Assert.Equal(RestoreExistingPremiumSubscriptionCommand.UnpaidSubscriptionMessage, result.AsT1.Response);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateSubscriptionAsync(default!);
     }
 
     [Theory, BitAutoData]

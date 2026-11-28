@@ -26,6 +26,7 @@ public class CreatePremiumCheckoutSessionCommandTests
     private readonly ISubscriberService _subscriberService = Substitute.For<ISubscriberService>();
     private readonly IGlobalSettings _globalSettings = Substitute.For<IGlobalSettings>();
     private readonly ILogger<CreatePremiumCheckoutSessionCommand> _logger = Substitute.For<ILogger<CreatePremiumCheckoutSessionCommand>>();
+    private readonly IRestoreExistingPremiumSubscriptionCommand _restoreExistingPremiumSubscriptionCommand = Substitute.For<IRestoreExistingPremiumSubscriptionCommand>();
     private readonly ICreatePremiumCheckoutSessionCommand _command;
 
     private const string _successUrl = "success/url";
@@ -64,7 +65,8 @@ public class CreatePremiumCheckoutSessionCommandTests
             _pricingClient,
             _subscriberService,
             _globalSettings,
-            _logger);
+            _logger,
+            _restoreExistingPremiumSubscriptionCommand);
     }
 
     [Theory]
@@ -138,6 +140,45 @@ public class CreatePremiumCheckoutSessionCommandTests
             && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.UserId] == user.Id.ToString()
             && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.OriginatingAppVersion] == appVersion
             && options.SubscriptionData.Metadata[StripeConstants.MetadataKeys.OriginatingPlatform] == platform));
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Run_ExistingActiveSubscription_RestoresPremiumAndReturnsVaultSubscriptionUrl(User user)
+    {
+        // Arrange
+        user.Premium = false;
+        var baseServiceUri = Substitute.For<IBaseServiceUriSettings>();
+        baseServiceUri.VaultWithHash.Returns("https://vault.example/#");
+        _globalSettings.BaseServiceUri.Returns(baseServiceUri);
+        _restoreExistingPremiumSubscriptionCommand.Run(user)
+            .Returns(new Subscription { Id = "sub_live", Status = StripeConstants.SubscriptionStatus.Active });
+
+        // Act
+        var result = await _command.Run(user, "2026.1.0", StripeConstants.CheckoutSession.Platforms.Browser);
+
+        // Assert
+        Assert.True(result.IsT0);
+        Assert.Equal("https://vault.example/#/settings/subscription/user-subscription", result.AsT0.CheckoutSessionUrl);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateCheckoutSessionAsync(default!);
+    }
+
+    [Theory]
+    [BitAutoData]
+    public async Task Run_ExistingUnpaidSubscription_ReturnsBadRequest(User user)
+    {
+        // Arrange
+        user.Premium = false;
+        _restoreExistingPremiumSubscriptionCommand.Run(user)
+            .Returns(new Subscription { Id = "sub_unpaid", Status = StripeConstants.SubscriptionStatus.Unpaid });
+
+        // Act
+        var result = await _command.Run(user, "2026.1.0", StripeConstants.CheckoutSession.Platforms.Browser);
+
+        // Assert
+        Assert.True(result.IsT1);
+        Assert.Equal(RestoreExistingPremiumSubscriptionCommand.UnpaidSubscriptionMessage, result.AsT1.Response);
+        await _stripeAdapter.DidNotReceiveWithAnyArgs().CreateCheckoutSessionAsync(default!);
     }
 
     [Theory]
