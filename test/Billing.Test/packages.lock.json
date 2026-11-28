@@ -49,9 +49,9 @@
       },
       "RichardSzalay.MockHttp": {
         "type": "Direct",
-        "requested": "[7.0.0, 7.0.0]",
-        "resolved": "7.0.0",
-        "contentHash": "QwnauYiaywp65QKFnP+wvgiQ2D8Pv888qB2dyfd7MSVDF06sIvxqASenk+RxsWybyyt+Hu1Y251wQxpHTv3UYg=="
+        "requested": "[7.1.0, 7.1.0]",
+        "resolved": "7.1.0",
+        "contentHash": "xIOzidJTpZa7f4Ig9xQDBhCXlZi2TCFA2mD0LQcA0J1ld6cVF42tU6+iOzfUAac4EfkvtYWsuMCLVckM6fQxLg=="
       },
       "xunit": {
         "type": "Direct",
