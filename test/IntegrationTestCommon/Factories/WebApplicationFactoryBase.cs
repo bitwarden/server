@@ -200,6 +200,10 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
                 services.First(sd => sd.ServiceType == typeof(DbContextOptions<DatabaseContext>));
             services.Remove(dbContextOptions);
 
+            // Disable logs. This must come before Migrate: Migrate builds its own service provider from these
+            // services, and with the default logger factory that provider starts a console logger thread.
+            services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
+
             // Add database to the service collection
             TestDatabase.AddDatabase(services);
             if (ManagesDatabase)
@@ -243,9 +247,6 @@ public abstract class WebApplicationFactoryBase<T> : WebApplicationFactory<T>
 
             // Fix IP Rate Limiting
             services.AddSingleton<IStartupFilter, CustomStartupFilter>();
-
-            // Disable logs
-            services.AddSingleton<ILoggerFactory, NullLoggerFactory>();
 
             // Noop StripePaymentService - this could be changed to integrate with our Stripe test account
             if (!StripeEnabled)
