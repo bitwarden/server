@@ -1,0 +1,22 @@
+name: Backport PR to branch
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+  actions: write
+
+jobs:
+  backport:
+    # My Draft PR:
+    uses: bitwarden/gh-actions/.github/workflows/backport-base.yml@d0b8f4e649e45f844ee63787bba39a51ed6c9ff2
+    with:
+      pr_description_template: |
+        Backport of #%source_pr_number% to %target_branch%
+
+        /cc %cc_users%
+
+        # %source_pr_title%
