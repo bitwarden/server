@@ -39,6 +39,8 @@ public static class Constants
     public const string DenyLegacyUserMinimumVersion = "2025.6.0";
     public const string PamPartialCipherMinimumVersion = "2026.11.1";
 
+    public const string PM35389RestrictedItemTypesDataMinimumVersion = "2026.12.0";
+
     /// <summary>
     /// Domain suffixes for Bitwarden cloud-hosted environments.
     /// </summary>
