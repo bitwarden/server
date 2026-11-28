@@ -37,11 +37,15 @@ public static class Saml2AcsPostHarness
     /// A caller can give the service provider certificate, to let the handler decrypt an assertion.
     /// A caller can allow unsolicited responses. Without this, the handler rejects a response that
     /// answers no request before it validates the signature.
+    /// A caller can give host configuration entries, which the host reads before it starts.
+    /// A caller can mark the host as self-hosted, and can set when the service provider signs requests.
     /// </summary>
     public static async Task<Saml2AcsArrangement> ArrangeAsync(
         string assertionElement, string issuer = IdpEntityId, bool wantAssertionsSigned = false,
         bool rsa15DeprecationFlag = false, X509Certificate2? idpCertificate = null,
-        X509Certificate2? spCertificate = null, bool allowUnsolicitedResponse = false)
+        X509Certificate2? spCertificate = null, bool allowUnsolicitedResponse = false,
+        IReadOnlyDictionary<string, string?>? configuration = null, bool selfHosted = false,
+        Saml2SigningBehavior spSigningBehavior = Saml2SigningBehavior.IfIdpWantAuthnRequestsSigned)
     {
         var builder = new SsoTestDataBuilder()
             .WithSsoConfig(cfg => cfg!.SetData(new SsoConfigurationData
@@ -52,7 +56,19 @@ public static class Saml2AcsPostHarness
                 IdpX509PublicCert = CoreHelpers.Base64UrlEncode((idpCertificate ?? BuildIdpCertificate()).RawData),
                 SpWantAssertionsSigned = wantAssertionsSigned,
                 IdpAllowUnsolicitedAuthnResponse = allowUnsolicitedResponse,
+                SpSigningBehavior = spSigningBehavior,
             }));
+        if (selfHosted)
+        {
+            builder.AsSelfHosted();
+        }
+        if (configuration != null)
+        {
+            foreach (var (key, value) in configuration)
+            {
+                builder.WithConfiguration(key, value);
+            }
+        }
         if (spCertificate != null)
         {
             builder.WithSamlSigningCertificate(spCertificate);
