@@ -10,11 +10,11 @@ using Bit.Core.Repositories;
 using Bit.Core.Tokens;
 using OtpNet;
 using Xunit;
-using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorIntegrationTestHelpers;
+using static Bit.Api.IntegrationTest.Auth.Helpers.TwoFactorTestHelpers;
 
 namespace Bit.Api.IntegrationTest.Auth.TwoFactor;
 
-public class TwoFactorControllerAuthenticatorTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
+public class TwoFactorAuthenticatorTests : IClassFixture<ApiApplicationFactory>, IAsyncLifetime
 {
     private readonly HttpClient _client;
     private readonly ApiApplicationFactory _factory;
@@ -24,7 +24,7 @@ public class TwoFactorControllerAuthenticatorTests : IClassFixture<ApiApplicatio
 
     private string _userEmail = null!;
 
-    public TwoFactorControllerAuthenticatorTests(ApiApplicationFactory factory)
+    public TwoFactorAuthenticatorTests(ApiApplicationFactory factory)
     {
         _factory = factory;
         SubstituteTwoFactorProviderServices(_factory);
