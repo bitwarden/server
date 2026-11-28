@@ -93,5 +93,6 @@ public enum GlobalEquivalentDomainsType : byte
     TakeawayEU = 88, // deprecated
     Atlassian = 89,
     Pinterest = 90, // deprecated
-    Twitter = 91
+    Twitter = 91,
+    CoxCommunications = 92
 }
